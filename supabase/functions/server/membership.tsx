@@ -25,7 +25,9 @@ export interface MembershipTier {
   display_name: string;
   price: number;
   duration_months: number;
+  billing_cycle: 'week' | 'month' | 'year';
   discount_percentage: number;
+  is_popular?: boolean;
   benefits: string[];
   color: string;
 }
@@ -38,6 +40,7 @@ export const DEFAULT_TIERS: MembershipTier[] = [
     display_name: 'Silver',
     price: 99,
     duration_months: 1,
+    billing_cycle: 'year',
     discount_percentage: 10,
     benefits: ['10% off all services', 'Priority booking', 'Birthday gift'],
     color: 'text-gray-300'
@@ -48,6 +51,7 @@ export const DEFAULT_TIERS: MembershipTier[] = [
     display_name: 'Gold',
     price: 479,
     duration_months: 1,
+    billing_cycle: 'year',
     discount_percentage: 20,
     benefits: ['20% off all services', 'Priority booking', 'Birthday gift', 'Free upgrade once/month'],
     color: 'text-[#eab308]'
@@ -58,6 +62,7 @@ export const DEFAULT_TIERS: MembershipTier[] = [
     display_name: 'Platinum',
     price: 539,
     duration_months: 1,
+    billing_cycle: 'year',
     discount_percentage: 25,
     benefits: ['25% off all services', 'VIP priority', 'Birthday gift', 'Free upgrade twice/month', 'Complimentary drink'],
     color: 'text-white'
@@ -68,6 +73,7 @@ export const DEFAULT_TIERS: MembershipTier[] = [
     display_name: 'VIP Crypto',
     price: 624,
     duration_months: 1,
+    billing_cycle: 'year',
     discount_percentage: 35,
     benefits: ['35% off all services', 'VIP priority', 'Birthday gift', 'Unlimited free upgrades', 'Complimentary drink', 'Exclusive events'],
     color: 'text-[#f7931a]'

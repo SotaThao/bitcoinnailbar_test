@@ -7,7 +7,9 @@ export interface MembershipTier {
   display_name: string;
   price: number;
   duration_months: number;
+  billing_cycle: 'week' | 'month' | 'year';
   discount_percentage: number;
+  is_popular?: boolean;
   benefits: string[];
   color: string;
 }

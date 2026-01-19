@@ -26,11 +26,15 @@ export function MembershipCard({ tier, visual, saveText, className, previewMode 
   const Icon = visual.icon;
   const Container = previewMode ? 'div' : motion.div;
 
+  const animationProps = previewMode ? {} : {
+    initial: { opacity: 0, y: 30 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true }
+  };
+
   return (
     <Container
-      initial={previewMode ? undefined : { opacity: 0, y: 30 }}
-      whileInView={previewMode ? undefined : { opacity: 1, y: 0 }}
-      viewport={previewMode ? undefined : { once: true }}
+      {...animationProps}
       className={`relative group ${className}`}
     >
       <div className={`
@@ -85,8 +89,8 @@ export function MembershipCard({ tier, visual, saveText, className, previewMode 
                  style={{ textShadow: visual.popular ? '0 0 15px rgba(255,255,255,0.6)' : undefined }}>
               <span className="text-4xl font-bold">${tier.price}</span>
               <span className="text-gray-400 text-sm">
-                {((tier as any).billing_cycle === 'week') ? '/wk' : 
-                 ((tier as any).billing_cycle === 'month') ? '/mo' : '/yr'}
+                {tier.billing_cycle === 'week' ? '/wk' : 
+                 tier.billing_cycle === 'month' ? '/mo' : '/yr'}
               </span>
             </div>
             <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">

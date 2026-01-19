@@ -45,7 +45,11 @@ export function MembershipSection() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 max-w-[1536px] mx-auto rounded-2xl">
           {tiers.map((tier, index) => {
-            const visual = TIER_VISUALS[tier.name] || TIER_VISUALS['silver'];
+            const baseVisual = TIER_VISUALS[tier.name] || TIER_VISUALS['silver'];
+            const visual = {
+              ...baseVisual,
+              popular: tier.is_popular !== undefined ? tier.is_popular : baseVisual.popular
+            };
             const saveText = tier.discount_percentage > 0 ? `${t('home.membership.save')} ${tier.discount_percentage}%` : null;
 
             return (

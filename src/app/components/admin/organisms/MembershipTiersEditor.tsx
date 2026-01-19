@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
+import { getAuthToken } from '/utils/auth';
 import { useMembershipTiers, MembershipTier } from '../../../hooks/useMembershipTiers';
 import { MembershipCard } from '../../molecules/MembershipCard';
 import { TIER_VISUALS } from '../../../lib/membership-visuals';
@@ -59,12 +60,19 @@ export function MembershipTiersEditor() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const token = getAuthToken();
+      
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/memberships/tiers/config`,
         {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${publicAnonKey}`,
+            'X-Session-Token': token,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ tiers }),
@@ -114,6 +122,7 @@ export function MembershipTiersEditor() {
                   display_name: 'New Tier',
                   price: 99,
                   duration_months: 12,
+                  billing_cycle: 'year',
                   discount_percentage: 0,
                   benefits: ['Access to features'],
                   color: 'text-gray-400'
@@ -194,8 +203,8 @@ export function MembershipTiersEditor() {
                   <div className="space-y-2">
                     <Label>Billing Cycle</Label>
                     <Select
-                      value={(selectedTier as any).billing_cycle || 'year'}
-                      onValueChange={(value) => handleTierChange('billing_cycle' as any, value)}
+                      value={selectedTier.billing_cycle || 'year'}
+                      onValueChange={(value) => handleTierChange('billing_cycle', value)}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select cycle" />
@@ -221,8 +230,8 @@ export function MembershipTiersEditor() {
                   <input
                     type="checkbox"
                     id="is_popular"
-                    checked={(selectedTier as any).is_popular || false}
-                    onChange={(e) => handleTierChange('is_popular' as any, e.target.checked)}
+                    checked={selectedTier.is_popular || false}
+                    onChange={(e) => handleTierChange('is_popular', e.target.checked)}
                     className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
                   />
                   <Label htmlFor="is_popular" className="cursor-pointer">Recommended (Most Popular)</Label>
@@ -267,7 +276,7 @@ export function MembershipTiersEditor() {
             <div className="transform scale-90 origin-top">
               <MembershipCard 
                 tier={selectedTier} 
-                visual={selectedVisual ? { ...selectedVisual, popular: (selectedTier as any).is_popular || false } : selectedVisual!}
+                visual={selectedVisual ? { ...selectedVisual, popular: selectedTier.is_popular || false } : selectedVisual!}
                 saveText={selectedTier.discount_percentage > 0 ? `Save ${selectedTier.discount_percentage}%` : null}
                 previewMode={true}
               />

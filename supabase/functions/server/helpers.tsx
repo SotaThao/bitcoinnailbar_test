@@ -165,30 +165,44 @@ export const verifyJWT = async (token: string): Promise<any> => {
     // 1. Try custom JWT verification first (Custom Auth)
     const { payload } = await jose.jwtVerify(token, JWT_SECRET);
     return payload;
-  } catch (customError) {
+  } catch (customError: any) {
     // 2. If custom verification fails, try Supabase Auth verification
+    // But skip Supabase verification if the error is a signature verification error
+    // and the token looks like it could be an anon key (very long, no typical JWT structure)
+    const isSignatureError = customError.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED' || 
+                             customError.code === 'ERR_JWT_INVALID';
+    
+    // Count dots in token - JWT should have exactly 2 dots, anon keys may have different structure
+    const dotCount = (token.match(/\./g) || []).length;
+    const isLikelyAnonKey = dotCount !== 2 || token.length > 500;
+
+    // If it's a signature error and looks like an anon key, don't bother with Supabase verification
+    if (isSignatureError && isLikelyAnonKey) {
+      return null;
+    }
+
     try {
       const { data: { user }, error: sbError } = await supabase.auth.getUser(token);
       
       if (sbError || !user) {
-        // If both fail, log the first error (usually more relevant if we expected custom auth)
-        // But if signature failed, it might be Supabase token, so checking user is the right fallback.
-        console.error('❌ [JWT] Verification failed (Custom & Supabase):', customError);
+        // Only log if it's not a signature verification error (which is expected)
+        if (!isSignatureError) {
+          console.warn('⚠️ [JWT] Verification failed:', customError.message);
+        }
         return null;
       }
       
       // Map Supabase User to our internal User/Payload format
-      // Supabase users might not have all the custom fields we expect, so provide defaults.
       return {
         sub: user.id,
         email: user.email,
-        role: user.user_metadata?.role || 'staff', // Fallback role
+        role: user.user_metadata?.role || 'staff',
         full_name: user.user_metadata?.full_name || user.email,
         permissions: user.user_metadata?.permissions || {},
         is_supabase_user: true
       };
-    } catch (error) {
-      console.error('❌ [JWT] Supabase verification exception:', error);
+    } catch (error: any) {
+      // Don't log Supabase verification errors - they're expected for custom JWT tokens
       return null;
     }
   }
