@@ -1336,6 +1336,45 @@ app.post("/make-server-84f9c112/appointments", async (c) => {
   }
 });
 
+// Get All Appointments (for Admin)
+app.get("/make-server-84f9c112/appointments", async (c) => {
+  try {
+    const appointments = await kv.getByPrefix("appointment:");
+    
+    // Sort by creation time (newest first)
+    const sorted = appointments.sort((a: any, b: any) => {
+      const timeA = new Date(a.createdAt || a.appointmentTime).getTime();
+      const timeB = new Date(b.createdAt || b.appointmentTime).getTime();
+      return timeB - timeA;
+    });
+    
+    console.log(`📋 [GET_APPOINTMENTS] Returning ${sorted.length} appointments`);
+    return c.json({ success: true, data: sorted });
+  } catch (error: any) {
+    console.error("❌ [GET_APPOINTMENTS] Error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Get Single Appointment by ID
+app.get("/make-server-84f9c112/appointments/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const appointment = await kv.get(id);
+    
+    if (!appointment) {
+      console.warn(`⚠️ [GET_APPOINTMENT] Not found: ${id}`);
+      return c.json({ success: false, error: "Appointment not found" }, 404);
+    }
+    
+    console.log(`✅ [GET_APPOINTMENT] Found: ${id}`);
+    return c.json({ success: true, data: appointment });
+  } catch (error: any) {
+    console.error("❌ [GET_APPOINTMENT] Error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // Update Appointment
 app.put("/make-server-84f9c112/appointments/:id", async (c) => {
   const id = c.req.param("id");

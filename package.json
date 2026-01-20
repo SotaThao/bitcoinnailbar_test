@@ -5,7 +5,17 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "dev:staging": "vite --mode staging",
+    "build:staging": "vite build --mode staging",
+    "build:production": "vite build --mode production",
+    "supabase:link": "supabase link",
+    "supabase:status": "supabase status",
+    "supabase:branch:list": "supabase branches list",
+    "supabase:branch:staging": "supabase branches switch staging",
+    "supabase:branch:main": "supabase branches switch main",
+    "deploy:staging": "supabase functions deploy --project-ref $(supabase branches get staging --json | jq -r '.project_ref')",
+    "deploy:production": "supabase functions deploy"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

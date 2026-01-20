@@ -44,3 +44,22 @@ Bước 5: Triển khai Trang (Assembly)
 Lắp ghép các UI Components đã tạo ở Bước 3 vào các trang.
 
 Khi cần một tính năng mới (ví dụ: Modal), phải kiểm tra xem có thể tạo thành một component dùng chung không.
+
+Some of the base components you are using may have styling(eg. gap/typography) baked in as defaults.
+So make sure you explicitly set any styling information from the guidelines in the generated react to override the defaults.
+
+3. Documentation Standards
+Tất cả file documentation (.md) PHẢI được đặt trong folder /docs/.
+
+KHÔNG tạo file .md ở root directory (ngoại trừ README.md và file system).
+
+Khi tạo documentation mới:
+- Đặt trong /docs/ hoặc subfolder phù hợp như /docs/03-guides/
+- Sử dụng cấu trúc folder có sẵn: 01-architecture, 02-api, 03-guides, 04-changelogs, 05-references
+- Tên file viết chữ hoa, dấu gạch dưới thay khoảng trắng: FEATURE_NAME.md
+
+Ví dụ:
+✅ /docs/03-guides/STAGING_SETUP.md
+✅ /docs/04-changelogs/NEW_FEATURE.md
+❌ /STAGING_SETUP.md (sai - không được ở root)
+❌ /docs/staging-setup.md (sai - chữ thường)
