@@ -361,6 +361,7 @@ async function createAppointment(data: any) {
       const displayServices = Array.isArray(appointment.serviceNames) ? appointment.serviceNames.join(", ") : 'Selected services';
       
       // QR Generation
+      console.log("🎫 [CREATE_APPT] Generating QR code for appointment:", appointmentId);
       const qrData = JSON.stringify({
         id: appointmentId,
         phone: customerPhone,
@@ -372,10 +373,12 @@ async function createAppointment(data: any) {
         width: 300, margin: 2,
         color: { dark: '#000000', light: '#FFFFFF' }
       });
+      console.log("✅ [CREATE_APPT] QR code generated successfully");
       
       // Cloudinary Upload
       const cloudinaryUrl = Deno.env.get("CLOUDINARY_URL");
       if (cloudinaryUrl) {
+        console.log("☁️ [CREATE_APPT] Attempting Cloudinary upload...");
         const matches = cloudinaryUrl.match(/cloudinary:\/\/([^:]+):([^@]+)@(.+)/);
         if (matches) {
           const [, apiKey, apiSecret, cloudName] = matches;
@@ -410,8 +413,16 @@ async function createAppointment(data: any) {
           if (uploadResponse.ok) {
             const uploadResult = await uploadResponse.json();
             qrCodeUrl = uploadResult.secure_url;
+            console.log("✅ [CREATE_APPT] QR uploaded to Cloudinary:", qrCodeUrl);
+          } else {
+            const errorText = await uploadResponse.text();
+            console.error("❌ [CREATE_APPT] Cloudinary upload failed:", uploadResponse.status, errorText);
           }
+        } else {
+          console.warn("⚠️ [CREATE_APPT] Could not parse CLOUDINARY_URL");
         }
+      } else {
+        console.warn("⚠️ [CREATE_APPT] CLOUDINARY_URL not configured, QR will fallback to client-side generation");
       }
 
       // Email Template
@@ -2566,6 +2577,8 @@ app.post("/make-server-84f9c112/chat", async (c) => {
         });
         
         const finalData = await finalResponse.json();
+        
+        console.log("🎫 [CHATBOT] Booking completed, returning ticketData with qrCodeUrl:", bookingResult.qrCodeUrl ? "✅ Has URL" : "⚠️ No URL (will use fallback)");
         
         // Return with ticket data for frontend to display
         return c.json({ 

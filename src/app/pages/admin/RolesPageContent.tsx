@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/app/components/ui/button';
+import { SearchInput } from '@/app/components/ui/search-input';
 import { Plus, Pencil, Trash2, Shield, X, CheckSquare, Square, Search } from 'lucide-react';
 import { getAuthToken, getCurrentUser } from '/utils/auth';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
@@ -263,22 +264,11 @@ export default function RolesPageContent() {
       {/* Header with Create Button */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
+          <SearchInput
             placeholder="Search roles by name or description..."
             value={rolesSearchQuery}
             onChange={(e) => setRolesSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
           />
-          {rolesSearchQuery && (
-            <button
-              onClick={() => setRolesSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          )}
         </div>
         <Button
           onClick={() => {

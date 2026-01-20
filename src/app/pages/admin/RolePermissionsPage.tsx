@@ -51,12 +51,6 @@ export default function RolePermissionsPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-serif font-bold text-gray-900">Role & Permissions Management</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage roles and their associated permissions</p>
-        </div>
-
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-1 inline-flex gap-1">
           <button

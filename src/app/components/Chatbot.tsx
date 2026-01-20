@@ -168,6 +168,12 @@ export function Chatbot() {
       if (data.success) {
         // Check if there's ticket data (booking confirmed)
         if (data.ticketData) {
+          console.log("🎫 [CHATBOT] Received ticketData from backend:", {
+            hasQrCodeUrl: !!data.ticketData.qrCodeUrl,
+            qrCodeUrl: data.ticketData.qrCodeUrl?.substring(0, 50) + "...",
+            customerName: data.ticketData.customerName,
+            appointmentTime: data.ticketData.appointmentTime
+          });
           setMessages(prev => [...prev, { 
             role: 'assistant', 
             content: data.message,
@@ -241,7 +247,16 @@ export function Chatbot() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#151923]">
-              {messages.map((msg, index) => (
+              {messages.map((msg, index) => {
+                // Debug log for ticket messages
+                if (msg.isTicket) {
+                  console.log(`🎫 [CHATBOT RENDER] Message ${index} is ticket:`, {
+                    hasTicketData: !!msg.ticketData,
+                    ticketData: msg.ticketData
+                  });
+                }
+                
+                return (
                 <div
                   key={index}
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -363,7 +378,8 @@ export function Chatbot() {
                     </div>
                   )}
                 </div>
-              ))}
+              );
+              })}
               {isLoading && (
                 <div className="flex justify-start">
                   <div className="bg-[#2a3040] rounded-2xl rounded-tl-none px-4 py-3 border border-gray-700 flex items-center gap-1">

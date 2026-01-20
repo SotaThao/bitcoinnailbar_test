@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/app/components/ui/button';
+import { SearchInput } from '@/app/components/ui/search-input';
 import { CustomSelect } from '@/app/components/ui/custom-select';
-import { Plus, Pencil, Trash2, UserCheck, UserX, Mail, Phone, Shield, Eye, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, UserCheck, UserX, Mail, Phone, Shield, Eye, EyeOff, Search } from 'lucide-react';
 import { getAuthToken, getCurrentUser } from '/utils/auth';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { OwnerOnlyAccess } from '@/app/components/OwnerOnlyAccess';
@@ -74,6 +75,7 @@ export default function UsersPage() {
   });
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (isOwner) {
@@ -303,6 +305,15 @@ export default function UsersPage() {
     }
   };
 
+  // Filter users based on search query
+  const filteredUsers = searchQuery
+    ? users.filter(user => 
+        user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.phone?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : users;
+
   // If not owner, show access denied
   if (!isOwner) {
     return (
@@ -325,15 +336,18 @@ export default function UsersPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-serif font-bold text-gray-900">User Management</h1>
-            <p className="text-sm text-gray-500 mt-1">Manage staff and admin accounts</p>
+        {/* Header with Search */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <SearchInput
+              placeholder="Search users by name, email, or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
           <Button
             onClick={() => setShowCreateModal(true)}
-            className="bg-[#F97316] hover:bg-[#EA580C] text-white gap-2"
+            className="bg-[#F97316] hover:bg-[#EA580C] text-white gap-2 flex-shrink-0"
           >
             <Plus className="h-4 w-4" />
             Add User
@@ -374,7 +388,7 @@ export default function UsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
