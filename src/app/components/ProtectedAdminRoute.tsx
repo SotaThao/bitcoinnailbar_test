@@ -6,9 +6,10 @@ import { getSession, clearSession } from '/utils/auth';
 
 interface ProtectedAdminRouteProps {
   children: React.ReactNode;
+  requireOwner?: boolean; // Keep for backward compatibility but won't use
 }
 
-export function ProtectedAdminRoute({ children }: ProtectedAdminRouteProps) {
+export function ProtectedAdminRoute({ children, requireOwner }: ProtectedAdminRouteProps) {
   const [loading, setLoading] = useState(true);
   const [hasOwner, setHasOwner] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -129,5 +130,6 @@ export function ProtectedAdminRoute({ children }: ProtectedAdminRouteProps) {
     return <Navigate to="/admin/login" replace />;
   }
 
+  // No longer checking requireOwner here - let individual pages handle it
   return <>{children}</>;
 }

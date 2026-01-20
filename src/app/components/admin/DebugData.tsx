@@ -1,10 +1,7 @@
-import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import AdminLayout from '../AdminLayout';
 import { Loader2, AlertTriangle, Database, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 
 export default function DebugData() {
   const [loading, setLoading] = useState(true);

@@ -1,15 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import PublicLayout from '../PublicLayout';
-import { useLanguage } from '../../context/LanguageContext';
-import { Star, ThumbsUp, User, Quote, MessageCircle } from 'lucide-react';
+import { SEOHead } from '../shared/SEOHead';
+import { Star, ChevronDown, ThumbsUp, Search } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 import { format } from 'date-fns';
-import { motion } from 'motion/react';
 
 export default function ReviewsPage() {
-  const { t } = useLanguage();
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,6 +47,10 @@ export default function ReviewsPage() {
 
   return (
     <PublicLayout>
+      <SEOHead
+        title="Bitcoin Nail Bar Reviews"
+        description="See what our clients are saying about the Bitcoin Nail Bar experience."
+      />
       <div className="pt-24 pb-20 bg-gray-50 min-h-screen">
         <div className="container mx-auto px-4">
              <div className="text-center mb-16 space-y-4">
@@ -56,7 +59,7 @@ export default function ReviewsPage() {
                     Testimonials
                 </div>
                 <h1 className="text-4xl md:text-5xl font-serif font-bold text-[#0B0F19]">
-                    {t('nav.reviews')}
+                    Reviews
                 </h1>
                 <p className="text-gray-600 max-w-2xl mx-auto text-lg">
                     See what our clients are saying about the Bitcoin Nail Bar experience.

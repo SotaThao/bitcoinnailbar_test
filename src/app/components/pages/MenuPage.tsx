@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, forwardRef } from 'react';
+import { useState, useRef, useEffect, forwardRef } from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import { ChevronLeft, ChevronRight, Loader2, ImageOff } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 import PublicLayout from '../PublicLayout';
 import { useLocation, Link } from 'react-router-dom';
+import logger from '@utils/logger';
 
 interface MenuImage {
   id: string;
@@ -35,12 +36,16 @@ export default function MenuPage() {
   const [currentPage, setCurrentPage] = useState(0);
   const [dimensions, setDimensions] = useState({ width: 400, height: 600 });
   const flipBookRef = useRef<any>(null);
+  const [flipKey, setFlipKey] = useState(0); // Key for mobile force remount
+  const [isTransitioning, setIsTransitioning] = useState(false); // Smooth transition state
   
   // Touch handling for mobile - prevent accidental flips
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [swipeDistance, setSwipeDistance] = useState(80);
-
+  const [buttonsVisible, setButtonsVisible] = useState(true);
+  const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
   useEffect(() => {
     // Detect mobile device
     const checkMobile = () => {
@@ -50,6 +55,45 @@ export default function MenuPage() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Auto-hide buttons after 3s on mobile
+  useEffect(() => {
+    if (!isMobile) {
+      setButtonsVisible(true);
+      return;
+    }
+
+    const startHideTimer = () => {
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+      }
+      
+      setButtonsVisible(true);
+      
+      hideTimerRef.current = setTimeout(() => {
+        setButtonsVisible(false);
+      }, 3000);
+    };
+
+    const handleUserInteraction = () => {
+      startHideTimer();
+    };
+
+    // Start timer on mount
+    startHideTimer();
+
+    // Reset timer on any interaction
+    window.addEventListener('touchstart', handleUserInteraction);
+    window.addEventListener('click', handleUserInteraction);
+
+    return () => {
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+      }
+      window.removeEventListener('touchstart', handleUserInteraction);
+      window.removeEventListener('click', handleUserInteraction);
+    };
+  }, [isMobile]);
 
   useEffect(() => {
     fetchImages();
@@ -153,11 +197,63 @@ export default function MenuPage() {
   };
 
   const nextPage = () => {
-    flipBookRef.current?.pageFlip()?.flipNext();
+    if (currentPage < totalPages - 1) {
+      const targetPage = currentPage + 1;
+      
+      try {
+        if (flipBookRef.current) {
+          const pageFlip = flipBookRef.current.pageFlip();
+          if (pageFlip && typeof pageFlip.flipNext === 'function') {
+            pageFlip.flipNext();
+          } else if (pageFlip && typeof pageFlip.flip === 'function') {
+            pageFlip.flip(targetPage);
+          }
+        }
+      } catch (error) {
+        console.error('Error flipping page:', error);
+      }
+      
+      setCurrentPage(targetPage);
+    }
   };
 
   const prevPage = () => {
-    flipBookRef.current?.pageFlip()?.flipPrev();
+    if (currentPage > 0 && !isTransitioning) {
+      const targetPage = currentPage - 1;
+      
+      if (isMobile) {
+        // Mobile: Smooth crossfade transition instead of jarring remount
+        setIsTransitioning(true);
+        
+        // Phase 1: Fade out (200ms)
+        setTimeout(() => {
+          // Phase 2: Change page instantly while faded
+          setCurrentPage(targetPage);
+          setFlipKey(prev => prev + 1);
+          
+          // Phase 3: Fade back in (200ms)
+          setTimeout(() => {
+            setIsTransitioning(false);
+          }, 50);
+        }, 200);
+      } else {
+        // Desktop: Use smooth flipPrev API
+        try {
+          if (flipBookRef.current) {
+            const pageFlip = flipBookRef.current.pageFlip();
+            if (pageFlip && typeof pageFlip.flipPrev === 'function') {
+              pageFlip.flipPrev();
+            } else if (pageFlip && typeof pageFlip.flip === 'function') {
+              pageFlip.flip(targetPage);
+            }
+          }
+        } catch (error) {
+          console.error('Error flipping page backward:', error);
+        }
+        
+        setCurrentPage(targetPage);
+      }
+    }
   };
 
   if (loading) {
@@ -196,23 +292,35 @@ export default function MenuPage() {
 
   return (
     <PublicLayout>
-      <div className="relative w-full max-w-6xl mx-auto">
-        <div className="flex items-center justify-center">
+      <div className="relative w-full max-w-6xl mx-auto px-4 md:px-0">
+        <div className="flex items-center justify-center relative">
           {/* Left Arrow */}
           <button
             onClick={prevPage}
             disabled={currentPage === 0}
-            className="absolute left-0 z-10 p-3 md:p-4 rounded-full backdrop-blur-md border border-white/10 text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:border-[#FF9800]/50 hover:bg-black/60"
+            className="absolute left-2 md:left-0 z-30 p-4 md:p-4 rounded-full backdrop-blur-md border border-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:border-[#FF9800]/50 hover:bg-black/60 active:scale-95"
             style={{
               background: 'rgba(0, 0, 0, 0.4)',
               boxShadow: '0 0 20px rgba(255, 152, 0, 0.3)',
+              touchAction: 'manipulation',
+              pointerEvents: 'auto',
+              opacity: isMobile ? (buttonsVisible ? 1 : 0) : 1,
+              transition: 'opacity 0.5s ease-in-out, border-color 0.3s, background-color 0.3s, transform 0.1s',
             }}
           >
             <ChevronLeft className="w-6 h-6 md:w-8 md:h-8" />
           </button>
 
           {/* FlipBook */}
-          <div className="shadow-2xl" style={{ perspective: '1500px' }}>
+          <div 
+            className="shadow-2xl" 
+            style={{ 
+              perspective: '1500px',
+              opacity: isTransitioning ? 0 : 1, // Crossfade: fade to 0 during transition
+              transform: isTransitioning ? 'scale(0.98)' : 'scale(1)', // Subtle scale for depth
+              transition: 'opacity 200ms ease-in-out, transform 200ms ease-in-out',
+            }}
+          >
             <HTMLFlipBook
               ref={flipBookRef}
               width={dimensions.width}
@@ -227,7 +335,7 @@ export default function MenuPage() {
               onFlip={onFlip}
               className="flipbook-container"
               style={{}}
-              startPage={0}
+              startPage={currentPage} // Use currentPage as startPage
               drawShadow={true}
               flippingTime={800}
               usePortrait={true}
@@ -239,6 +347,7 @@ export default function MenuPage() {
               clickEventForward={true}
               swipeDistance={isMobile ? swipeDistance : 30}
               useMouseEvents={!isMobile}
+              key={isMobile ? flipKey : undefined} // Only use key remount on mobile
             >
               {/* Menu Images Only */}
               {images.map((image) => (
@@ -251,10 +360,14 @@ export default function MenuPage() {
           <button
             onClick={nextPage}
             disabled={currentPage >= totalPages - 1}
-            className="absolute right-0 z-10 p-3 md:p-4 rounded-full backdrop-blur-md border border-white/10 text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:border-[#FF9800]/50 hover:bg-black/60"
+            className="absolute right-2 md:right-0 z-30 p-4 md:p-4 rounded-full backdrop-blur-md border border-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:border-[#FF9800]/50 hover:bg-black/60 active:scale-95"
             style={{
               background: 'rgba(0, 0, 0, 0.4)',
               boxShadow: '0 0 20px rgba(255, 152, 0, 0.3)',
+              touchAction: 'manipulation',
+              pointerEvents: 'auto',
+              opacity: isMobile ? (buttonsVisible ? 1 : 0) : 1,
+              transition: 'opacity 0.5s ease-in-out, border-color 0.3s, background-color 0.3s, transform 0.1s',
             }}
           >
             <ChevronRight className="w-6 h-6 md:w-8 md:h-8" />

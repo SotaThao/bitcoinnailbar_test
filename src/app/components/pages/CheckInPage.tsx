@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Check, X, Calendar, Clock, User, Scissors } from 'lucide-react';

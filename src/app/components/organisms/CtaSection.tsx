@@ -38,7 +38,7 @@ export function CtaSection() {
               {t('ready_cta.btn_book')}
             </PrimaryButton>
           </Link>
-          <Link to="/services">
+          <Link to="/menu">
             <SecondaryButton size="lg" variant="outline">
               <Sparkles className="h-5 w-5" />
               {t('ready_cta.btn_explore')}

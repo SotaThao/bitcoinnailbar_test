@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
 import { Button } from '@/app/components/ui/button';
 import { Card } from '@/app/components/ui/card';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';

@@ -254,7 +254,7 @@ export function MembershipTiersEditor() {
         </Card>
 
         <div className="flex justify-end gap-2">
-          <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+          <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto bg-orange-500 text-white hover:bg-orange-600">
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...

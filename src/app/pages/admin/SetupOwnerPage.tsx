@@ -7,6 +7,24 @@ import { Eye, EyeOff, ShieldCheck, AlertCircle } from 'lucide-react';
 import bitcoinLogo from 'figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 
+// Helper function to format phone number as (XXX) XXX-XXXX
+const formatPhoneNumber = (value: string): string => {
+  // Remove all non-numeric characters
+  const phoneNumber = value.replace(/\D/g, '');
+  
+  // Format based on length
+  if (phoneNumber.length <= 3) {
+    return phoneNumber;
+  } else if (phoneNumber.length <= 6) {
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+  } else if (phoneNumber.length <= 10) {
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6)}`;
+  } else {
+    // Limit to 10 digits
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+  }
+};
+
 export default function SetupOwnerPage() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -147,7 +165,7 @@ export default function SetupOwnerPage() {
                 type="tel"
                 placeholder="(714) 555-0123"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })}
                 className="h-11"
                 disabled={loading}
               />

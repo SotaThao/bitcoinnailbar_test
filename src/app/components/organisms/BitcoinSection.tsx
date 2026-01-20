@@ -20,6 +20,14 @@ export function BitcoinSection() {
     }
   };
 
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent click from bubbling to video element
+    if (!videoRef.current) return;
+    
+    videoRef.current.play();
+    videoRef.current.muted = false;
+  };
+
   return (
     <section className="py-20 bg-black text-white overflow-hidden">
       <div className="container mx-auto px-4">
@@ -49,7 +57,7 @@ export function BitcoinSection() {
                   
                   {/* YouTube-style Play Button Overlay */}
                   {!isPlaying && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-opacity hover:bg-black/30 cursor-pointer" onClick={handleVideoClick}>
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-opacity hover:bg-black/30 cursor-pointer" onClick={handleOverlayClick}>
                       <div className="w-20 h-20 rounded-full bg-[#FF9800] flex items-center justify-center shadow-[0_0_30px_rgba(255,152,0,0.5)] transition-transform hover:scale-110">
                         <Play className="h-10 w-10 text-white fill-white ml-1" />
                       </div>

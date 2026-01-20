@@ -10,6 +10,7 @@ import { ServicesTable } from './organisms/ServicesTable';
 import { ServiceFormSheet } from './molecules/ServiceFormSheet';
 import { CategoryFormSheet } from './molecules/CategoryFormSheet';
 import MenuUploadContent from './MenuUploadContent';
+import { PillTabs, PillTabsContent, PillTabsList, PillTabsTrigger } from '../ui/pill-tabs';
 
 // Utilities and constants
 import { filterServices, flattenServiceData } from '../../lib/service-menu-utils';
@@ -241,35 +242,21 @@ export default function AdminServices() {
   return (
     <AdminLayout>
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {/* Main Tab Switcher */}
-        <div className="flex gap-2 border-b border-gray-200">
-          <button
-            onClick={() => setMainTab('services')}
-            className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors relative ${
-              mainTab === 'services'
-                ? 'text-[#FF9F1C] border-b-2 border-[#FF9F1C]'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Scissors className="w-4 h-4" />
-            Services List
-          </button>
-          <button
-            onClick={() => setMainTab('menu')}
-            className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors relative ${
-              mainTab === 'menu'
-                ? 'text-[#FF9F1C] border-b-2 border-[#FF9F1C]'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <ImageIcon className="w-4 h-4" />
-            Menu Upload
-          </button>
-        </div>
+        {/* Main Tab Switcher with PillTabs */}
+        <PillTabs value={mainTab} onValueChange={(value) => setMainTab(value as 'services' | 'menu')}>
+          <PillTabsList>
+            <PillTabsTrigger value="services" className="gap-2">
+              <Scissors className="h-4 w-4" />
+              Services List
+            </PillTabsTrigger>
+            <PillTabsTrigger value="menu" className="gap-2">
+              <ImageIcon className="h-4 w-4" />
+              Menu Upload
+            </PillTabsTrigger>
+          </PillTabsList>
 
-        {/* Tab Content */}
-        {mainTab === 'services' ? (
-          <>
+          {/* Services List Tab Content */}
+          <PillTabsContent value="services">
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               {/* Sidebar: Categories */}
               <div className="lg:col-span-1">
@@ -316,10 +303,13 @@ export default function AdminServices() {
                 />
               </div>
             </div>
-          </>
-        ) : (
-          <MenuUploadContent />
-        )}
+          </PillTabsContent>
+
+          {/* Menu Upload Tab Content */}
+          <PillTabsContent value="menu">
+            <MenuUploadContent />
+          </PillTabsContent>
+        </PillTabs>
 
         {/* Edit/Create Service Form Sheet */}
         <ServiceFormSheet

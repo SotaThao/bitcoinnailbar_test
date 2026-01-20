@@ -227,9 +227,20 @@ app.post('/make-server-84f9c112/users', requireAuth, async (c) => {
       return c.json({ success: false, error: 'Missing required fields: email, password, full_name, role' }, 400);
     }
 
-    // Validate role
-    if (!['admin', 'staff'].includes(role)) {
-      return c.json({ success: false, error: 'Role must be admin or staff (cannot create owner)' }, 400);
+    // Validate role - Allow custom roles
+    // Check if it's a built-in role or custom role exists
+    const builtInRoles = ['admin', 'staff'];
+    if (!builtInRoles.includes(role)) {
+      // Check if custom role exists
+      const roles = await kv.getByPrefix('role:');
+      const roleExists = roles.some((r: any) => r.name.toLowerCase() === role.toLowerCase());
+      
+      if (!roleExists) {
+        return c.json({ 
+          success: false, 
+          error: `Role '${role}' does not exist. Please use 'admin', 'staff', or create a custom role first.` 
+        }, 400);
+      }
     }
 
     // Check if email already exists
@@ -303,7 +314,7 @@ app.put('/make-server-84f9c112/users/:id', requireAuth, async (c) => {
     }
 
     const userId = c.req.param('id');
-    const { email, full_name, phone, role } = await c.req.json();
+    const { email, full_name, phone, role, password } = await c.req.json();
 
     // Get existing user
     const user = await kv.get(`user:${userId}`);
@@ -325,6 +336,13 @@ app.put('/make-server-84f9c112/users/:id', requireAuth, async (c) => {
       }
     }
 
+    // Hash new password if provided
+    let password_hash = user.password_hash;
+    if (password) {
+      password_hash = await hashPassword(password);
+      console.log(`🔐 [UPDATE USER] Password updated for: ${user.email}`);
+    }
+
     // Update user
     const updatedUser = {
       ...user,
@@ -332,6 +350,7 @@ app.put('/make-server-84f9c112/users/:id', requireAuth, async (c) => {
       full_name: full_name || user.full_name,
       phone: phone !== undefined ? phone : user.phone,
       role: role || user.role,
+      password_hash,
     };
 
     await kv.set(`user:${userId}`, updatedUser);

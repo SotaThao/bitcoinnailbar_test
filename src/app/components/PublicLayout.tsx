@@ -21,6 +21,8 @@ import { BottomNav } from './BottomNav';
 import { CryptoTicker } from './CryptoTicker';
 import { BrandLogo } from './BrandLogo';
 import { useLanguage } from '../context/LanguageContext';
+import { useLoadingState } from '../context/LoadingContext';
+import { useSequentialLoad } from '../hooks/useSequentialLoad';
 import { useState, useEffect } from 'react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 
@@ -49,12 +51,24 @@ const TikTokIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+// Helper function to ensure URLs have https:// prefix
+const ensureHttps = (url: string): string => {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `https://${url}`;
+};
+
 export default function PublicLayout({ children }: PublicLayoutProps) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { t } = useLanguage();
+  const { hasPromotionModal, modalRendered } = useLoadingState();
+  const { loadCryptoTicker, loadChatbot } = useSequentialLoad({ hasPromotionModal, modalRendered });
+  
   const [socialMedia, setSocialMedia] = useState({
     facebook: '',
     instagram: '',
@@ -135,7 +149,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
 
   const navLinks = [
     { path: '/', label: t('nav.home') },
-    { path: '/services', label: t('nav.services'), dropdown: true },
+    { path: '/menu', label: t('nav.services'), dropdown: true }, // Changed from /services to /menu
     { path: '/promotions', label: t('nav.promotions') || 'Promotions' },
     { path: '/membership', label: t('nav.membership') || 'Membership' },
     { path: '/careers', label: t('nav.careers') || 'Careers' },
@@ -159,7 +173,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
       <header 
         className="fixed top-0 z-50 w-full border-b border-white/5 bg-[#0B0F19]/90 backdrop-blur supports-[backdrop-filter]:bg-[#0B0F19]/60 transition-all duration-500 translate-y-0 opacity-100"
       >
-        <CryptoTicker />
+        {loadCryptoTicker && <CryptoTicker />}
         <div className="container mx-auto px-4">
           <div className="flex h-20 items-center justify-between">
             {/* Logo */}
@@ -256,55 +270,22 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               <nav className="flex flex-col gap-2 w-full">
                 {navLinks.map((link, index) => (
                   link.dropdown ? (
-                    // Services with Dropdown
-                    <div key={index} className="w-full">
+                    // Services - Direct link to first menu page on mobile
+                    <Link
+                      key={index}
+                      to="/menu?page=1"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="w-full"
+                    >
                       <Button
                         variant="ghost"
-                        onClick={() => setMobileServicesOpen(!mobileServicesOpen)}
-                        className={`w-full justify-between text-gray-300 hover:text-[#FF9800] hover:bg-white/5 ${
+                        className={`w-full justify-start text-gray-300 hover:text-[#FF9800] hover:bg-white/5 ${
                           location.pathname === link.path ? 'text-[#FF9800] bg-white/5' : ''
                         }`}
                       >
                         {link.label}
-                        <ChevronDown className={`h-4 w-4 transition-transform ${mobileServicesOpen ? 'rotate-180' : ''}`} />
                       </Button>
-                      
-                      {/* Submenu */}
-                      {mobileServicesOpen && (
-                        <div className="ml-4 mt-2 flex flex-col gap-1">
-                          {/* Service List Link - Hidden */}
-                          {/* <Link
-                            to="/services"
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="w-full"
-                          >
-                            <Button
-                              variant="ghost"
-                              className="w-full justify-start text-sm text-gray-400 hover:text-[#FF9800] hover:bg-white/5"
-                            >
-                              Service List
-                            </Button>
-                          </Link> */}
-                          
-                          {/* Menu Items */}
-                          {menuItems.map((item) => (
-                            <Link
-                              key={item.id}
-                              to={`/menu?page=${item.order}`}
-                              onClick={() => setMobileMenuOpen(false)}
-                              className="w-full"
-                            >
-                              <Button
-                                variant="ghost"
-                                className="w-full justify-start text-sm text-gray-400 hover:text-[#FF9800] hover:bg-white/5"
-                              >
-                                {item.name}
-                              </Button>
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    </Link>
                   ) : (
                     // Regular Links
                     <Link
@@ -370,17 +351,17 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               {/* Social Media */}
               <div className="flex items-center gap-4">
                 {socialMedia.facebook && (
-                  <a href={socialMedia.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-[#1A1F2E] border border-white/5 flex items-center justify-center text-gray-400 hover:bg-[#FF9800] hover:text-[#0B0F19] hover:border-[#FF9800] transition-all duration-300">
+                  <a href={ensureHttps(socialMedia.facebook)} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-[#1A1F2E] border border-white/5 flex items-center justify-center text-gray-400 hover:bg-[#FF9800] hover:text-[#0B0F19] hover:border-[#FF9800] transition-all duration-300">
                     <Facebook className="h-4 w-4" />
                   </a>
                 )}
                 {socialMedia.instagram && (
-                  <a href={socialMedia.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-[#1A1F2E] border border-white/5 flex items-center justify-center text-gray-400 hover:bg-[#FF9800] hover:text-[#0B0F19] hover:border-[#FF9800] transition-all duration-300">
+                  <a href={ensureHttps(socialMedia.instagram)} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-[#1A1F2E] border border-white/5 flex items-center justify-center text-gray-400 hover:bg-[#FF9800] hover:text-[#0B0F19] hover:border-[#FF9800] transition-all duration-300">
                     <Instagram className="h-4 w-4" />
                   </a>
                 )}
                 {socialMedia.tiktok && (
-                  <a href={socialMedia.tiktok} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-[#1A1F2E] border border-white/5 flex items-center justify-center text-gray-400 hover:bg-[#FF9800] hover:text-[#0B0F19] hover:border-[#FF9800] transition-all duration-300">
+                  <a href={ensureHttps(socialMedia.tiktok)} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-[#1A1F2E] border border-white/5 flex items-center justify-center text-gray-400 hover:bg-[#FF9800] hover:text-[#0B0F19] hover:border-[#FF9800] transition-all duration-300">
                     <TikTokIcon className="h-4 w-4" />
                   </a>
                 )}
@@ -539,7 +520,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           </div>
         </div>
       </footer>
-      <Chatbot />
+      {loadChatbot && <Chatbot />}
       <BottomNav />
     </div>
   );

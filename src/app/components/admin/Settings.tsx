@@ -1,15 +1,18 @@
-import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { LoadingSpinner } from './atoms/LoadingSpinner';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 import { apiClient } from '../../lib/api-client';
 import AdminLayout from '../AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
-import { Facebook, Instagram, Save, Loader2, Bug, List, ImageIcon, ExternalLink } from 'lucide-react';
+import { Facebook, Instagram, Save, Loader2, Bug, List, ImageIcon, ExternalLink, MessageCircle } from 'lucide-react';
+import { getCurrentUser } from '/utils/auth';
+import { OwnerOnlyAccess } from '@/app/components/OwnerOnlyAccess';
+import { ChatbotSettings } from './organisms/ChatbotSettings';
 
 const TikTokIcon = ({ className }: { className?: string }) => (
   <svg 
@@ -27,6 +30,10 @@ const TikTokIcon = ({ className }: { className?: string }) => (
 );
 
 export default function AdminSettings() {
+  // Check if current user is owner first
+  const currentUser = getCurrentUser();
+  const isOwner = currentUser?.role === 'owner';
+
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -37,10 +44,15 @@ export default function AdminSettings() {
   });
   const [homepageMenuMode, setHomepageMenuMode] = useState<'services-list' | 'menu-images'>('services-list');
   const [savingMenuMode, setSavingMenuMode] = useState(false);
+  const [chatbotAvatar, setChatbotAvatar] = useState<string>('');
+  const [chatbotAvatarPath, setChatbotAvatarPath] = useState<string>('');
+  const [savingChatbot, setSavingChatbot] = useState(false);
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    if (isOwner) {
+      fetchSettings();
+    }
+  }, [isOwner]);
 
   const fetchSettings = async () => {
     try {
@@ -61,6 +73,19 @@ export default function AdminSettings() {
       const modeData = await modeResponse.json();
       if (modeData.success) {
         setHomepageMenuMode(modeData.data.mode);
+      }
+
+      // Fetch chatbot avatar
+      const avatarResponse = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/settings/chatbot-avatar`,
+        {
+          headers: { Authorization: `Bearer ${publicAnonKey}` },
+        }
+      );
+      const avatarData = await avatarResponse.json();
+      if (avatarData.success) {
+        setChatbotAvatar(avatarData.data.avatar);
+        // avatarPath might not exist in old data, so it's optional
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
@@ -117,11 +142,53 @@ export default function AdminSettings() {
     }
   };
 
+  const handleSaveChatbot = async () => {
+    setSavingChatbot(true);
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/settings/chatbot-avatar`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${publicAnonKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ avatarPath: chatbotAvatarPath }),
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success('✅ Chatbot avatar updated!', {
+          description: 'The new avatar will appear in the chatbot widget.',
+        });
+      } else {
+        throw new Error(data.error || 'Failed to save');
+      }
+    } catch (error: any) {
+      console.error('Failed to save chatbot avatar:', error);
+      toast.error(`❌ Failed to save: ${error.message}`);
+    } finally {
+      setSavingChatbot(false);
+    }
+  };
+
+  // If not owner, show access denied in AdminLayout
+  if (!isOwner) {
+    return (
+      <AdminLayout>
+        <OwnerOnlyAccess />
+      </AdminLayout>
+    );
+  }
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <LoadingSpinner />
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <LoadingSpinner />
+        </div>
+      </AdminLayout>
     );
   }
 
@@ -367,6 +434,50 @@ export default function AdminSettings() {
               <Bug className="h-4 w-4 mr-2" />
               Database Debug Panel
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Chatbot Settings Section */}
+        <Card className="bg-white border-gray-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-gray-900">
+              <span className="w-2 h-2 rounded-full bg-green-500" />
+              Chatbot Settings
+            </CardTitle>
+            <CardDescription className="text-gray-500">
+              Configure the chatbot for customer interactions
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ChatbotSettings 
+              avatarUrl={chatbotAvatar}
+              avatarPath={chatbotAvatarPath}
+              onAvatarUpdate={(url, path) => {
+                setChatbotAvatar(url);
+                setChatbotAvatarPath(path);
+              }}
+            />
+            
+            {/* Save Button */}
+            <div className="pt-4 border-t border-gray-100 flex justify-end">
+              <Button
+                onClick={handleSaveChatbot}
+                disabled={savingChatbot}
+                className="bg-primary hover:bg-primary/90 text-white font-medium shadow-sm"
+              >
+                {savingChatbot ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Button } from '../ui/button';
+import PublicLayout from '../PublicLayout';
+import { SEOHead } from '../shared/SEOHead';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Card } from '../ui/card';
-import { Check, ChevronRight, Loader2 } from 'lucide-react';
+import { PillTabs, PillTabsContent, PillTabsList, PillTabsTrigger } from '../ui/pill-tabs';
 import { cn } from '../ui/utils';
 import { useLanguage } from '../../context/LanguageContext';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 import { useServiceCategories } from '../../hooks/useServiceCategories';
 
 export function ServiceMenu() {

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Instagram, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Instagram, Facebook, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { useLanguage } from '../../context/LanguageContext';
+import { projectId, publicAnonKey } from '/utils/supabase/info';
 import img1 from 'figma:asset/490a930e6c326d1add62e3f6ba528d76450ac949.png';
 import img2 from 'figma:asset/3976be47e4190d18a738dedbeb3ac96221c6c101.png';
 import img3 from 'figma:asset/421e44d36e14dee66a0a1ff99a2b4e3dc34150ad.png';
@@ -16,9 +17,48 @@ const galleryImages = [
   img1, img2, img3, img4, img5, img6, img7, img8
 ];
 
+// Helper function to ensure URLs have https:// prefix
+const ensureHttps = (url: string): string => {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `https://${url}`;
+};
+
 export function GallerySection() {
   const { t } = useLanguage();
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [socialMedia, setSocialMedia] = useState({
+    facebook: '',
+    instagram: '',
+  });
+
+  // Fetch social media links
+  useEffect(() => {
+    const fetchSocialMedia = async () => {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/settings/social-media`,
+          {
+            headers: { Authorization: `Bearer ${publicAnonKey}` },
+          }
+        );
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          setSocialMedia({
+            facebook: result.data.facebook || '',
+            instagram: result.data.instagram || '',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch social media links:', error);
+      }
+    };
+
+    fetchSocialMedia();
+  }, []);
 
   const showNext = useCallback((e?: any) => {
     e?.stopPropagation();
@@ -86,11 +126,30 @@ export function GallerySection() {
              </motion.div>
           </div>
           
-          {/* Instagram Bar */}
-          <a href="#" className="block bg-[#0f172a] border-t border-white/10 py-5 hover:bg-[#FF9800] hover:text-black transition-colors group">
+          {/* Social Media CTA Bar */}
+          <a 
+            href={socialMedia.instagram ? ensureHttps(socialMedia.instagram) : (socialMedia.facebook ? ensureHttps(socialMedia.facebook) : '#')} 
+            target={socialMedia.instagram || socialMedia.facebook ? '_blank' : '_self'}
+            rel={socialMedia.instagram || socialMedia.facebook ? 'noopener noreferrer' : undefined}
+            className="block bg-[#0f172a] border-t border-white/10 py-5 hover:bg-[#FF9800] hover:text-black transition-colors group"
+          >
              <div className="flex items-center justify-center gap-3 text-white group-hover:text-black text-xs font-bold tracking-[0.2em] uppercase">
-                <Instagram className="h-4 w-4" />
-                {t('ready_cta.instagram')}
+                {socialMedia.instagram ? (
+                  <>
+                    <Instagram className="h-4 w-4" />
+                    Follow us on Instagram
+                  </>
+                ) : socialMedia.facebook ? (
+                  <>
+                    <Facebook className="h-4 w-4" />
+                    Follow us on Facebook
+                  </>
+                ) : (
+                  <>
+                    <Instagram className="h-4 w-4" />
+                    {t('ready_cta.instagram')}
+                  </>
+                )}
              </div>
           </a>
        </div>

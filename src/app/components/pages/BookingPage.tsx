@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { QRCodeSVG } from 'qrcode.react';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 import { Button } from '../ui/button';
 import { AnimatedButton } from '../ui/animated-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -689,20 +689,20 @@ export default function BookingPage() {
                               <div key={service.id} className="space-y-2">
                                 <div
                                   onClick={() => toggleService(service.id)}
-                                  className={`p-6 rounded-xl border transition-all cursor-pointer group relative overflow-hidden ${
+                                  className={`p-6 rounded-xl border transition-all cursor-pointer group relative overflow-hidden flex flex-col min-h-[140px] ${
                                     isServiceSelected
                                       ? 'border-[#FF9800] bg-[#FF9800]/10 shadow-[0_0_15px_rgba(255,152,0,0.1)]'
                                       : 'border-zinc-800 bg-black/40 hover:border-zinc-600 hover:bg-zinc-900/60'
                                   }`}
                                 >
                                   <div className="flex items-start justify-between mb-3 relative z-10">
-                                    <h3 className={`font-serif font-bold text-lg ${isServiceSelected ? 'text-[#FF9800]' : 'text-white'}`}>
+                                    <h3 className={`font-serif font-bold text-lg min-h-[3.5rem] flex items-start pr-2 ${isServiceSelected ? 'text-[#FF9800]' : 'text-white'}`}>
                                       {translatedService.name}
                                     </h3>
-                                    <span className="text-xl font-bold text-[#FF9800]">${service.price}</span>
+                                    <span className="text-xl font-bold text-[#FF9800] flex-shrink-0">${service.price}</span>
                                   </div>
-                                  <p className="text-sm text-gray-400 mb-3 relative z-10 line-clamp-2">{translatedService.description}</p>
-                                  <div className="flex items-center justify-between relative z-10">
+                                  <p className="text-sm text-gray-400 mb-3 relative z-10 line-clamp-2 flex-1">{translatedService.description}</p>
+                                  <div className="flex items-center justify-between relative z-10 mt-auto">
                                      <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider">
                                         <Clock className="h-3 w-3" />
                                         {service.duration}

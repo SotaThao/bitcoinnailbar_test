@@ -15,7 +15,7 @@ This system automatically notifies the Admin Dashboard when a customer checks in
 ## ⚙️ Enable Supabase Realtime (Required)
 
 ### Step 1: Go to Supabase Dashboard
-1. Visit: https://supabase.com/dashboard/project/pwmrmcipniefewufwjjy
+1. Visit: https://supabase.com/dashboard/project/YOUR_PROJECT_ID
 2. Navigate to **Database** → **Replication**
 
 ### Step 2: Enable Realtime for Table
@@ -119,7 +119,7 @@ The app will still work without real-time updates. Simply:
 - **Action:** Saves notification to `notification:checkin:{timestamp}` key
 
 ### Frontend Changes:
-- **Hook:** `/src/app/hooks/useRealtimeNotifications.ts`
+- **Hook:** `/src/app/hooks/useRealtimeNotifications.ts` (future)
 - **Component:** `/src/app/components/admin/Appointments.tsx`
 - **Library:** `@supabase/supabase-js` + `sonner` (toast)
 
@@ -149,5 +149,6 @@ If you encounter issues:
 
 ---
 
-**Last Updated:** January 2026
-**Version:** 1.0.0
+**Last Updated:** January 20, 2026  
+**Version:** 1.0.0  
+**Status:** Production Ready ✅

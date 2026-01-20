@@ -1,9 +1,9 @@
 /**
- * Centralized API Client for Admin Panel
- * Provides type-safe fetch wrapper with consistent error handling
+ * Unified API Client
+ * Centralizes all backend API calls with consistent error handling.
  */
 
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 import type { ApiResponse } from './admin-types';
 
 const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112`;

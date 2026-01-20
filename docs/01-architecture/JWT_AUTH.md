@@ -7,7 +7,7 @@ Bitcoin Nail Bar sử dụng **JWT (JSON Web Tokens)** cho authentication & auth
 
 ## 🏗️ Architecture
 
-### **Flow:**
+### Flow:
 ```
 1. User Login → Backend verifies credentials
 2. Backend generates JWT (signed with secret key)
@@ -22,7 +22,7 @@ Bitcoin Nail Bar sử dụng **JWT (JSON Web Tokens)** cho authentication & auth
 
 ## 🎫 JWT Structure
 
-### **Header:**
+### Header:
 ```json
 {
   "alg": "HS256",
@@ -30,7 +30,7 @@ Bitcoin Nail Bar sử dụng **JWT (JSON Web Tokens)** cho authentication & auth
 }
 ```
 
-### **Payload (Claims):**
+### Payload (Claims):
 ```json
 {
   "sub": "user-uuid-123",           // Subject (User ID)
@@ -51,7 +51,7 @@ Bitcoin Nail Bar sử dụng **JWT (JSON Web Tokens)** cho authentication & auth
 }
 ```
 
-### **Signature:**
+### Signature:
 ```
 HMACSHA256(
   base64UrlEncode(header) + "." + base64UrlEncode(payload),
@@ -63,13 +63,13 @@ HMACSHA256(
 
 ## 👥 Roles & Permissions
 
-### **Role Hierarchy:**
+### Role Hierarchy:
 1. **Owner** - Full access (all permissions = true)
 2. **Admin** - Customizable permissions
 3. **Manager** - Limited permissions
 4. **Staff** - View-only permissions
 
-### **Permission Matrix:**
+### Permission Matrix:
 
 | Permission                  | Owner | Admin | Manager | Staff |
 |-----------------------------|-------|-------|---------|-------|
@@ -85,7 +85,7 @@ HMACSHA256(
 
 ## 🛠️ Backend Implementation
 
-### **Generate JWT (Login):**
+### Generate JWT (Login):
 ```typescript
 const generateJWT = async (user: User): Promise<string> => {
   const payload = {
@@ -106,7 +106,7 @@ const generateJWT = async (user: User): Promise<string> => {
 };
 ```
 
-### **Verify JWT:**
+### Verify JWT:
 ```typescript
 const verifyJWT = async (token: string): Promise<any> => {
   try {
@@ -118,7 +118,7 @@ const verifyJWT = async (token: string): Promise<any> => {
 };
 ```
 
-### **Protected Route Middleware:**
+### Protected Route Middleware:
 ```typescript
 const requireAuth = async (c: any, next: any) => {
   const token = c.req.header('Authorization')?.replace('Bearer ', '');
@@ -137,7 +137,7 @@ const requireAuth = async (c: any, next: any) => {
 };
 ```
 
-### **Permission Check Middleware:**
+### Permission Check Middleware:
 ```typescript
 const requirePermission = (permission: string) => {
   return async (c: any, next: any) => {
@@ -159,7 +159,7 @@ const requirePermission = (permission: string) => {
 };
 ```
 
-### **Usage Example:**
+### Usage Example:
 ```typescript
 // Protected route with permission check
 app.delete(
@@ -179,7 +179,7 @@ app.delete(
 
 ## 💻 Frontend Implementation
 
-### **Store JWT after login:**
+### Store JWT after login:
 ```typescript
 // utils/auth.ts
 export const saveSession = (token: string, expiresAt: string) => {
@@ -190,7 +190,7 @@ export const saveSession = (token: string, expiresAt: string) => {
 };
 ```
 
-### **Send JWT with requests:**
+### Send JWT with requests:
 ```typescript
 const response = await fetch('/api/endpoint', {
   headers: {
@@ -199,7 +199,7 @@ const response = await fetch('/api/endpoint', {
 });
 ```
 
-### **Check permissions in UI:**
+### Check permissions in UI:
 ```typescript
 const session = getSession();
 if (!session) return null;
@@ -217,14 +217,14 @@ const payload = JSON.parse(atob(session.token.split('.')[1]));
 
 ## 🔒 Security Best Practices
 
-### ✅ **Implemented:**
+### ✅ Implemented:
 - JWT signed with HMAC-SHA256
 - 7-day expiration
 - HTTPS only (Supabase Edge Functions)
 - No sensitive data in payload
 - Token stored in localStorage (XSS protection via CSP)
 
-### 🚀 **Future Enhancements:**
+### 🚀 Future Enhancements:
 - [ ] Refresh token mechanism
 - [ ] Token revocation (blacklist)
 - [ ] Rate limiting per user
@@ -235,7 +235,7 @@ const payload = JSON.parse(atob(session.token.split('.')[1]));
 
 ## 📋 Testing Flow
 
-### **1. Test Login:**
+### 1. Test Login:
 ```bash
 curl -X POST https://your-project.supabase.co/functions/v1/make-server-84f9c112/auth/login \
   -H "Content-Type: application/json" \
@@ -257,7 +257,7 @@ curl -X POST https://your-project.supabase.co/functions/v1/make-server-84f9c112/
 }
 ```
 
-### **2. Test Verify:**
+### 2. Test Verify:
 ```bash
 curl https://your-project.supabase.co/functions/v1/make-server-84f9c112/auth/verify \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -282,21 +282,21 @@ curl https://your-project.supabase.co/functions/v1/make-server-84f9c112/auth/ver
 
 ## 🐛 Debugging
 
-### **Decode JWT (Browser Console):**
+### Decode JWT (Browser Console):
 ```javascript
 const token = localStorage.getItem('admin_session');
 const payload = JSON.parse(atob(JSON.parse(token).token.split('.')[1]));
 console.log('JWT Payload:', payload);
 ```
 
-### **Check Expiration:**
+### Check Expiration:
 ```javascript
 const exp = payload.exp * 1000; // Convert to milliseconds
 const isExpired = Date.now() > exp;
 console.log('Expired:', isExpired);
 ```
 
-### **Debug Endpoints:**
+### Debug Endpoints:
 - `/admin/test-jwt` - JWT test interface
 - `/admin/debug-auth` - Auth debugging tools
 
@@ -361,3 +361,9 @@ app.post('/auth/refresh', async (c) => {
 - **Jose Library:** https://github.com/panva/jose
 - **RBAC Best Practices:** https://auth0.com/docs/manage-users/access-control/rbac
 - **OWASP JWT Security:** https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html
+
+---
+
+**Last Updated:** January 20, 2026  
+**Version:** 1.0.0  
+**Status:** Production Ready ✅

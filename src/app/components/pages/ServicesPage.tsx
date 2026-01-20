@@ -122,10 +122,10 @@ export default function ServicesPage() {
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                          {Array.isArray(t('services_page.categories.signature.items')) && (t('services_page.categories.signature.items') as any[]).map((item, idx) => (
-                            <div key={idx} className="bg-white/5 rounded-xl p-6 border border-white/10 hover:border-[#FF9800]/50 transition-colors">
-                               <h4 className="font-bold text-lg mb-2 text-[#FF9800]">{item.name}</h4>
-                               <p className="text-sm text-gray-400 mb-4 h-10">{item.desc}</p>
-                               <div className="font-bold text-xl">{item.price}</div>
+                            <div key={idx} className="bg-white/5 rounded-xl p-6 border border-white/10 hover:border-[#FF9800]/50 transition-colors flex flex-col min-h-[160px]">
+                               <h4 className="font-bold text-lg mb-2 text-[#FF9800] line-clamp-2 min-h-[3.5rem] flex items-start">{item.name}</h4>
+                               <p className="text-sm text-gray-400 mb-4 flex-1">{item.desc}</p>
+                               <div className="font-bold text-xl mt-auto">{item.price}</div>
                             </div>
                          ))}
                       </div>

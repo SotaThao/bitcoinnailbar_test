@@ -14,6 +14,8 @@ export default defineConfig({
     alias: {
       // Alias @ to the src directory
       '@': path.resolve(__dirname, './src'),
+      // Alias for root-level utils folder
+      '@utils': path.resolve(__dirname, './utils'),
     },
   },
 })

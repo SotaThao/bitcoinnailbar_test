@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Sparkles, Calendar, Crown, Gift } from 'lucide-react';
+import { Home, Scissors, Calendar, Crown, Gift } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { motion } from 'motion/react';
 
@@ -19,9 +19,9 @@ export function BottomNav() {
       icon: Home 
     },
     { 
-      path: '/services', 
+      path: '/menu?page=1', 
       label: t('bottom_nav.services'),
-      icon: Sparkles 
+      icon: Scissors 
     },
     { 
       path: '/booking', 

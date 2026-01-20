@@ -272,4 +272,39 @@
   .dark ::-webkit-scrollbar-thumb:hover {
     background: transparent;
   }
+
+  /* Custom Select/Dropdown Option Styling */
+  select option {
+    padding: 8px 12px;
+  }
+
+  select option:checked {
+    background: linear-gradient(0deg, #dbeafe 0%, #dbeafe 100%);
+    color: #1e3a8a;
+  }
+
+  select option:hover {
+    background: linear-gradient(0deg, #fff7ed 0%, #fff7ed 100%);
+    color: #9a3412;
+  }
+
+  /* Rounded corners for dropdown menu */
+  select:focus {
+    border-radius: 0.75rem;
+  }
+
+  /* Target the dropdown list container */
+  select[size]:not([size="1"]),
+  select[multiple] {
+    border-radius: 0.75rem;
+  }
+
+  /* First and last option rounded corners */
+  select option:first-child {
+    border-radius: 0.75rem 0.75rem 0 0;
+  }
+
+  select option:last-child {
+    border-radius: 0 0 0.75rem 0.75rem;
+  }
 }

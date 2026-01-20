@@ -1,11 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Send, MessageCircle, Minimize2, Sparkles, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Minimize2, Sparkles, Send } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import chatbotAvatar from 'figma:asset/de8481357e60f01d5b3cac2383f942b7598cef7d.png';
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 import { useLanguage } from '../context/LanguageContext';
 import ReactMarkdown from 'react-markdown';
 import { QRCodeSVG } from 'qrcode.react';
@@ -40,10 +39,33 @@ export function Chatbot() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [services, setServices] = useState<Service[]>([]);
+  const [chatbotAvatar, setChatbotAvatar] = useState('');
 
   // Bubble state
   const [showBubble, setShowBubble] = useState(false);
   const [bubbleText, setBubbleText] = useState("");
+
+  // Fetch chatbot avatar on mount
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/settings/chatbot-avatar`,
+          {
+            headers: { Authorization: `Bearer ${publicAnonKey}` },
+          }
+        );
+        const data = await response.json();
+        if (data.success && data.data.avatar) {
+          setChatbotAvatar(data.data.avatar);
+        }
+      } catch (error) {
+        console.error('Failed to fetch chatbot avatar:', error);
+        // Avatar will remain empty and show MessageCircle icon instead
+      }
+    };
+    fetchAvatar();
+  }, []);
 
   // Fetch services on mount
   useEffect(() => {
@@ -191,8 +213,12 @@ export function Chatbot() {
             <div className="bg-[#0B0F19] p-4 flex items-center justify-between border-b border-gray-800">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#FF9800]">
-                    <ImageWithFallback src={chatbotAvatar} alt="AI Assistant" className="w-full h-full object-cover" />
+                  <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#FF9800] flex items-center justify-center bg-[#FF9800]">
+                    {chatbotAvatar ? (
+                      <ImageWithFallback src={chatbotAvatar} alt="AI Assistant" className="w-full h-full object-cover" />
+                    ) : (
+                      <MessageCircle className="w-6 h-6 text-black" />
+                    )}
                   </div>
                   <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#0B0F19] rounded-full"></span>
                 </div>
@@ -408,9 +434,9 @@ export function Chatbot() {
         whileTap={{ scale: 0.9 }}
         initial={{ opacity: 0, scale: 0 }}
         animate={{ 
-          opacity: 1, 
-          scale: 1,
-          boxShadow: ["0 0 0 0 rgba(255, 152, 0, 0.7)", "0 0 0 20px rgba(255, 152, 0, 0)"],
+          opacity: chatbotAvatar ? 1 : 0, 
+          scale: chatbotAvatar ? 1 : 0,
+          boxShadow: chatbotAvatar ? ["0 0 0 0 rgba(255, 152, 0, 0.7)", "0 0 0 20px rgba(255, 152, 0, 0)"] : "0 0 0 0 rgba(255, 152, 0, 0)",
         }}
         transition={{
           boxShadow: {
@@ -419,13 +445,17 @@ export function Chatbot() {
             }
         }}
       >
-        <div className="relative w-full h-full">
+        {chatbotAvatar ? (
+          <div className="relative w-full h-full">
             <ImageWithFallback 
-                src={chatbotAvatar} 
-                alt="Chat" 
-                className="w-full h-full object-cover"
+              src={chatbotAvatar} 
+              alt="Chat" 
+              className="w-full h-full object-cover"
             />
-        </div>
+          </div>
+        ) : (
+          <MessageCircle className="w-8 h-8 text-black" />
+        )}
       </motion.button>
     </>
   );

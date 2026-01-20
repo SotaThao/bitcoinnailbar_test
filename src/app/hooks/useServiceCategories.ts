@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 import { PlusCircle } from 'lucide-react'; // Default icon for custom categories
 import type { ServiceCategory } from '../lib/service-constants';
 

@@ -9,6 +9,8 @@ import * as jose from 'npm:jose@5.2.0';
 import { membershipRoutes } from './membership.tsx';
 import { app as authApp } from './auth.tsx';
 import { app as customersApp } from './customers.tsx';
+import rolesApp from './roles.tsx';
+import { promotionsApp } from './promotions.tsx';
 
 // JWT Secret - in production this should be from environment variable
 const JWT_SECRET = new TextEncoder().encode(
@@ -89,6 +91,8 @@ app.use('*', cors({
 app.route('/', authApp);
 app.route('/', membershipRoutes);
 app.route('/', customersApp);
+app.route('/make-server-84f9c112/roles', rolesApp);
+app.route('/', promotionsApp);
 
 // ========== TYPE DEFINITIONS ==========
 interface User {
@@ -1536,16 +1540,39 @@ app.get("/make-server-84f9c112/dashboard/stats", async (c) => {
         };
       });
     
-    // Staff status details
-    const staffStatus = staff.slice(0, 5).map((s: any) => {
+    // Staff status details - Return ALL staff (pagination handled in frontend)
+    const staffStatus = staff.map((s: any) => {
       const isBusy = busyStaffIds.includes(s.id);
       const staffAppt = isBusy ? todayAppointments.find((a: any) => a.staffId === s.id) : null;
+      
+      let busyUntil = '';
+      if (staffAppt) {
+        // Calculate busy until time based on service duration
+        const apptServices = services.filter((service: any) => 
+          staffAppt.serviceIds && staffAppt.serviceIds.includes(service.id)
+        );
+        const totalDuration = apptServices.reduce((sum: number, service: any) => {
+          return sum + (parseInt(service.duration) || 30);
+        }, 0);
+        
+        const apptStartTime = new Date(staffAppt.appointmentTime);
+        const apptEndTime = new Date(apptStartTime.getTime() + totalDuration * 60000);
+        
+        // Format busy until time
+        const hours = apptEndTime.getHours();
+        const minutes = apptEndTime.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        busyUntil = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+      }
       
       return {
         name: s.name,
         status: isBusy ? 'Busy' : 'Available',
         color: isBusy ? 'bg-orange-500' : 'bg-green-500',
-        text: isBusy ? 'Busy with client' : 'Available'
+        text: isBusy ? `Busy until ${busyUntil}` : 'Available',
+        busyUntil: busyUntil,
+        isBusy: isBusy
       };
     });
     
@@ -2219,6 +2246,71 @@ app.post("/make-server-84f9c112/chat", async (c) => {
     console.log("🔥 [CHAT DEBUG] Total bookings:", totalBookings);
     console.log("🔥 [CHAT DEBUG] Hot services count:", hotServices.length);
 
+    // ========== FETCH MEMBERSHIP DATA ==========
+    const membershipTiers = await kv.get('membership:tiers') || [];
+    let membershipContext = '';
+    
+    if (Array.isArray(membershipTiers) && membershipTiers.length > 0) {
+      membershipContext += '\n\n💎 MEMBERSHIP PROGRAM:\n';
+      membershipContext += 'We offer a premium membership program with exclusive benefits and savings.\n\n';
+      
+      membershipTiers.forEach((tier: any) => {
+        membershipContext += `📋 ${tier.name.toUpperCase()} TIER:\n`;
+        membershipContext += `  💰 Price: $${tier.price} (${tier.duration})\n`;
+        membershipContext += `  🎁 Benefits:\n`;
+        
+        if (tier.benefits && Array.isArray(tier.benefits)) {
+          tier.benefits.forEach((benefit: string) => {
+            membershipContext += `    ✓ ${benefit}\n`;
+          });
+        }
+        
+        if (tier.discount > 0) {
+          membershipContext += `  💵 Discount: ${tier.discount}% OFF all services\n`;
+        }
+        
+        if (tier.description) {
+          membershipContext += `  ℹ️  ${tier.description}\n`;
+        }
+        
+        membershipContext += '\n';
+      });
+      
+      membershipContext += '🌟 WHEN TO RECOMMEND MEMBERSHIP:\n';
+      membershipContext += '  - Customer asks about pricing for multiple services\n';
+      membershipContext += '  - Customer is a frequent visitor or books regularly\n';
+      membershipContext += '  - Customer shows interest in multiple treatments\n';
+      membershipContext += '  - When member price shows significant savings (highlight the difference)\n';
+      membershipContext += '  - ALWAYS mention membership benefits when discussing service prices\n';
+    }
+    
+    // ========== FETCH PROMOTIONS DATA ==========
+    const promotionsData = await kv.get('settings:promotions') || [];
+    let promotionContext = '';
+    
+    if (Array.isArray(promotionsData) && promotionsData.length > 0) {
+      promotionContext += '\n\n🎉 CURRENT PROMOTIONS & SPECIAL OFFERS:\n';
+      
+      promotionsData.forEach((promo: any, index: number) => {
+        const promoLang = promo[language] || promo['en'];
+        if (promoLang) {
+          promotionContext += `\n${index + 1}. ${promoLang.title}\n`;
+          if (promoLang.description) {
+            promotionContext += `   📝 ${promoLang.description}\n`;
+          }
+          if (promoLang.buttonText) {
+            promotionContext += `   🔗 Action: ${promoLang.buttonText}\n`;
+          }
+        }
+      });
+      
+      promotionContext += '\n���� PROMOTION STRATEGY:\n';
+      promotionContext += '  - Mention relevant promotions when customer inquires about specific services\n';
+      promotionContext += '  - Use promotions to create urgency and encourage booking\n';
+      promotionContext += '  - Always check if a promotion applies to customer\'s requested services\n';
+      promotionContext += '  - Be enthusiastic but not pushy about promotions\n';
+    }
+
     // ========== Build AI Context with Enhanced Structure ==========
     let serviceContext = "\n\n📋 AVAILABLE SERVICES:\n";
     serviceContext += `(Total Active Services: ${allServices.length})\n`;
@@ -2309,7 +2401,7 @@ app.post("/make-server-84f9c112/chat", async (c) => {
     serviceContext += validServiceNames.join(', ') + '\n';
     serviceContext += '\n⚠️ IMPORTANT: If customer asks about a service NOT in this list, politely say it\'s not available.\n';
     
-    const systemPrompt = `You are the AI receptionist for "Bitcoin Nail Bar".
+    const systemPrompt = `You are the AI receptionist for "Bitcoin Nail Bar" - an intelligent, helpful, and knowledgeable assistant.
     
     CURRENT DATE/TIME: ${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' })} (Central Time - Houston, TX)
     
@@ -2322,40 +2414,77 @@ app.post("/make-server-84f9c112/chat", async (c) => {
     - Special Feature: We are the first nail salon in Houston accepting Bitcoin payments
     
     ${serviceContext}
+    ${membershipContext}
+    ${promotionContext}
     
     🚨 CRITICAL ACCURACY RULES (MUST FOLLOW):
     1. ✅ ONLY mention services listed above in "AVAILABLE SERVICES"
     2. ✅ ONLY quote prices exactly as shown (do NOT estimate or guess)
-    3. ✅ If a service is NOT listed above, say "I don't have that service in our menu"
-    4. ✅ If you're unsure about ANY information, ask customer to check with staff
-    5. ❌ NEVER invent service names, prices, or promotions
-    6. ❌ NEVER mention "Hot Services" unless explicitly shown above with booking data
-    7. ❌ NEVER make assumptions about services not in the list
+    3. ✅ ONLY mention promotions listed in "CURRENT PROMOTIONS" section
+    4. ✅ ONLY mention membership tiers shown in "MEMBERSHIP PROGRAM" section
+    5. ✅ If a service is NOT listed above, say "I don't have that service in our menu"
+    6. ✅ If you're unsure about ANY information, ask customer to check with staff
+    7. ❌ NEVER invent service names, prices, promotions, or membership details
+    8. ❌ NEVER mention "Hot Services" unless explicitly shown above with booking data
+    9. ❌ NEVER make assumptions about services not in the list
     
-    CAPABILITIES:
-    1. Answer questions about services and crypto payments (Bitcoin accepted).
-    2. RECOMMEND SERVICES based on:
-       - ⭐ Dịch vụ được đề xuất = Best value/quality (HIGHEST PRIORITY if shown above)
-       - 💰 Membership Savings = Highlight Member vs Regular price differences
-       - 📂 Category-specific services based on customer needs
-    3. SUGGEST ADD-ONS when customer books a main service (if add-ons are listed above).
-    4. BOOK APPOINTMENTS: You have FULL AUTHORITY to book appointments.
-       - Ask for: Name, Phone Number, Service, and Date/Time.
-       - Ask for Email (optional but recommended).
+    🎯 ADVANCED CAPABILITIES & INTELLIGENCE:
+    
+    1. 💬 CONVERSATIONAL INTELLIGENCE:
+       - Understand context from previous messages in the conversation
+       - Remember customer preferences mentioned earlier in the chat
+       - Ask clarifying questions when customer intent is unclear
+       - Provide personalized recommendations based on customer needs
+    
+    2. 🎨 SERVICE RECOMMENDATIONS (Smart Upselling):
+       - ⭐ FIRST: Recommend "Dịch vụ được đề xuất" (Owner Recommended) - HIGHEST PRIORITY
+       - 💰 SECOND: Highlight membership savings when applicable (show exact $ amount saved)
+       - 🔥 THIRD: Suggest hot services (if shown with booking data)
+       - 📂 FOURTH: Category-based recommendations matching customer needs
+       - ➕ ALWAYS: Suggest relevant add-ons to enhance the main service
        
-    CRITICAL RULES FOR BOOKING:
-    - First CONFIRM all booking details with the user before proceeding.
-    - Show a clear summary: Name, Phone, Service(s), Date & Time, Email (if provided).
-    - Ask: "Should I confirm this booking for you?" or similar confirmation question.
-    - ONLY AFTER user confirms (e.g., "yes", "confirm", "ok", "đúng rồi"), use the 'create_booking' tool.
-    - You CANNOT create a booking by just writing text. You MUST use the 'create_booking' tool.
-    - IMPORTANT: Convert the user's requested time (e.g. "tomorrow at 5pm", "10h sáng mai") to a strict ISO 8601 format (YYYY-MM-DDTHH:mm:ss) based on the CURRENT DATE/TIME provided above.
-    - If you are unsure about the date, assume the next occurrence of that time.
-    - DO NOT make up a booking ID. Use the tool.
+    3. 💎 MEMBERSHIP UPSELLING STRATEGY:
+       - When customer asks about pricing: Compare regular vs member prices
+       - When booking multiple services: Calculate total savings with membership
+       - When customer is repeat visitor: Mention long-term value of membership
+       - EXAMPLE: "As a member, you'd save $15 on this service alone! Over 6 months, that's $90+ in savings."
+       
+    4. 🎉 PROMOTION AWARENESS:
+       - Match promotions to customer's requested services
+       - Create urgency: "We have a special offer this month!"
+       - Be enthusiastic but natural: "Great timing! This service is currently on promotion."
+       - If multiple promotions apply, mention the best value one first
+       
+    5. 📅 APPOINTMENT BOOKING INTELLIGENCE:
+       - Ask for: Name, Phone Number, Service(s), Date/Time
+       - Optional but recommended: Email address
+       - FIRST: Show clear summary of booking details
+       - SECOND: Ask confirmation: "Should I confirm this booking for you?"
+       - THIRD: ONLY after explicit confirmation ("yes", "confirm", "ok", "đúng rồi"), use 'create_booking' tool
+       - Convert natural language time to ISO 8601 format (YYYY-MM-DDTHH:mm:ss)
+       - Handle multiple services in one booking
+       - YOU CANNOT create bookings by text alone - MUST use 'create_booking' tool
+       
+    6. 🧠 CONTEXT AWARENESS:
+       - Track conversation history to avoid repeating information
+       - Remember if customer already knows about membership/promotions
+       - Adapt tone based on customer's communication style (formal/casual)
+       - Handle multi-turn conversations naturally
+       
+    7. 💡 PROACTIVE ASSISTANCE:
+       - Suggest booking during less busy hours if customer is flexible
+       - Recommend service packages that complement each other
+       - Inform about preparation needed for certain services
+       - Mention parking, payment options, or other practical details when relevant
     
-    LANGUAGE: ${language === 'vi' ? 'Vietnamese (Quý khách - polite form)' : 'English'}
-    STYLE: Professional, luxury, friendly. Make customers feel valued.
-    UPSELLING: Gently suggest membership benefits when discussing prices.
+    🎭 COMMUNICATION STYLE:
+    - LANGUAGE: ${language === 'vi' ? 'Vietnamese (Quý khách - polite, respectful form)' : 'English (Professional yet warm)'}
+    - TONE: Professional, luxury salon experience, friendly and welcoming
+    - PERSONALITY: Knowledgeable expert who genuinely cares about customer satisfaction
+    - EMPATHY: Show understanding of customer needs and concerns
+    - ENTHUSIASM: Be genuinely excited about services and promotions (but not pushy)
+    
+    🎯 GOAL: Make every customer feel valued, informed, and excited to visit Bitcoin Nail Bar.
     `;
 
     const tools = [
@@ -3039,6 +3168,131 @@ app.post("/make-server-84f9c112/admin/settings/homepage-menu", async (c) => {
   }
 });
 
+// GET: Fetch chatbot avatar
+app.get("/make-server-84f9c112/settings/chatbot-avatar", async (c) => {
+  try {
+    const avatarPath = await kv.get("settings:chatbot-avatar-path") || '';
+    
+    if (!avatarPath) {
+      console.log('ℹ️ [CHATBOT AVATAR] No avatar path found in KV store');
+      return c.json({ success: true, data: { avatar: '' } });
+    }
+
+    // Regenerate fresh signed URL from file path
+    const BUCKET_NAME = 'make-84f9c112-promotions';
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .createSignedUrl(avatarPath, 3600); // 1 hour expiry
+
+    if (error) {
+      console.error(`❌ [CHATBOT AVATAR] Failed to generate signed URL for path "${avatarPath}":`, error);
+      return c.json({ success: true, data: { avatar: '' } });
+    }
+
+    console.log(`✅ [CHATBOT AVATAR] Fresh signed URL generated for: ${avatarPath}`);
+    return c.json({ success: true, data: { avatar: data.signedUrl } });
+  } catch (error: any) {
+    console.error("❌ [CHATBOT SETTING] Exception:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// POST: Update chatbot avatar (expects file path, not signed URL)
+app.post("/make-server-84f9c112/admin/settings/chatbot-avatar", async (c) => {
+  try {
+    const { avatarPath } = await c.req.json();
+    
+    // Save file path to KV store
+    await kv.set("settings:chatbot-avatar-path", avatarPath || '');
+    
+    console.log(`✅ [CHATBOT SETTING] Avatar path updated: ${avatarPath}`);
+    return c.json({ success: true, data: { avatarPath } });
+  } catch (error: any) {
+    console.error("❌ [CHATBOT SETTING] Exception:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// POST: Save promotions to KV store
+app.post("/make-server-84f9c112/admin/settings/promotions", async (c) => {
+  try {
+    const { promotions } = await c.req.json();
+    
+    if (!Array.isArray(promotions)) {
+      return c.json({ success: false, error: "Invalid promotions data" }, 400);
+    }
+    
+    await kv.set("settings:promotions", promotions);
+    
+    console.log(`✅ [PROMOTIONS SETTING] ${promotions.length} promotions saved`);
+    return c.json({ success: true, data: { promotions } });
+  } catch (error: any) {
+    console.error("❌ [PROMOTIONS SETTING] Exception:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// GET: Fetch promotions from KV store
+app.get("/make-server-84f9c112/settings/promotions", async (c) => {
+  try {
+    const promotions = await kv.get("settings:promotions") || [];
+    
+    // Generate fresh signed URLs for images
+    const promotionsWithSignedUrls = await Promise.all(
+      (promotions as any[]).map(async (promo: any) => {
+        const updatedPromo = { ...promo };
+        
+        // Process both languages
+        for (const lang of ['vi', 'en']) {
+          if (!updatedPromo[lang]) continue;
+          
+          // Background Image
+          if (updatedPromo[lang].backgroundImagePath) {
+            try {
+              const { data: signedData, error: signError } = await supabase.storage
+                .from('make-84f9c112-promotions')
+                .createSignedUrl(updatedPromo[lang].backgroundImagePath, 86400); // 24 hours (reduced from 1 year for security)
+              
+              if (signError) {
+                console.warn(`⚠️ Failed to sign background image for ${promo.id} (${lang}):`, signError);
+              } else if (signedData?.signedUrl) {
+                updatedPromo[lang].backgroundImage = signedData.signedUrl;
+              }
+            } catch (err) {
+              console.error(`❌ Error signing background image for ${promo.id} (${lang}):`, err);
+            }
+          }
+          
+          // Icon Image
+          if (updatedPromo[lang].iconImagePath) {
+            try {
+              const { data: signedData, error: signError } = await supabase.storage
+                .from('make-84f9c112-promotions')
+                .createSignedUrl(updatedPromo[lang].iconImagePath, 86400); // 24 hours (reduced from 1 year for security)
+              
+              if (signError) {
+                console.warn(`⚠️ Failed to sign icon image for ${promo.id} (${lang}):`, signError);
+              } else if (signedData?.signedUrl) {
+                updatedPromo[lang].iconImage = signedData.signedUrl;
+              }
+            } catch (err) {
+              console.error(`❌ Error signing icon image for ${promo.id} (${lang}):`, err);
+            }
+          }
+        }
+        
+        return updatedPromo;
+      })
+    );
+    
+    console.log(`✅ [PROMOTIONS SETTING] Fetched ${promotionsWithSignedUrls.length} promotions with fresh signed URLs`);
+    return c.json({ success: true, data: { promotions: promotionsWithSignedUrls } });
+  } catch (error: any) {
+    console.error("❌ [PROMOTIONS SETTING] Exception:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // Proxy for VLinkExchange to avoid CORS
 app.get("/make-server-84f9c112/proxy/vlink", async (c) => {
   try {
@@ -3198,6 +3452,70 @@ app.post("/make-server-84f9c112/appointments/availability", async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+
+// ========== SEED BUILT-IN ROLES ON STARTUP ==========
+async function seedBuiltInRoles() {
+  try {
+    console.log('🌱 [SEED] Checking for built-in roles...');
+    
+    const existingRoles = await kv.getByPrefix('role:');
+    
+    // Check if built-in roles already exist
+    const hasAdminRole = existingRoles.some((r: any) => r.name === 'admin' && r.is_built_in);
+    const hasStaffRole = existingRoles.some((r: any) => r.name === 'staff' && r.is_built_in);
+    
+    // Seed Admin role if not exists
+    if (!hasAdminRole) {
+      const adminRoleId = crypto.randomUUID();
+      const adminRole = {
+        id: adminRoleId,
+        name: 'admin',
+        description: 'Administrator with elevated permissions',
+        permissions: [
+          'manage_services',
+          'manage_staff',
+          'view_reports',
+          'manage_appointments',
+          'process_payments',
+          'view_analytics',
+        ],
+        is_built_in: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      await kv.set(`role:${adminRoleId}`, adminRole);
+      console.log('✅ [SEED] Created built-in role: Admin');
+    }
+    
+    // Seed Staff role if not exists
+    if (!hasStaffRole) {
+      const staffRoleId = crypto.randomUUID();
+      const staffRole = {
+        id: staffRoleId,
+        name: 'staff',
+        description: 'Staff member with basic permissions',
+        permissions: [
+          'manage_appointments',
+          'process_payments',
+        ],
+        is_built_in: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      await kv.set(`role:${staffRoleId}`, staffRole);
+      console.log('✅ [SEED] Created built-in role: Staff');
+    }
+    
+    if (hasAdminRole && hasStaffRole) {
+      console.log('✅ [SEED] Built-in roles already exist, skipping...');
+    }
+  } catch (error: any) {
+    console.error('❌ [SEED] Failed to seed built-in roles:', error);
+  }
+}
+
+// Run seed function before starting server
+await seedBuiltInRoles();
 
 console.log('🚀 [SERVER] Bitcoin Nail Bar Server Starting...');
 console.log('🔍 [SERVER] Check-in endpoint: /make-server-84f9c112/check-in');

@@ -61,7 +61,7 @@ export default function AdminAppointments() {
 
         {/* Filter Card */}
         <Card className="bg-white border-gray-100 shadow-sm">
-          <CardHeader>
+          <CardHeader className="px-[24px] py-[16px] pt-[16px] pr-[24px] pb-[8px] pl-[24px]">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
                 <CardTitle className="text-gray-900">All Appointments</CardTitle>
@@ -73,7 +73,7 @@ export default function AdminAppointments() {
                     <Button
                       variant={"outline"}
                       className={cn(
-                        "w-full md:w-[240px] justify-start text-left font-normal bg-white border-gray-200 text-gray-900",
+                        "w-full md:w-[240px] h-10 justify-start text-left font-normal bg-white border-gray-200 text-gray-900 rounded-full",
                         !date && "text-gray-500"
                       )}
                     >
@@ -92,7 +92,7 @@ export default function AdminAppointments() {
                 </Popover>
                 
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-full md:w-[200px] bg-white border-gray-200 text-gray-900">
+                  <SelectTrigger className="w-full md:w-[200px] h-10 bg-white border-gray-200 text-gray-900 !rounded-full">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent className="bg-white border-gray-200 text-gray-900">

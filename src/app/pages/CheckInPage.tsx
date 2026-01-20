@@ -2,23 +2,35 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Clock, 
-  Gem, 
-  LogIn, 
-  Scan, 
-  ArrowLeft, 
-  CheckCircle, 
-  QrCode, 
-  Smartphone, 
-  Loader2, 
-  AlertCircle, 
-  SwitchCamera 
+  Home, 
+  Calendar, 
+  UserCheck, 
+  Clipboard,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Search,
+  QrCode,
+  User,
+  Phone,
+  Mail,
+  MapPin,
+  Camera,
+  X,
+  CreditCard,
+  AlertCircle,
+  SwitchCamera,
+  Scan,
+  Gem,
+  LogIn,
+  ArrowLeft,
+  Smartphone,
+  Loader2
 } from 'lucide-react';
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
@@ -26,6 +38,25 @@ import bitcoinLogo from 'figma:asset/8504cf526757125a74c4095fde998e4033127268.pn
 import imgPattern from 'figma:asset/f84ad6d75c01f5865641dba32416e817dee06ff5.png';
 
 import { QRCodeCanvas } from 'qrcode.react';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+
+// Helper function to format phone number as (XXX) XXX-XXXX
+const formatPhoneNumber = (value: string): string => {
+  // Remove all non-numeric characters
+  const phoneNumber = value.replace(/\D/g, '');
+  
+  // Format based on length
+  if (phoneNumber.length <= 3) {
+    return phoneNumber;
+  } else if (phoneNumber.length <= 6) {
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+  } else if (phoneNumber.length <= 10) {
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6)}`;
+  } else {
+    // Limit to 10 digits
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+  }
+};
 
 // --- PROMOTIONS DATA ---
 const PROMOTIONS = [
@@ -821,7 +852,7 @@ export default function AdminCheckInPage() {
                             <Input
                               type="tel"
                               value={phoneNumber}
-                              onChange={(e) => setPhoneNumber(e.target.value)}
+                              onChange={(e) => setPhoneNumber(formatPhoneNumber(e.target.value))}
                               placeholder="(555) 123-4567"
                               className="h-16 text-2xl text-center font-bold tracking-widest bg-gray-50 border-transparent focus:bg-white focus:border-[#FF9800]/50 rounded-2xl transition-all shadow-inner placeholder:text-gray-400 mt-[0px] mr-[0px] mb-[60px] ml-[0px]"
                               autoFocus

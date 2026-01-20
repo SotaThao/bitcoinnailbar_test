@@ -1,8 +1,8 @@
 /**
- * Debug utilities to inspect current storage
+ * Utilities for debugging Cloudinary storage
  */
 
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112`;
 

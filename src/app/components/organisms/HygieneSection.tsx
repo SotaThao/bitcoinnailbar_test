@@ -103,7 +103,7 @@ export function HygieneSection() {
             </div>
 
             <div className="pt-4">
-              <Link to="/services">
+              <Link to="/menu">
                 <PrimaryButton size="lg" className="font-bold shadow-lg shadow-[#FF9800]/20 hover:shadow-[#FF9800]/40 transition-shadow">
                   {t('home.services.btn')}
                 </PrimaryButton>

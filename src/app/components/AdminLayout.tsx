@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import bitcoinLogo from 'figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png';
-import { LayoutDashboard, Calendar, DollarSign, BarChart3, LogOut, Scissors, Star, Bitcoin, User, Bell, Settings, Scan, CreditCard } from 'lucide-react';
+import { LayoutDashboard, Calendar, DollarSign, BarChart3, LogOut, Scissors, Star, Bitcoin, User, Bell, Settings, Scan, CreditCard, Users2, Shield } from 'lucide-react';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { clearSession, getCurrentUser, getAuthToken } from '/utils/auth';
@@ -11,6 +11,7 @@ interface AdminLayoutProps {
 }
 
 import { GlobalRealtimeListener } from './admin/GlobalRealtimeListener';
+import { NotificationPopover } from './admin/NotificationPopover';
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
@@ -48,7 +49,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/admin/appointments', label: 'Appointments', icon: Calendar },
     { path: '/admin/services', label: 'Services', icon: Scissors },
-    { path: '/admin/membership', label: 'Memberships', icon: CreditCard },
+    { path: '/admin/membership', label: 'Memberships & Promotion', icon: CreditCard },
     { path: '/admin/staff-payroll', label: 'Staff & Payroll', icon: DollarSign },
     { path: '/admin/reviews', label: 'Reviews', icon: Star },
     { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
@@ -57,11 +58,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   // General section
   const generalNavLinks = [
     { path: '/admin/check-in', label: 'Check-in Kiosk', icon: Scan },
-    { path: '/admin/settings', label: 'Settings', icon: Settings },
+  ];
+
+  // Owner section (Only visible to owner role)
+  const ownerNavLinks = [
+    { path: '/admin/users', label: 'User Management', icon: Users2 },
+    { path: '/admin/role-permissions', label: 'Role & Permissions', icon: Shield },
+    { path: '/admin/system-settings', label: 'System Settings', icon: Settings },
   ];
 
   // Combined for lookups
-  const navLinks = [...mainNavLinks, ...generalNavLinks];
+  const navLinks = [...mainNavLinks, ...generalNavLinks, ...(currentUser?.role === 'owner' ? ownerNavLinks : [])];
 
   // Determine current page title
   const currentPage = navLinks.find(link => link.path === location.pathname)?.label || 'Dashboard';
@@ -138,6 +145,40 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </Link>
             );
           })}
+
+          {/* Owner Section Divider */}
+          {currentUser?.role === 'owner' && (
+            <>
+              <div className="py-3">
+                <div className="border-t border-gray-200"></div>
+              </div>
+              <div className="px-3 mb-2">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Owner Account</p>
+              </div>
+            </>
+          )}
+
+          {/* Owner Section */}
+          {currentUser?.role === 'owner' && ownerNavLinks.map((link) => {
+            const Icon = link.icon;
+            const isActive = location.pathname === link.path;
+            
+            return (
+              <Link key={link.path} to={link.path}>
+                <Button
+                  variant="ghost"
+                  className={`w-full justify-start gap-3 h-11 mb-1 font-medium transition-all duration-200 ${
+                    isActive 
+                      ? 'bg-[#FFF7ED] text-[#F97316] hover:bg-[#FFF7ED] hover:text-[#F97316]' 
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <Icon className={`h-5 w-5 ${isActive ? 'text-[#F97316]' : 'text-gray-400'}`} />
+                  <span>{link.label}</span>
+                </Button>
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Sign Out */}
@@ -174,9 +215,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
            </div>
 
            <div className="flex items-center gap-6">
-              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-gray-900">
-                 <Bell className="h-5 w-5" />
-              </Button>
+              <NotificationPopover />
               <div className="flex items-center gap-3 pl-6 border-l border-gray-100">
                  <div className="text-right hidden lg:block">
                     <p className="text-sm font-bold text-gray-900">{currentUser?.full_name || 'Admin User'}</p>

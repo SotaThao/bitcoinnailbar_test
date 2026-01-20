@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { format, startOfWeek, endOfWeek, subWeeks } from 'date-fns';
-import { projectId, publicAnonKey } from '../../../../utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import AdminLayout from '../AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
