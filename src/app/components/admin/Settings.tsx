@@ -182,15 +182,8 @@ export default function AdminSettings() {
     );
   }
 
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <LoadingSpinner />
-        </div>
-      </AdminLayout>
-    );
-  }
+  // Remove loading screen - show settings immediately (even if fetching)
+  // Silent background updates for better UX
 
   return (
     <AdminLayout>

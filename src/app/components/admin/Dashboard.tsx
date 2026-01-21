@@ -139,13 +139,8 @@ export default function AdminDashboard() {
   const totalPages = Math.ceil(filteredStaffStatus.length / itemsPerPage);
   const currentStaffStatus = filteredStaffStatus.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  if (loading) {
-    return (
-      <AdminLayout>
-        <LoadingSpinner />
-      </AdminLayout>
-    );
-  }
+  // Remove loading screen - show data immediately (even if stale)
+  // Background updates will silently refresh without disrupting UX
 
   return (
     <AdminLayout>

@@ -16,7 +16,7 @@ export default function DebugData() {
   }, []);
 
   const loadDebugData = async () => {
-    setLoading(true);
+    // Silent background fetch - no loading state shown
     try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/debug/data-check`,
@@ -41,7 +41,7 @@ export default function DebugData() {
   };
 
   const handleCleanupDuplicates = async () => {
-    if (!confirm(`⚠️ Bạn ch���c chắn muốn xóa ${data?.duplicates?.totalDuplicates} bản ghi duplicate?\n\nHành động này KHÔNG THỂ HOÀN TÁC!`)) {
+    if (!confirm(`⚠️ Bạn chc chắn muốn xóa ${data?.duplicates?.totalDuplicates} bản ghi duplicate?\n\nHành động này KHÔNG THỂ HOÀN TÁC!`)) {
       return;
     }
 
@@ -90,15 +90,8 @@ export default function DebugData() {
     }
   };
 
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-        </div>
-      </AdminLayout>
-    );
-  }
+  // Remove initial loading screen - show data immediately for better UX
+  // Data fetches silently in background
 
   return (
     <AdminLayout>
