@@ -41,6 +41,7 @@ export function LanguageSwitcher({ align = "end" }: LanguageSwitcherProps) {
         className="bg-[#1A1A1A] border border-white/10 text-gray-200 min-w-[160px] z-[100] p-1.5 shadow-2xl rounded-xl"
       >
         {(Object.entries(languageNames) as [Language, string][])
+          .filter(([code]) => code === 'en' || code === 'vi')
           .map(([code, name]) => (
           <DropdownMenuItem
             key={code}

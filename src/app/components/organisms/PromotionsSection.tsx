@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, Clock, Gem, Crown, CreditCard, Calendar } from 'lucide-react';
 import imgPattern from 'figma:asset/f84ad6d75c01f5865641dba32416e817dee06ff5.png';
 import bitcoinIcon from 'figma:asset/8504cf526757125a74c4095fde998e4033127268.png';
+import { useLanguage } from '../../context/LanguageContext';
 
 export function PromotionsSection() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const { t } = useLanguage();
 
   const slides = [
     { id: 'crypto', component: <CryptoSlide /> },
@@ -37,10 +39,10 @@ export function PromotionsSection() {
           className="flex flex-col items-center gap-2 text-center"
         >
           <h4 className="text-[#f7931a] text-sm tracking-[0.2em] uppercase font-serif">
-            Special Offers
+            {t('promotions.header.badge')}
           </h4>
           <h2 className="text-4xl md:text-5xl font-bold text-white font-serif">
-            Current Promotions
+            {t('promotions.header.title')}
           </h2>
           <div className="h-1 w-24 bg-[#f7931a] rounded-full mt-2" />
         </motion.div>
@@ -106,6 +108,8 @@ export function PromotionsSection() {
 
 // Slide 1: Pay With Crypto
 function CryptoSlide() {
+  const { t } = useLanguage();
+  
   return (
     <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-r from-[#111827] to-black overflow-hidden">
       {/* Background Pattern */}
@@ -121,18 +125,18 @@ function CryptoSlide() {
         <div className="flex flex-col items-start gap-6 max-w-lg">
           {/* Badge */}
           <div className="px-3 py-1 rounded border border-[#f7931a] bg-[#f7931a]/20 text-[#f7931a] text-xs font-bold tracking-widest uppercase">
-            PAYMENT 4.0
+            {t('promotions.crypto_slide.badge')}
           </div>
           
           {/* Heading */}
           <div className="flex flex-col font-serif font-bold text-4xl md:text-6xl leading-tight text-white">
-            <span>PAY WITH</span>
-            <span className="text-[#f7931a]">CRYPTO</span>
+            <span>{t('promotions.crypto_slide.title_line1')}</span>
+            <span className="text-[#f7931a]">{t('promotions.crypto_slide.title_line2')}</span>
           </div>
 
           {/* Description */}
           <div className="text-lg md:text-xl text-gray-300 leading-snug">
-            Get an instant <span className="text-white font-bold text-2xl">10% OFF</span> when you pay with Bitcoin, USDT or VLinkPay wallet.
+            {t('promotions.crypto_slide.description')} <span className="text-white font-bold text-2xl">{t('promotions.crypto_slide.discount')}</span> {t('promotions.crypto_slide.description_part2')}
           </div>
 
           {/* Button */}
@@ -144,7 +148,7 @@ function CryptoSlide() {
           >
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
             <CreditCard className="w-5 h-5" />
-            <span className="relative">PAY NOW</span>
+            <span className="relative">{t('promotions.crypto_slide.button')}</span>
           </a>
         </div>
 
@@ -167,6 +171,8 @@ function CryptoSlide() {
 
 // Slide 2: Golden Hour
 function GoldenHourSlide() {
+  const { t } = useLanguage();
+  
   return (
     <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
       {/* Background Gradient */}
@@ -181,7 +187,7 @@ function GoldenHourSlide() {
         
         {/* Heading */}
         <h2 className="font-serif font-bold text-3xl md:text-5xl text-white tracking-wide drop-shadow-md">
-          GOLDEN HOUR
+          {t('promotions.golden_hour_slide.title')}
         </h2>
 
         {/* Divider */}
@@ -189,18 +195,18 @@ function GoldenHourSlide() {
 
         {/* Days */}
         <div className="text-lg md:text-xl font-bold text-white tracking-wide">
-          MONDAY - THURSDAY
+          {t('promotions.golden_hour_slide.days')}
         </div>
 
         {/* Time */}
         <div className="flex items-center gap-2 text-white/90 text-base md:text-lg">
           <Clock className="w-4 h-4 md:w-5 md:h-5" />
-          <span>12:00 PM - 3:30 PM</span>
+          <span>{t('promotions.golden_hour_slide.time')}</span>
         </div>
 
         {/* Discount */}
         <div className="text-3xl md:text-4xl font-bold text-white drop-shadow-md mt-1">
-          15% OFF
+          {t('promotions.golden_hour_slide.discount')}
         </div>
 
         {/* Button */}
@@ -211,7 +217,7 @@ function GoldenHourSlide() {
           className="mt-2 px-6 py-2.5 rounded-full bg-white text-[#996515] font-bold shadow-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm md:text-base"
         >
           <Calendar className="w-4 h-4 md:w-5 md:h-5" />
-          BOOK APPOINTMENT
+          {t('promotions.golden_hour_slide.button')}
         </a>
       </div>
     </div>
@@ -220,6 +226,8 @@ function GoldenHourSlide() {
 
 // Slide 3: VIP Royalty
 function VipRoyaltySlide() {
+  const { t } = useLanguage();
+  
   return (
     <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-r from-[#1e3a8a] to-black overflow-hidden">
       {/* Blue Glow */}
@@ -235,20 +243,20 @@ function VipRoyaltySlide() {
         <div className="flex flex-col items-end gap-6 max-w-lg text-right w-full md:w-auto">
           {/* Badge */}
           <div className="px-3 py-1 rounded border border-[#3b82f6] bg-[#3b82f6]/20 text-[#93c5fd] text-xs font-bold tracking-widest uppercase">
-            MEMBERS ONLY
+            {t('promotions.vip_royalty_slide.badge')}
           </div>
           
           {/* Heading */}
           <div className="flex flex-col font-serif font-bold text-4xl md:text-6xl leading-tight text-white">
             <div className="flex items-baseline justify-end gap-3 flex-wrap">
-              <span className="text-4xl">VIP</span>
-              <span className="text-[#60a5fa]">ROYALTY</span>
+              <span className="text-4xl">{t('promotions.vip_royalty_slide.title_vip')}</span>
+              <span className="text-[#60a5fa]">{t('promotions.vip_royalty_slide.title_royalty')}</span>
             </div>
           </div>
 
           {/* Description */}
           <div className="text-lg md:text-xl text-gray-300 leading-snug">
-            Join our exclusive club today. Receive <span className="text-white font-bold">$50 CREDIT</span> instantly upon registration.
+            {t('promotions.vip_royalty_slide.description')} <span className="text-white font-bold">{t('promotions.vip_royalty_slide.credit')}</span> {t('promotions.vip_royalty_slide.description_part2')}
           </div>
 
           {/* Button */}
@@ -257,7 +265,7 @@ function VipRoyaltySlide() {
             className="group mt-4 px-8 py-3 rounded-full bg-transparent border-2 border-[#60a5fa] text-[#60a5fa] font-bold flex items-center gap-3 shadow-[0_0_20px_rgba(96,165,250,0.3)] hover:bg-[#60a5fa] hover:text-white transition-all duration-300"
           >
             <Crown className="w-5 h-5" />
-            <span>JOIN CLUB</span>
+            <span>{t('promotions.vip_royalty_slide.button')}</span>
           </a>
         </div>
       </div>

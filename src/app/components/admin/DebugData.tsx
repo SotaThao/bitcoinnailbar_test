@@ -1,7 +1,10 @@
+import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Loader2, AlertTriangle, Database, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '@utils/supabase/info';
+import AdminLayout from '@/app/components/AdminLayout';
 
 export default function DebugData() {
   const [loading, setLoading] = useState(true);
@@ -38,7 +41,7 @@ export default function DebugData() {
   };
 
   const handleCleanupDuplicates = async () => {
-    if (!confirm(`⚠️ Bạn chắc chắn muốn xóa ${data?.duplicates?.totalDuplicates} bản ghi duplicate?\n\nHành động này KHÔNG THỂ HOÀN TÁC!`)) {
+    if (!confirm(`⚠️ Bạn ch���c chắn muốn xóa ${data?.duplicates?.totalDuplicates} bản ghi duplicate?\n\nHành động này KHÔNG THỂ HOÀN TÁC!`)) {
       return;
     }
 

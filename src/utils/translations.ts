@@ -611,6 +611,115 @@ export const translations = {
         "Relax, refresh, and recharge. You've earned it!",
         "Sending you love and a moment of pure bliss."
       ]
+    },
+    redeem: {
+      badge: "Redeem Your Code",
+      title: "Activate Membership",
+      subtitle: "Payment successful? Enter your redeem code from email to activate your membership package",
+      instructions: {
+        title: "Purchase Guide",
+        step1: {
+          title: "Choose Package",
+          desc: "Select the right membership package above and click \"Join Now\""
+        },
+        step2: {
+          title: "Payment",
+          desc: "VLINKPAY window will open. Complete secure payment"
+        },
+        step3: {
+          title: "Receive Code",
+          desc: "You will receive redeem code via email after successful payment"
+        },
+        step4: {
+          title: "Activate",
+          desc: "Enter code in the form beside to activate membership"
+        },
+        note: "Note:",
+        note_desc: "One account can use multiple codes. Highest tier will be activated first."
+      },
+      tabs: {
+        redeem: "Enter Code",
+        check: "Check Status"
+      },
+      form: {
+        title_redeem: "Enter Redeem Code",
+        title_check: "Check Membership"
+      },
+      faq: {
+        title: "Frequently Asked Questions",
+        q1: "Does the redeem code expire?",
+        a1: "Yes, the code is valid for 30 days from payment date.",
+        q2: "Can I transfer the code to someone else?",
+        a2: "Yes, the code is transferable. Whoever enters the correct code will receive the membership.",
+        q3: "What if I have multiple membership packages?",
+        a3: "The highest package will be activated first. When it expires, the lower package will automatically apply."
+      }
+    },
+    payment_modal: {
+      header: {
+        membership: "Membership",
+        payment: "Payment:"
+      },
+      email_form: {
+        title: "Enter Your Email",
+        subtitle: "Redeem code will be sent to this email after successful payment",
+        label: "Email",
+        placeholder: "example@email.com",
+        required: "*",
+        button: "Continue Payment",
+        error_required: "Please enter email",
+        error_invalid: "Invalid email"
+      },
+      notes: {
+        title: "Important notes:",
+        note1: "Email must be accurate to receive redeem code",
+        note2: "Check spam folder if you don't see the email",
+        note3: "Code is valid for 30 days"
+      },
+      payment_iframe: {
+        sent_to: "Redeem code will be sent to:",
+        loading: "Loading VLINKPAY payment page...",
+        copy_url: "Copy Link",
+        copied: "Copied!",
+        open_in_new_tab: "Open in New Tab"
+      },
+      success: {
+        title: "🎉 Payment successful!",
+        code_label: "Redeem code:",
+        instruction1: "Please check email to receive the code.",
+        instruction2: "Use this code to activate membership below."
+      }
+    },
+    promotions: {
+      header: {
+        badge: "Special Offers",
+        title: "Current Promotions"
+      },
+      crypto_slide: {
+        badge: "PAYMENT 4.0",
+        title_line1: "PAY WITH",
+        title_line2: "CRYPTO",
+        description: "Get an instant",
+        discount: "10% OFF",
+        description_part2: "when you pay with Bitcoin, USDT or VLinkPay wallet.",
+        button: "PAY NOW"
+      },
+      golden_hour_slide: {
+        title: "GOLDEN HOUR",
+        days: "MONDAY - THURSDAY",
+        time: "12:00 PM - 3:30 PM",
+        discount: "15% OFF",
+        button: "BOOK APPOINTMENT"
+      },
+      vip_royalty_slide: {
+        badge: "MEMBERS ONLY",
+        title_vip: "VIP",
+        title_royalty: "ROYALTY",
+        description: "Join our exclusive club today. Receive",
+        credit: "$50 CREDIT",
+        description_part2: "instantly upon registration.",
+        button: "JOIN CLUB"
+      }
     }
   },
   
@@ -1214,6 +1323,115 @@ export const translations = {
         "Thư giãn, làm mới và nạp lại năng lượng. Bạn đã làm việc vất vả rồi!",
         "Gửi đến bạn tình yêu và khoảnh khắc hạnh phúc thuần khiết."
       ]
+    },
+    redeem: {
+      badge: "Redeem Your Code",
+      title: "Kích Hoạt Membership",
+      subtitle: "Đã thanh toán thành công? Nhập mã redeem từ email để kích hoạt gói membership của bạn",
+      instructions: {
+        title: "Hướng Dẫn Mua Gói",
+        step1: {
+          title: "Chọn Gói",
+          desc: "Chọn gói membership phù hợp ở bên trên và nhấn \"Join Now\""
+        },
+        step2: {
+          title: "Thanh Toán",
+          desc: "Cửa sổ VLINKPAY sẽ mở. Hoàn tất thanh toán an toàn"
+        },
+        step3: {
+          title: "Nhận Mã",
+          desc: "Bạn sẽ nhận mã redeem qua email sau khi thanh toán thành công"
+        },
+        step4: {
+          title: "Kích Hoạt",
+          desc: "Nhập mã vào form bên cạnh để kích hoạt membership"
+        },
+        note: "Lưu ý:",
+        note_desc: "Một tài khoản có thể sử dụng nhiều mã. Gói cao nhất sẽ được ưu tiên kích hoạt trước."
+      },
+      tabs: {
+        redeem: "Nhập Mã",
+        check: "Kiểm tra"
+      },
+      form: {
+        title_redeem: "Nhập Mã Redeem",
+        title_check: "Kiểm Tra Membership"
+      },
+      faq: {
+        title: "Câu Hỏi Thường Gặp",
+        q1: "Mã redeem có thời hạn không?",
+        a1: "Có, mã có hiệu lực trong 30 ngày kể từ khi thanh toán.",
+        q2: "Tôi có thể chuyển mã cho người khác không?",
+        a2: "Có, mã có thể chuyển nhượng. Ai nhập đúng mã sẽ nhận được membership.",
+        q3: "Nếu tôi có nhiều gói membership thì sao?",
+        a3: "Gói cao nhất sẽ được kích hoạt trước. Khi hết hạn, gói thấp hơn sẽ tự động được áp dụng."
+      }
+    },
+    payment_modal: {
+      header: {
+        membership: "Membership",
+        payment: "Thanh toán:"
+      },
+      email_form: {
+        title: "Nhập Email Của Bạn",
+        subtitle: "Mã redeem sẽ được gửi về email này sau khi thanh toán thành công",
+        label: "Email",
+        placeholder: "example@email.com",
+        required: "*",
+        button: "Tiếp Tục Thanh Toán",
+        error_required: "Vui lòng nhập email",
+        error_invalid: "Email không hợp lệ"
+      },
+      notes: {
+        title: "Lưu ý quan trọng:",
+        note1: "Email phải chính xác để nhận mã redeem",
+        note2: "Kiểm tra cả hộp thư spam nếu không thấy email",
+        note3: "Mã có hiệu lực trong 30 ngày"
+      },
+      payment_iframe: {
+        sent_to: "Mã redeem sẽ được gửi về:",
+        loading: "Đang tải trang thanh toán VLINKPAY...",
+        copy_url: "Sao Chép Link",
+        copied: "Đã Sao Chép!",
+        open_in_new_tab: "Mở Tab Mới"
+      },
+      success: {
+        title: "🎉 Thanh toán thành công!",
+        code_label: "Mã redeem:",
+        instruction1: "Vui lòng kiểm tra email để nhận mã code.",
+        instruction2: "Sử dụng mã này để kích hoạt membership bên dưới."
+      }
+    },
+    promotions: {
+      header: {
+        badge: "Ưu Đãi Đặc Biệt",
+        title: "Chương Trình Khuyến Mãi"
+      },
+      crypto_slide: {
+        badge: "THANH TOÁN 4.0",
+        title_line1: "THANH TOÁN",
+        title_line2: "CRYPTO",
+        description: "Giảm ngay",
+        discount: "10%",
+        description_part2: "khi thanh toán bằng Bitcoin, USDT hoặc ví VLinkPay.",
+        button: "THANH TOÁN NGAY"
+      },
+      golden_hour_slide: {
+        title: "GIỜ VÀNG",
+        days: "THỨ HAI - THỨ NĂM",
+        time: "12:00 CH - 3:30 CH",
+        discount: "GIẢM 15%",
+        button: "ĐẶT LỊCH HẸN"
+      },
+      vip_royalty_slide: {
+        badge: "DÀNH CHO THÀNH VIÊN",
+        title_vip: "VIP",
+        title_royalty: "ROYALTY",
+        description: "Tham gia câu lạc bộ độc quyền của chúng tôi. Nhận",
+        credit: "$50 TIỀN ƯU ĐÃI",
+        description_part2: "ngay khi đăng ký.",
+        button: "THAM GIA NGAY"
+      }
     }
   },
 

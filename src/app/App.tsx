@@ -45,6 +45,7 @@ const AdminGallery = lazy(() => import('@/app/components/admin/GalleryManagement
 // Owner Pages - Lazy Loaded
 const UsersPage = lazy(() => import('@/app/pages/admin/UsersPage'));
 const RolePermissionsPage = lazy(() => import('@/app/pages/admin/RolePermissionsPage'));
+const VLinkPaySettingsPage = lazy(() => import('@/app/pages/admin/VLinkPaySettingsPage'));
 
 import { ProtectedAdminRoute } from '@/app/components/ProtectedAdminRoute';
 import { PromotionModal } from '@/app/components/PromotionModal';
@@ -197,6 +198,7 @@ export default function App() {
                 {/* Owner Routes */}
                 <Route path="/admin/users" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><UsersPage /></Suspense></ProtectedAdminRoute>} />
                 <Route path="/admin/role-permissions" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><RolePermissionsPage /></Suspense></ProtectedAdminRoute>} />
+                <Route path="/admin/vlinkpay-settings" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><VLinkPaySettingsPage /></Suspense></ProtectedAdminRoute>} />
                 <Route path="/admin/system-settings" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><AdminSettings /></Suspense></ProtectedAdminRoute>} />
                 
                 {/* Legacy Settings Route - Redirect to System Settings */}

@@ -77,6 +77,22 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
 
   const [menuItems, setMenuItems] = useState<Array<MenuItem>>([]);
 
+  // Hide header when payment modal is open
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+
+  useEffect(() => {
+    const checkPaymentModal = () => {
+      setIsPaymentModalOpen(document.body.classList.contains('payment-modal-open'));
+    };
+
+    checkPaymentModal();
+    
+    const observer = new MutationObserver(checkPaymentModal);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     const handleScroll = () => {
       // Show header after scrolling past hero section (approx 400px)
@@ -171,7 +187,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
 
       {/* Header / Navigation */}
       <header 
-        className="fixed top-0 z-50 w-full border-b border-white/5 bg-[#0B0F19]/90 backdrop-blur supports-[backdrop-filter]:bg-[#0B0F19]/60 transition-all duration-500 translate-y-0 opacity-100"
+        className={`fixed top-0 z-50 w-full border-b border-white/5 bg-[#0B0F19]/90 backdrop-blur supports-[backdrop-filter]:bg-[#0B0F19]/60 transition-all duration-500 translate-y-0 opacity-100 ${isPaymentModalOpen ? 'hidden' : ''}`}
       >
         {loadCryptoTicker && <CryptoTicker />}
         <div className="container mx-auto px-4">

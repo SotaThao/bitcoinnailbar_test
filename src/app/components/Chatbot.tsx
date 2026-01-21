@@ -45,6 +45,23 @@ export function Chatbot() {
   const [showBubble, setShowBubble] = useState(false);
   const [bubbleText, setBubbleText] = useState("");
 
+  // Hide chatbot when payment modal is open
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+
+  useEffect(() => {
+    const checkPaymentModal = () => {
+      setIsPaymentModalOpen(document.body.classList.contains('payment-modal-open'));
+    };
+
+    // Check on mount and set up observer
+    checkPaymentModal();
+    
+    const observer = new MutationObserver(checkPaymentModal);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
+
   // Fetch chatbot avatar on mount
   useEffect(() => {
     const fetchAvatar = async () => {
@@ -207,7 +224,7 @@ export function Chatbot() {
   return (
     <>
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && !isPaymentModalOpen && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -428,7 +445,7 @@ export function Chatbot() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {showBubble && !isOpen && (
+        {showBubble && !isOpen && !isPaymentModalOpen && (
           <motion.div
             initial={{ opacity: 0, y: 10, scale: 0.8, x: 0 }}
             animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
@@ -443,36 +460,38 @@ export function Chatbot() {
       </AnimatePresence>
 
       {/* Toggle Button */}
-      <motion.button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed right-6 bottom-[106px] md:bottom-6 z-50 w-16 h-16 rounded-full bg-[#FF9800] shadow-lg flex items-center justify-center overflow-hidden border-4 border-[#FF9800]/50"
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        initial={{ opacity: 0, scale: 0 }}
-        animate={{ 
-          opacity: chatbotAvatar ? 1 : 0, 
-          scale: chatbotAvatar ? 1 : 0,
-          boxShadow: chatbotAvatar ? ["0 0 0 0 rgba(255, 152, 0, 0.7)", "0 0 0 20px rgba(255, 152, 0, 0)"] : "0 0 0 0 rgba(255, 152, 0, 0)",
-        }}
-        transition={{
-          boxShadow: {
-            duration: 1.5,
-            repeat: Infinity,
-            }
-        }}
-      >
-        {chatbotAvatar ? (
-          <div className="relative w-full h-full">
-            <ImageWithFallback 
-              src={chatbotAvatar} 
-              alt="Chat" 
-              className="w-full h-full object-cover"
-            />
-          </div>
-        ) : (
-          <MessageCircle className="w-8 h-8 text-black" />
-        )}
-      </motion.button>
+      {!isPaymentModalOpen && (
+        <motion.button
+          onClick={() => setIsOpen(!isOpen)}
+          className="fixed right-6 bottom-[106px] md:bottom-6 z-50 w-16 h-16 rounded-full bg-[#FF9800] shadow-lg flex items-center justify-center overflow-hidden border-4 border-[#FF9800]/50"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ 
+            opacity: chatbotAvatar ? 1 : 0, 
+            scale: chatbotAvatar ? 1 : 0,
+            boxShadow: chatbotAvatar ? ["0 0 0 0 rgba(255, 152, 0, 0.7)", "0 0 0 20px rgba(255, 152, 0, 0)"] : "0 0 0 0 rgba(255, 152, 0, 0)",
+          }}
+          transition={{
+            boxShadow: {
+              duration: 1.5,
+              repeat: Infinity,
+              }
+          }}
+        >
+          {chatbotAvatar ? (
+            <div className="relative w-full h-full">
+              <ImageWithFallback 
+                src={chatbotAvatar} 
+                alt="Chat" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <MessageCircle className="w-8 h-8 text-black" />
+          )}
+        </motion.button>
+      )}
     </>
   );
 }

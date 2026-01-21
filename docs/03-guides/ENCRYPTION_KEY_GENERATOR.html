@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 VLINKPAY Encryption Key Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            font-size: 28px;
+            color: #1a202c;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 30px;
+        }
+        
+        .warning-box {
+            background: #fff5f5;
+            border: 2px solid #feb2b2;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .warning-box h3 {
+            color: #c53030;
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .warning-box p {
+            color: #742a2a;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 20px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .key-display {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .key-display.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .key-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .key-value {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #2d3748;
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e0;
+            word-break: break-all;
+            margin-bottom: 12px;
+        }
+        
+        .copy-btn {
+            padding: 10px 20px;
+            background: #48bb78;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .copy-btn:hover {
+            background: #38a169;
+        }
+        
+        .copy-btn.copied {
+            background: #2f855a;
+        }
+        
+        .steps {
+            background: #ebf8ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .steps h3 {
+            color: #2c5282;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        .steps ol {
+            padding-left: 20px;
+        }
+        
+        .steps li {
+            color: #2d3748;
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        
+        .steps code {
+            background: #2d3748;
+            color: #68d391;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        .success-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background: #48bb78;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 VLINKPAY Encryption Key Generator</h1>
+        <p class="subtitle">Generate a secure 256-bit encryption key for your API keys</p>
+        
+        <div class="warning-box">
+            <h3>
+                <span>⚠️</span>
+                <span>Important Security Notice</span>
+            </h3>
+            <p>
+                This key will be used to encrypt your VLINKPAY API keys in the database. 
+                <strong>Keep it secret and secure!</strong> If you lose this key, you won't be able to decrypt your stored API keys.
+            </p>
+        </div>
+        
+        <button class="btn" onclick="generateKey()">
+            🎲 Generate Encryption Key
+        </button>
+        
+        <div class="key-display" id="keyDisplay">
+            <div class="key-label">Your Encryption Key (32 bytes, Base64 encoded):</div>
+            <div class="key-value" id="keyValue"></div>
+            <button class="copy-btn" id="copyBtn" onclick="copyKey()">
+                📋 Copy to Clipboard
+            </button>
+        </div>
+        
+        <div class="steps">
+            <h3>📝 Next Steps:</h3>
+            <ol>
+                <li>Click <strong>"Generate Encryption Key"</strong> above</li>
+                <li>Click <strong>"Copy to Clipboard"</strong> to copy the key</li>
+                <li>Go to <strong>Supabase Dashboard</strong> → Your Project</li>
+                <li>Navigate to <strong>Edge Functions</strong> → <strong>Secrets</strong></li>
+                <li>Add new secret:
+                    <br>• Name: <code>VLINKPAY_ENCRYPTION_KEY</code>
+                    <br>• Value: <em>[Paste your copied key]</em>
+                </li>
+                <li>Save the secret in Supabase</li>
+                <li>Go to your app's <code>/admin/vlinkpay-settings</code> page</li>
+                <li>Enter your VLINKPAY credentials and save</li>
+                <li><span class="success-icon">✓</span> Done! Your API keys are now encrypted!</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        let currentKey = '';
+        
+        function generateKey() {
+            // Generate 32 random bytes (256 bits)
+            const key = new Uint8Array(32);
+            crypto.getRandomValues(key);
+            
+            // Convert to base64
+            const base64Key = btoa(String.fromCharCode(...key));
+            currentKey = base64Key;
+            
+            // Display the key
+            document.getElementById('keyValue').textContent = base64Key;
+            document.getElementById('keyDisplay').classList.add('show');
+            
+            // Reset copy button
+            const copyBtn = document.getElementById('copyBtn');
+            copyBtn.textContent = '📋 Copy to Clipboard';
+            copyBtn.classList.remove('copied');
+        }
+        
+        async function copyKey() {
+            const copyBtn = document.getElementById('copyBtn');
+            
+            try {
+                await navigator.clipboard.writeText(currentKey);
+                copyBtn.textContent = '✅ Copied!';
+                copyBtn.classList.add('copied');
+                
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 Copy to Clipboard';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = currentKey;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                copyBtn.textContent = '✅ Copied!';
+                copyBtn.classList.add('copied');
+            }
+        }
+    </script>
+</body>
+</html>

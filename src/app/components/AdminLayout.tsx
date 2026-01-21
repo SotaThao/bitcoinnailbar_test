@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import bitcoinLogo from 'figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png';
-import { LayoutDashboard, Calendar, DollarSign, BarChart3, LogOut, Scissors, Star, Bitcoin, User, Bell, Settings, Scan, CreditCard, Users2, Shield, Image } from 'lucide-react';
+import { LayoutDashboard, Calendar, DollarSign, BarChart3, LogOut, Scissors, Star, Bitcoin, User, Bell, Settings, Scan, CreditCard, Users2, Shield, Image, Wallet } from 'lucide-react';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { clearSession, getCurrentUser, getAuthToken } from '/utils/auth';
@@ -65,6 +65,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const ownerNavLinks = [
     { path: '/admin/users', label: 'User Management', icon: Users2 },
     { path: '/admin/role-permissions', label: 'Role & Permissions', icon: Shield },
+    { path: '/admin/vlinkpay-settings', label: 'VLINKPAY Settings', icon: Wallet },
     { path: '/admin/system-settings', label: 'System Settings', icon: Settings },
   ];
 

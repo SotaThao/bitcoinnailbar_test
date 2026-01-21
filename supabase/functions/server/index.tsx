@@ -12,6 +12,9 @@ import { app as customersApp } from './customers.tsx';
 import rolesApp from './roles.tsx';
 import { promotionsApp } from './promotions.tsx';
 import galleryApp from './gallery.tsx';
+import { vlinkpaySettingsApp } from './vlinkpay-settings.tsx';
+import { paymentApp } from './payment.tsx';
+import { redeemApp } from './redeem.tsx';
 
 // JWT Secret - in production this should be from environment variable
 const JWT_SECRET = new TextEncoder().encode(
@@ -95,6 +98,9 @@ app.route('/', customersApp);
 app.route('/make-server-84f9c112/roles', rolesApp);
 app.route('/', promotionsApp);
 app.route('/', galleryApp);
+app.route('/', vlinkpaySettingsApp);
+app.route('/', paymentApp);
+app.route('/', redeemApp);
 
 // ========== TYPE DEFINITIONS ==========
 interface User {
@@ -3232,22 +3238,18 @@ app.get("/make-server-84f9c112/settings/chatbot-avatar", async (c) => {
       return c.json({ success: true, data: { avatar: '' } });
     }
 
-    // Regenerate fresh signed URL from file path
+    // Use public URL instead of signed URL (avatar is public content)
     const BUCKET_NAME = 'make-84f9c112-promotions';
-    const { data, error } = await supabase.storage
+    const { data } = supabase.storage
       .from(BUCKET_NAME)
-      .createSignedUrl(avatarPath, 3600); // 1 hour expiry
+      .getPublicUrl(avatarPath);
 
-    if (error) {
-      console.error(`❌ [CHATBOT AVATAR] Failed to generate signed URL for path "${avatarPath}":`, error);
-      return c.json({ success: true, data: { avatar: '' } });
-    }
-
-    console.log(`✅ [CHATBOT AVATAR] Fresh signed URL generated for: ${avatarPath}`);
-    return c.json({ success: true, data: { avatar: data.signedUrl } });
+    console.log(`✅ [CHATBOT AVATAR] Public URL generated for: ${avatarPath}`);
+    return c.json({ success: true, data: { avatar: data.publicUrl } });
   } catch (error: any) {
     console.error("❌ [CHATBOT SETTING] Exception:", error);
-    return c.json({ success: false, error: error.message }, 500);
+    // Fallback to empty avatar on error
+    return c.json({ success: true, data: { avatar: '' } });
   }
 });
 
@@ -3512,62 +3514,67 @@ async function seedBuiltInRoles() {
   try {
     console.log('🌱 [SEED] Checking for built-in roles...');
     
-    // Add timeout to avoid hanging on network issues
+    // Increase timeout to 15 seconds
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Seed timeout after 5s')), 5000)
+      setTimeout(() => reject(new Error('Seed timeout after 15s')), 15000)
     );
     
     const seedPromise = (async () => {
-      const existingRoles = await kv.getByPrefix('role:');
-      
-      // Check if built-in roles already exist
-      const hasAdminRole = existingRoles.some((r: any) => r.name === 'admin' && r.is_built_in);
-      const hasStaffRole = existingRoles.some((r: any) => r.name === 'staff' && r.is_built_in);
-      
-      // Seed Admin role if not exists
-      if (!hasAdminRole) {
-        const adminRoleId = crypto.randomUUID();
-        const adminRole = {
-          id: adminRoleId,
-          name: 'admin',
-          description: 'Administrator with elevated permissions',
-          permissions: [
-            'manage_services',
-            'manage_staff',
-            'view_reports',
-            'manage_appointments',
-            'process_payments',
-            'view_analytics',
-          ],
-          is_built_in: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        await kv.set(`role:${adminRoleId}`, adminRole);
-        console.log('✅ [SEED] Created built-in role: Admin');
-      }
-      
-      // Seed Staff role if not exists
-      if (!hasStaffRole) {
-        const staffRoleId = crypto.randomUUID();
-        const staffRole = {
-          id: staffRoleId,
-          name: 'staff',
-          description: 'Staff member with basic permissions',
-          permissions: [
-            'manage_appointments',
-            'process_payments',
-          ],
-          is_built_in: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        await kv.set(`role:${staffRoleId}`, staffRole);
-        console.log('✅ [SEED] Created built-in role: Staff');
-      }
-      
-      if (hasAdminRole && hasStaffRole) {
-        console.log('✅ [SEED] Built-in roles already exist, skipping...');
+      try {
+        const existingRoles = await kv.getByPrefix('role:');
+        
+        // Check if built-in roles already exist
+        const hasAdminRole = existingRoles.some((r: any) => r.name === 'admin' && r.is_built_in);
+        const hasStaffRole = existingRoles.some((r: any) => r.name === 'staff' && r.is_built_in);
+        
+        // Seed Admin role if not exists
+        if (!hasAdminRole) {
+          const adminRoleId = crypto.randomUUID();
+          const adminRole = {
+            id: adminRoleId,
+            name: 'admin',
+            description: 'Administrator with elevated permissions',
+            permissions: [
+              'manage_services',
+              'manage_staff',
+              'view_reports',
+              'manage_appointments',
+              'process_payments',
+              'view_analytics',
+            ],
+            is_built_in: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+          await kv.set(`role:${adminRoleId}`, adminRole);
+          console.log('✅ [SEED] Created built-in role: Admin');
+        }
+        
+        // Seed Staff role if not exists
+        if (!hasStaffRole) {
+          const staffRoleId = crypto.randomUUID();
+          const staffRole = {
+            id: staffRoleId,
+            name: 'staff',
+            description: 'Staff member with basic permissions',
+            permissions: [
+              'manage_appointments',
+              'process_payments',
+            ],
+            is_built_in: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+          await kv.set(`role:${staffRoleId}`, staffRole);
+          console.log('✅ [SEED] Created built-in role: Staff');
+        }
+        
+        if (hasAdminRole && hasStaffRole) {
+          console.log('✅ [SEED] Built-in roles already exist, skipping...');
+        }
+      } catch (seedError) {
+        console.error('❌ [SEED] Error in seed logic:', seedError);
+        throw seedError;
       }
     })();
     
@@ -3575,6 +3582,7 @@ async function seedBuiltInRoles() {
   } catch (error: any) {
     console.error('❌ [SEED] Failed to seed built-in roles:', error);
     console.log('⚠️  [SEED] Server will continue starting. Roles will be created on first access if needed.');
+    // Don't throw - let server continue
   }
 }
 
@@ -3582,9 +3590,11 @@ async function seedBuiltInRoles() {
 console.log('🚀 [SERVER] Bitcoin Nail Bar Server Starting...');
 console.log('🔍 [SERVER] Check-in endpoint: /make-server-84f9c112/check-in');
 
-// Seed roles in background (non-blocking)
-seedBuiltInRoles().catch(err => {
-  console.error('⚠️  [SEED] Background seed failed, but server is running:', err);
-});
+// Seed roles in background (non-blocking) - wrapped in setTimeout to be truly async
+setTimeout(() => {
+  seedBuiltInRoles().catch(err => {
+    console.error('⚠️  [SEED] Background seed failed, but server is running:', err);
+  });
+}, 100);
 
 Deno.serve(app.fetch);

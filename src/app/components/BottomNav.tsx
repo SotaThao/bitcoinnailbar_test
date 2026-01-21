@@ -2,13 +2,35 @@ import { Link, useLocation } from 'react-router-dom';
 import { Home, Scissors, Calendar, Crown, Gift } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { motion } from 'motion/react';
+import { useState, useEffect } from 'react';
 
 export function BottomNav() {
   const location = useLocation();
   const { t } = useLanguage();
 
+  // Hide BottomNav when payment modal is open
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+
+  useEffect(() => {
+    const checkPaymentModal = () => {
+      setIsPaymentModalOpen(document.body.classList.contains('payment-modal-open'));
+    };
+
+    checkPaymentModal();
+    
+    const observer = new MutationObserver(checkPaymentModal);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
+
   // Hide BottomNav on booking page (mobile only)
   if (location.pathname === '/booking') {
+    return null;
+  }
+
+  // Hide BottomNav when payment modal is open
+  if (isPaymentModalOpen) {
     return null;
   }
 

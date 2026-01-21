@@ -27,7 +27,7 @@ const initBucket = async () => {
     if (!bucketExists) {
       console.log('📦 [PROMOTIONS] Creating storage bucket...');
       const { error } = await supabase.storage.createBucket(BUCKET_NAME, {
-        public: false,
+        public: true, // Public bucket for promotion images and chatbot avatars
         fileSizeLimit: 5242880, // 5MB
         allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
       });
@@ -44,6 +44,20 @@ const initBucket = async () => {
       }
     } else {
       console.log('✅ [PROMOTIONS] Bucket already exists');
+      
+      // Update bucket to public if it's not already
+      try {
+        const { error: updateError } = await supabase.storage.updateBucket(BUCKET_NAME, {
+          public: true,
+        });
+        if (updateError) {
+          console.warn('⚠️  [PROMOTIONS] Could not update bucket to public:', updateError);
+        } else {
+          console.log('✅ [PROMOTIONS] Bucket updated to public');
+        }
+      } catch (e) {
+        console.warn('⚠️  [PROMOTIONS] Bucket update skipped:', e);
+      }
     }
   } catch (error) {
     console.error('❌ [PROMOTIONS] Bucket initialization error:', error);
@@ -103,14 +117,10 @@ app.post('/make-server-84f9c112/promotions/upload-image', async (c) => {
       return c.json({ success: false, error: error.message }, 500);
     }
 
-    // Generate signed URL (valid for 24 hours)
-    const { data: signedUrlData } = await supabase.storage
+    // Get public URL (bucket is public, no expiry needed)
+    const { data: publicUrlData } = supabase.storage
       .from(BUCKET_NAME)
-      .createSignedUrl(filename, 86400); // 24 hours (reduced from 1 year for security)
-
-    if (!signedUrlData) {
-      return c.json({ success: false, error: 'Failed to generate signed URL' }, 500);
-    }
+      .getPublicUrl(filename);
 
     console.log('✅ [PROMOTIONS] Image uploaded:', filename);
 
@@ -118,7 +128,7 @@ app.post('/make-server-84f9c112/promotions/upload-image', async (c) => {
       success: true,
       data: {
         path: data.path,
-        signedUrl: signedUrlData.signedUrl,
+        signedUrl: publicUrlData.publicUrl, // Using public URL instead of signed URL
         filename
       }
     });

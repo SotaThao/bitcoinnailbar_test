@@ -1,6 +1,8 @@
-# ⚡ Quick Start - Staging Setup (10 Phút)
+# ⚡ Quick Start - Staging Setup (10 Minutes)
 
-**Cho người đã quen Supabase, cần setup nhanh**
+**For users familiar with Supabase who need quick setup**
+
+**Last Updated:** January 21, 2026
 
 ---
 
@@ -10,68 +12,85 @@
 ✅ Supabase Pro Plan
 ✅ Node.js >= 18
 ✅ Git installed
+✅ Supabase CLI (will install below)
 ```
 
 ---
 
-## 🚀 Setup 6 Bước
+## 🚀 Setup in 6 Steps
 
 ### 1️⃣ **Install CLI** (30s)
+
 ```bash
 npm install -g supabase
 supabase --version
 ```
 
+---
+
 ### 2️⃣ **Login** (30s)
+
 ```bash
 supabase login
-# Browser mở → Click "Authorize"
+# Browser opens → Click "Authorize"
 ```
+
+---
 
 ### 3️⃣ **Link Project** (1 min)
+
 ```bash
-# Lấy Project Ref: Dashboard → Settings → General → Reference ID
+# Get Project Ref: Dashboard → Settings → General → Reference ID
 supabase link --project-ref YOUR_PROJECT_REF
-# Nhập database password khi được hỏi
+# Enter database password when prompted
 ```
 
+---
+
 ### 4️⃣ **Enable Branching** (1 min)
+
 ```bash
 # Dashboard → Settings → General → Enable Branching
-# Wait 30-60s cho provision
+# Wait 30-60s for provisioning
 
 # Verify:
 supabase branches list
 # Should see: main branch
 ```
 
-### 5️⃣ **Create Staging** (2 min)
+---
+
+### 5️⃣ **Create Staging Branch** (2 min)
+
 ```bash
 supabase branches create staging
 
-# ⚠️ LƯU NGAY:
+# ⚠️ SAVE IMMEDIATELY:
 # - Staging Project Ref
 # - API URL  
 # - Anon Key
 # - Service Role Key
 ```
 
+---
+
 ### 6️⃣ **Deploy** (5 min)
+
 ```bash
-# A. Update .env.staging với staging values
+# A. Update .env.staging with staging values
 
 # B. Set secrets:
-STAGING_REF="xyz789staging"  # Thay bằng staging ref
+STAGING_REF="xyz789staging"  # Replace with your staging ref
 
-supabase secrets set DEEPSEEK_API_KEY="sk-..." --project-ref $STAGING_REF
-supabase secrets set CLOUDINARY_URL="cloudinary://..." --project-ref $STAGING_REF
-supabase secrets set RESEND_API_KEY="re_..." --project-ref $STAGING_REF
-supabase secrets set RESEND_FROM_EMAIL="noreply@bitcoinnailbar.com" --project-ref $STAGING_REF
-supabase secrets set JWT_SECRET="staging-secret-2024" --project-ref $STAGING_REF
+supabase secrets set \
+  SUPABASE_URL="https://$STAGING_REF.supabase.co" \
+  SUPABASE_ANON_KEY="your-staging-anon-key" \
+  SUPABASE_SERVICE_ROLE_KEY="your-staging-service-role-key" \
+  --project-ref $STAGING_REF
 
 # C. Deploy:
 chmod +x scripts/deploy-staging.sh
-npm run deploy:staging
+./scripts/deploy-staging.sh
 ```
 
 ---
@@ -89,7 +108,8 @@ curl https://YOUR_STAGING_REF.supabase.co/functions/v1/make-server-84f9c112/heal
 
 ## 📝 Cheat Sheet
 
-### Deploy Commands:
+### **Deploy Commands:**
+
 ```bash
 # Staging
 npm run deploy:staging
@@ -98,7 +118,10 @@ npm run deploy:staging
 npm run deploy:prod
 ```
 
-### View Logs:
+---
+
+### **View Logs:**
+
 ```bash
 # Staging
 supabase functions logs make-server-84f9c112 --project-ref STAGING_REF
@@ -107,7 +130,10 @@ supabase functions logs make-server-84f9c112 --project-ref STAGING_REF
 supabase functions logs make-server-84f9c112 --project-ref MAIN_REF
 ```
 
-### Manage Secrets:
+---
+
+### **Manage Secrets:**
+
 ```bash
 # List
 supabase secrets list --project-ref REF
@@ -119,10 +145,13 @@ supabase secrets set KEY="value" --project-ref REF
 supabase secrets unset KEY --project-ref REF
 ```
 
-### Switch Branch:
+---
+
+### **Switch Branch:**
+
 ```bash
-./scripts/switch-branch.sh staging
-./scripts/switch-branch.sh main
+supabase branches switch staging
+supabase branches switch main
 ```
 
 ---
@@ -141,21 +170,28 @@ https://STAGING_REF.supabase.co/functions/v1/make-server-84f9c112
 
 ## 🚨 Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| 404 on deploy | Redeploy: `npm run deploy:staging` |
-| 401 Unauthorized | Check secrets: `supabase secrets list --project-ref REF` |
-| Branch not found | Enable branching in Dashboard |
-| Secrets not working | Redeploy after setting secrets |
+**Issue 1: "Branching not available"**
+→ Upgrade to Pro Plan
+
+**Issue 2: "Branch creation failed"**
+→ Wait 1-2 minutes after enabling branching
+
+**Issue 3: "Secrets not syncing"**
+→ Use `--project-ref` flag explicitly
 
 ---
 
 ## 📚 Full Guides
 
-- **Chi tiết tiếng Việt:** `/STAGING_SETUP_GUIDE_VIETNAMESE.md`
-- **Checklist đầy đủ:** `/STAGING_SETUP_CHECKLIST.md`
-- **Technical docs:** `/docs/SUPABASE_BRANCHING_GUIDE.md`
+- **Detailed Guide:** See `/docs/03-guides/STAGING_SETUP_COMPLETE_GUIDE.md`
+- **Architecture:** See `/docs/01-architecture/STAGING_DECISION.md`
+- **Branching Guide:** See `/docs/03-guides/SUPABASE_BRANCHING_GUIDE.md`
 
 ---
 
-✅ **Done in 10 minutes!** 🎉
+**Total Time:** ~10 minutes  
+**Difficulty:** Easy (if familiar with Supabase)
+
+---
+
+**End of Quick Start Guide**
