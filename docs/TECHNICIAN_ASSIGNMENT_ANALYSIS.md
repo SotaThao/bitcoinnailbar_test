@@ -2,6 +2,7 @@
 
 **Date:** January 20, 2026  
 **Status:** ⚠️ **NOT IMPLEMENTED**
+**Location:** `/docs/01-architecture/TECHNICIAN_ASSIGNMENT_ANALYSIS.md`
 
 ---
 

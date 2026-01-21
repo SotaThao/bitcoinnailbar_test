@@ -3,6 +3,7 @@
 **Date:** January 20, 2026  
 **Status:** ✅ **FIXED**  
 **Priority:** 🔴 Critical
+**Location:** `/docs/04-changelogs/FIX_SUMMARY.md`
 
 ---
 
@@ -85,7 +86,7 @@ app.get("/make-server-84f9c112/appointments/:id", async (c) => {
 ## 🧪 Testing Required
 
 Follow comprehensive testing guide:
-- **File:** `/BOOKING_FLOW_VERIFICATION.md`
+- **File:** `/docs/03-guides/BOOKING_FLOW_VERIFICATION.md`
 - **Time:** ~30 minutes
 - **Phases:** 5 test phases
 
@@ -102,9 +103,9 @@ Follow comprehensive testing guide:
 ## 📁 Related Files
 
 ### **Documentation Created:**
-1. `/BOOKING_FLOW_TEST_REPORT.md` - Detailed analysis
-2. `/BOOKING_FLOW_VERIFICATION.md` - Testing guide
-3. `/FIX_SUMMARY.md` - This file
+1. `/docs/04-changelogs/BOOKING_FLOW_TEST_REPORT.md` - Detailed analysis
+2. `/docs/03-guides/BOOKING_FLOW_VERIFICATION.md` - Testing guide
+3. `/docs/04-changelogs/FIX_SUMMARY.md` - This file
 
 ### **Code Modified:**
 1. `/supabase/functions/server/index.tsx` - Added GET endpoints
@@ -162,7 +163,7 @@ User → Chatbot → createAppointment()
 ## 📞 Support
 
 If issues persist:
-1. Check `/BOOKING_FLOW_VERIFICATION.md` troubleshooting section
+1. Check `/docs/03-guides/BOOKING_FLOW_VERIFICATION.md` troubleshooting section
 2. Review backend logs
 3. Check console errors
 4. Verify environment variables

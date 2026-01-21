@@ -40,6 +40,7 @@ const AdminComingSoon = lazy(() => import('@/app/components/admin/AdminComingSoo
 const AdminSettings = lazy(() => import('@/app/components/admin/Settings'));
 const AdminMembership = lazy(() => import('@/app/components/admin/MembershipPage'));
 const DebugData = lazy(() => import('@/app/components/admin/DebugData'));
+const AdminGallery = lazy(() => import('@/app/components/admin/GalleryManagement'));
 
 // Owner Pages - Lazy Loaded
 const UsersPage = lazy(() => import('@/app/pages/admin/UsersPage'));
@@ -202,6 +203,7 @@ export default function App() {
                 <Route path="/admin/settings" element={<Navigate to="/admin/system-settings" replace />} />
                 
                 <Route path="/admin/debug-data" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><DebugData /></Suspense></ProtectedAdminRoute>} />
+                <Route path="/admin/gallery" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminGallery /></Suspense></ProtectedAdminRoute>} />
                 
                 {/* Auth Routes (NOT PROTECTED - these are for logging in) */}
                 <Route path="/admin/setup-owner" element={<SetupOwnerPage />} />

@@ -11,19 +11,16 @@ These files have been moved from root to `/docs/`:
 
 1. ✅ `BOOKING_FLOW_TEST_REPORT.md` → `/docs/BOOKING_FLOW_TEST_REPORT.md`
 2. ✅ `BOOKING_FLOW_VERIFICATION.md` → `/docs/BOOKING_FLOW_VERIFICATION.md`
+3. ✅ `DOCUMENTATION.md` → `/docs/DOCUMENTATION.md`
+4. ✅ `FIX_SUMMARY.md` → `/docs/FIX_SUMMARY.md`
+5. ✅ `QUICK_REFERENCE.md` → `/docs/QUICK_REFERENCE.md`
+6. ✅ `TECHNICIAN_ASSIGNMENT_ANALYSIS.md` → `/docs/TECHNICIAN_ASSIGNMENT_ANALYSIS.md`
 
 ---
 
 ## ⏳ PENDING MIGRATIONS
 
 These files still need to be moved from root to `/docs/`:
-
-### **Main Documentation Files:**
-
-1. ❌ `/DOCUMENTATION.md` → Move to `/docs/DOCUMENTATION.md`
-2. ❌ `/FIX_SUMMARY.md` → Move to `/docs/FIX_SUMMARY.md`
-3. ❌ `/QUICK_REFERENCE.md` → Move to `/docs/QUICK_REFERENCE.md`
-4. ❌ `/TECHNICIAN_ASSIGNMENT_ANALYSIS.md` → Move to `/docs/TECHNICIAN_ASSIGNMENT_ANALYSIS.md`
 
 ### **Staging Setup Documentation:**
 

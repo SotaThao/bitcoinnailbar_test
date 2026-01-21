@@ -2,6 +2,8 @@
 
 > Keep this handy for daily development
 
+**Location:** `/docs/05-references/QUICK_REFERENCE.md`
+
 ---
 
 ## 📦 NPM Scripts (Fastest)

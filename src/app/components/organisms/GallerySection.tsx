@@ -4,18 +4,12 @@ import { Play, Instagram, Facebook, X, ChevronLeft, ChevronRight } from 'lucide-
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { useLanguage } from '../../context/LanguageContext';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
-import img1 from 'figma:asset/490a930e6c326d1add62e3f6ba528d76450ac949.png';
-import img2 from 'figma:asset/3976be47e4190d18a738dedbeb3ac96221c6c101.png';
-import img3 from 'figma:asset/421e44d36e14dee66a0a1ff99a2b4e3dc34150ad.png';
-import img4 from 'figma:asset/4bfb016c30178cac0fd6016ed541b8df4380f18f.png';
-import img5 from 'figma:asset/36f854256560dfcfb8c919a5776a411f0c3c8422.png';
-import img6 from 'figma:asset/335b66cb51969fc7c9a2c97186c9aa7dee54ed2f.png';
-import img7 from 'figma:asset/98a7d0f5d1022bd53d3508b351bacc1e15f89655.png';
-import img8 from 'figma:asset/76c9e9fb732fce98feb10ecd16537ebe409ebec5.png';
 
-const galleryImages = [
-  img1, img2, img3, img4, img5, img6, img7, img8
-];
+interface GalleryImage {
+  id: string;
+  cloudinary_url: string;
+  order: number;
+}
 
 // Helper function to ensure URLs have https:// prefix
 const ensureHttps = (url: string): string => {
@@ -29,10 +23,37 @@ const ensureHttps = (url: string): string => {
 export function GallerySection() {
   const { t } = useLanguage();
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
+  const [loading, setLoading] = useState(true);
   const [socialMedia, setSocialMedia] = useState({
     facebook: '',
     instagram: '',
   });
+
+  // Fetch gallery images from backend
+  useEffect(() => {
+    const fetchGalleryImages = async () => {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/gallery/images`,
+          {
+            headers: { Authorization: `Bearer ${publicAnonKey}` },
+          }
+        );
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          setGalleryImages(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch gallery images:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGalleryImages();
+  }, []);
 
   // Fetch social media links
   useEffect(() => {
@@ -63,12 +84,12 @@ export function GallerySection() {
   const showNext = useCallback((e?: any) => {
     e?.stopPropagation();
     setSelectedIndex((prev) => (prev === null ? null : (prev + 1) % galleryImages.length));
-  }, []);
+  }, [galleryImages.length]);
 
   const showPrev = useCallback((e?: any) => {
     e?.stopPropagation();
     setSelectedIndex((prev) => (prev === null ? null : (prev - 1 + galleryImages.length) % galleryImages.length));
-  }, []);
+  }, [galleryImages.length]);
 
   const closeLightbox = useCallback(() => setSelectedIndex(null), []);
 
@@ -82,6 +103,11 @@ export function GallerySection() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedIndex, showNext, showPrev, closeLightbox]);
+
+  // Don't render if no images
+  if (loading || galleryImages.length === 0) {
+    return null;
+  }
 
   return (
     <div className="w-full bg-black py-12 pb-0">
@@ -104,13 +130,13 @@ export function GallerySection() {
                    <div key={setIndex} className="flex gap-4">
                       {galleryImages.map((img, i) => (
                          <div 
-                           key={i} 
+                           key={img.id} 
                            onClick={() => setSelectedIndex(i)}
                            className="relative w-[300px] h-[200px] rounded-lg overflow-hidden flex-shrink-0 group grayscale hover:grayscale-0 transition-all duration-500 cursor-pointer border border-white/10"
                          >
-                            <ImageWithFallback 
-                              src={img} 
-                              alt="Gallery" 
+                            <img 
+                              src={img.cloudinary_url} 
+                              alt={`Gallery ${i + 1}`} 
                               className="w-full h-full object-cover"
                             />
                             <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors"></div>
@@ -187,8 +213,8 @@ export function GallerySection() {
                  transition={{ duration: 0.2 }}
                  className="relative w-full h-full flex items-center justify-center"
                >
-                 <ImageWithFallback 
-                    src={galleryImages[selectedIndex]} 
+                 <img 
+                    src={galleryImages[selectedIndex].cloudinary_url} 
                     alt="Gallery View" 
                     className="max-w-full max-h-[80vh] object-contain rounded-md shadow-2xl"
                  />

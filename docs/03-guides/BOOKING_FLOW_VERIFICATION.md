@@ -2,6 +2,7 @@
 
 **Status:** 🔧 **FIXED - Ready for Testing**  
 **Date:** January 20, 2026
+**Location:** `/docs/03-guides/BOOKING_FLOW_VERIFICATION.md`
 
 ---
 

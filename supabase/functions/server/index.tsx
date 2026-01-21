@@ -11,6 +11,7 @@ import { app as authApp } from './auth.tsx';
 import { app as customersApp } from './customers.tsx';
 import rolesApp from './roles.tsx';
 import { promotionsApp } from './promotions.tsx';
+import galleryApp from './gallery.tsx';
 
 // JWT Secret - in production this should be from environment variable
 const JWT_SECRET = new TextEncoder().encode(
@@ -38,7 +39,7 @@ const retry = async <T>(fn: () => Promise<T>, retries = 3, delay = 200): Promise
     return await fn();
   } catch (error: any) {
     // Retry on network/connection errors
-    if (retries > 0 && (String(error).includes("connection error") || String(error).includes("connection reset") || String(error).includes("TypeError"))) {
+    if (retries > 0 && (String(error).includes("connection error") || String(error).includes("connection reset") || String(error).includes("network connection lost") || String(error).includes("gateway error") || String(error).includes("TypeError"))) {
       console.warn(`⚠️ Request failed, retrying... (${retries} left). Error: ${error.message || error}`);
       await new Promise(r => setTimeout(r, delay));
       return retry(fn, retries - 1, delay * 2);
@@ -93,6 +94,7 @@ app.route('/', membershipRoutes);
 app.route('/', customersApp);
 app.route('/make-server-84f9c112/roles', rolesApp);
 app.route('/', promotionsApp);
+app.route('/', galleryApp);
 
 // ========== TYPE DEFINITIONS ==========
 interface User {
@@ -3510,66 +3512,79 @@ async function seedBuiltInRoles() {
   try {
     console.log('🌱 [SEED] Checking for built-in roles...');
     
-    const existingRoles = await kv.getByPrefix('role:');
+    // Add timeout to avoid hanging on network issues
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Seed timeout after 5s')), 5000)
+    );
     
-    // Check if built-in roles already exist
-    const hasAdminRole = existingRoles.some((r: any) => r.name === 'admin' && r.is_built_in);
-    const hasStaffRole = existingRoles.some((r: any) => r.name === 'staff' && r.is_built_in);
+    const seedPromise = (async () => {
+      const existingRoles = await kv.getByPrefix('role:');
+      
+      // Check if built-in roles already exist
+      const hasAdminRole = existingRoles.some((r: any) => r.name === 'admin' && r.is_built_in);
+      const hasStaffRole = existingRoles.some((r: any) => r.name === 'staff' && r.is_built_in);
+      
+      // Seed Admin role if not exists
+      if (!hasAdminRole) {
+        const adminRoleId = crypto.randomUUID();
+        const adminRole = {
+          id: adminRoleId,
+          name: 'admin',
+          description: 'Administrator with elevated permissions',
+          permissions: [
+            'manage_services',
+            'manage_staff',
+            'view_reports',
+            'manage_appointments',
+            'process_payments',
+            'view_analytics',
+          ],
+          is_built_in: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        await kv.set(`role:${adminRoleId}`, adminRole);
+        console.log('✅ [SEED] Created built-in role: Admin');
+      }
+      
+      // Seed Staff role if not exists
+      if (!hasStaffRole) {
+        const staffRoleId = crypto.randomUUID();
+        const staffRole = {
+          id: staffRoleId,
+          name: 'staff',
+          description: 'Staff member with basic permissions',
+          permissions: [
+            'manage_appointments',
+            'process_payments',
+          ],
+          is_built_in: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        await kv.set(`role:${staffRoleId}`, staffRole);
+        console.log('✅ [SEED] Created built-in role: Staff');
+      }
+      
+      if (hasAdminRole && hasStaffRole) {
+        console.log('✅ [SEED] Built-in roles already exist, skipping...');
+      }
+    })();
     
-    // Seed Admin role if not exists
-    if (!hasAdminRole) {
-      const adminRoleId = crypto.randomUUID();
-      const adminRole = {
-        id: adminRoleId,
-        name: 'admin',
-        description: 'Administrator with elevated permissions',
-        permissions: [
-          'manage_services',
-          'manage_staff',
-          'view_reports',
-          'manage_appointments',
-          'process_payments',
-          'view_analytics',
-        ],
-        is_built_in: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      await kv.set(`role:${adminRoleId}`, adminRole);
-      console.log('✅ [SEED] Created built-in role: Admin');
-    }
-    
-    // Seed Staff role if not exists
-    if (!hasStaffRole) {
-      const staffRoleId = crypto.randomUUID();
-      const staffRole = {
-        id: staffRoleId,
-        name: 'staff',
-        description: 'Staff member with basic permissions',
-        permissions: [
-          'manage_appointments',
-          'process_payments',
-        ],
-        is_built_in: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      await kv.set(`role:${staffRoleId}`, staffRole);
-      console.log('✅ [SEED] Created built-in role: Staff');
-    }
-    
-    if (hasAdminRole && hasStaffRole) {
-      console.log('✅ [SEED] Built-in roles already exist, skipping...');
-    }
+    await Promise.race([seedPromise, timeoutPromise]);
   } catch (error: any) {
     console.error('❌ [SEED] Failed to seed built-in roles:', error);
+    console.log('⚠️  [SEED] Server will continue starting. Roles will be created on first access if needed.');
   }
 }
 
-// Run seed function before starting server
-await seedBuiltInRoles();
-
+// Start server immediately (don't block on seed)
 console.log('🚀 [SERVER] Bitcoin Nail Bar Server Starting...');
 console.log('🔍 [SERVER] Check-in endpoint: /make-server-84f9c112/check-in');
+
+// Seed roles in background (non-blocking)
+seedBuiltInRoles().catch(err => {
+  console.error('⚠️  [SEED] Background seed failed, but server is running:', err);
+});
 
 Deno.serve(app.fetch);

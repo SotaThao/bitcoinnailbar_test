@@ -2,6 +2,7 @@
 
 **Date:** January 20, 2026  
 **Status:** ⚠️ **CRITICAL ISSUE FOUND**
+**Location:** `/docs/04-changelogs/BOOKING_FLOW_TEST_REPORT.md`
 
 ---
 
