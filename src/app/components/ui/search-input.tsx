@@ -6,7 +6,7 @@ import { Input } from "./input"
 const SearchInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, ...props }, ref) => {
     return (
-      <div className="relative flex-1 w-full">
+      <div className="relative flex-1 w-full min-w-0">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <Input
           type="search"

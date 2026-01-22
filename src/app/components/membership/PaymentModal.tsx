@@ -256,7 +256,7 @@ export function PaymentModal({
                 </p>
               </div>
 
-              <div className="relative bg-gray-100 rounded-xl overflow-hidden mt-6 md:mt-10" style={{ height: '480px' }}>
+              <div className="relative bg-gray-100 rounded-xl overflow-hidden mt-6 md:mt-10 h-[480px] md:h-[600px] lg:h-[650px]">
                 <iframe
                   src={iframeUrl}
                   className="w-full h-full border-0"
@@ -268,40 +268,6 @@ export function PaymentModal({
               <p className="text-xs text-center text-gray-500">
                 {t('payment_modal.payment_iframe.loading')}
               </p>
-
-              {/* URL Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                <button
-                  onClick={handleCopyUrl}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-50 hover:bg-gray-100 border-2 border-gray-300 hover:border-[#FF9800] text-gray-700 rounded-xl transition-all duration-200 group"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-5 h-5 text-green-600" />
-                      <span className="font-semibold text-green-600">
-                        {t('payment_modal.payment_iframe.copied') || 'Copied!'}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-5 h-5 group-hover:text-[#FF9800] transition-colors" />
-                      <span className="font-semibold group-hover:text-[#FF9800] transition-colors">
-                        {t('payment_modal.payment_iframe.copy_url') || 'Copy Link'}
-                      </span>
-                    </>
-                  )}
-                </button>
-                
-                <button
-                  onClick={handleOpenInNewTab}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#FF9800] to-[#F57C00] hover:from-[#F57C00] hover:to-[#FF9800] text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl group"
-                >
-                  <ExternalLink className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                  <span className="font-semibold">
-                    {t('payment_modal.payment_iframe.open_in_new_tab') || 'Open in New Tab'}
-                  </span>
-                </button>
-              </div>
             </div>
           )}
         </div>

@@ -8,11 +8,9 @@ import { projectId, publicAnonKey } from '/utils/supabase/info';
 
 export default function VLinkPaySettingsPage() {
   const [merchantRefCode, setMerchantRefCode] = useState('');
-  const [apiKey, setApiKey] = useState('');
   const [secretKey, setSecretKey] = useState('');
   const [sandboxEndpoint, setSandboxEndpoint] = useState('https://test-web-app.vlinkpay.com');
-  const [redirectUrl] = useState('https://www.bitcoinnailbar.com/membership?payment=success'); // Fixed redirect URL
-  const [showApiKey, setShowApiKey] = useState(false);
+  const [redirectUrl] = useState('https://www.bitcoinnailbar.com/redeem-membership'); // VLinkPay redirect to standalone redeem page
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingFetch, setLoadingFetch] = useState(true);
@@ -41,10 +39,7 @@ export default function VLinkPaySettingsPage() {
         setMerchantRefCode(result.data.merchantRefCode || '');
         setSandboxEndpoint(result.data.sandboxEndpoint || 'https://test-web-app.vlinkpay.com');
         // Redirect URL is fixed, don't load from backend
-        // API key is not returned for security, keep empty or show placeholder
-        if (result.data.apiKey === '***hidden***') {
-          setApiKey(''); // User must re-enter
-        }
+        // Secret key is not returned for security, keep empty or show placeholder
         if (result.data.secretKey === '***hidden***') {
           setSecretKey(''); // User must re-enter
         }
@@ -57,7 +52,7 @@ export default function VLinkPaySettingsPage() {
   };
 
   const handleSave = async () => {
-    if (!merchantRefCode.trim() || !apiKey.trim() || !secretKey.trim() || !sandboxEndpoint.trim() || !redirectUrl.trim()) {
+    if (!merchantRefCode.trim() || !secretKey.trim() || !sandboxEndpoint.trim() || !redirectUrl.trim()) {
       setError('All fields are required');
       return;
     }
@@ -86,7 +81,6 @@ export default function VLinkPaySettingsPage() {
           },
           body: JSON.stringify({
             merchantRefCode: merchantRefCode.trim(),
-            apiKey: apiKey.trim(),
             secretKey: secretKey.trim(),
             sandboxEndpoint: sandboxEndpoint.trim(),
             redirectUrl: redirectUrl.trim(),
@@ -106,6 +100,46 @@ export default function VLinkPaySettingsPage() {
       setError(err.message || 'Failed to save settings');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDebug = async () => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/debug/vlinkpay-settings`,
+        {
+          headers: {
+            Authorization: `Bearer ${publicAnonKey}`,
+          },
+        }
+      );
+
+      // Try to parse as JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('❌ [DEBUG] Non-JSON response:', text);
+        alert(`Debug failed: Server returned non-JSON response. Check console for details.`);
+        return;
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        console.error('❌ [DEBUG] Error:', result);
+        alert(`Debug failed: ${result.error || result.message || 'Unknown error'}`);
+        return;
+      }
+
+      console.log('🔍 [DEBUG] VLinkPay Settings:', result);
+      console.table(result.data);
+      alert('✅ Debug info logged to console. Press F12 to view.\n\n' + 
+            `Has API Key (old): ${result.data.hasApiKey}\n` +
+            `Has Secret Key (new): ${result.data.hasSecretKey}\n` +
+            `All Fields: ${result.data.allFields.join(', ')}`);
+    } catch (err) {
+      console.error('❌ [DEBUG] Failed:', err);
+      alert(`Debug failed: ${err.message}\n\nCheck console for details.`);
     }
   };
 
@@ -183,36 +217,10 @@ export default function VLinkPaySettingsPage() {
               </p>
             </div>
 
-            {/* API Key */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                API Key <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <Input
-                  type={showApiKey ? "text" : "password"}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Enter VLINKPAY API key"
-                  className="h-11 font-mono pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <p className="text-xs text-gray-500">
-                Your VLINKPAY API key for authentication
-              </p>
-            </div>
-
             {/* Secret Key */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">
-                Secret Key <span className="text-red-500">*</span>
+                Client id <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <Input
@@ -290,7 +298,7 @@ export default function VLinkPaySettingsPage() {
             <div className="flex gap-3 pt-4">
               <Button
                 onClick={handleSave}
-                disabled={loading || !merchantRefCode.trim() || !apiKey.trim() || !secretKey.trim() || !sandboxEndpoint.trim() || !redirectUrl.trim()}
+                disabled={loading || !merchantRefCode.trim() || !secretKey.trim() || !sandboxEndpoint.trim() || !redirectUrl.trim()}
                 className="bg-[#FF9800] hover:bg-[#F57C00] text-white"
               >
                 {loading ? (
@@ -304,6 +312,15 @@ export default function VLinkPaySettingsPage() {
                     Save Settings
                   </>
                 )}
+              </Button>
+              <Button
+                onClick={handleDebug}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Debug Settings
               </Button>
             </div>
           </CardContent>
@@ -322,12 +339,8 @@ export default function VLinkPaySettingsPage() {
               <p>Your unique merchant identifier provided by VLINKPAY team.</p>
             </div>
             <div>
-              <h4 className="font-semibold mb-1">API Key</h4>
-              <p>Secret key for authenticating with VLINKPAY services. Keep this confidential. <strong>Automatically encrypted</strong> using AES-256-GCM before storage.</p>
-            </div>
-            <div>
               <h4 className="font-semibold mb-1">Secret Key</h4>
-              <p>Additional secret key for enhanced security. <strong>Automatically encrypted</strong> using AES-256-GCM before storage.</p>
+              <p>Your VLINKPAY secret key for authentication. <strong>Automatically encrypted</strong> using AES-256-GCM before storage.</p>
             </div>
             <div>
               <h4 className="font-semibold mb-1">Sandbox Endpoint</h4>
@@ -338,7 +351,7 @@ export default function VLinkPaySettingsPage() {
               <p>After successful payment, users will be redirected to this URL. The redeem code will be sent via email.</p>
             </div>
             <p className="mt-4 pt-4 border-t border-blue-200">
-              <strong>🔐 Encryption:</strong> All API keys are automatically encrypted using AES-256-GCM with your configured encryption key. No manual encryption needed!
+              <strong>🔐 Encryption:</strong> Secret key is automatically encrypted using AES-256-GCM with your configured encryption key. No manual encryption needed!
             </p>
           </CardContent>
         </Card>

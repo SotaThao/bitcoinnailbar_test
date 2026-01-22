@@ -8,13 +8,21 @@ import { initialServices } from './initial_services.ts';
 import * as jose from 'npm:jose@5.2.0';
 import { membershipRoutes } from './membership.tsx';
 import { app as authApp } from './auth.tsx';
-import { app as customersApp } from './customers.tsx';
+import { customersApp } from './customers_new.tsx'; // Updated to new implementation
+import { customersBookingApp } from './customers_booking.tsx'; // Booking integration
+import { customersMembershipApp } from './customers_membership.tsx'; // Membership integration
 import rolesApp from './roles.tsx';
 import { promotionsApp } from './promotions.tsx';
 import galleryApp from './gallery.tsx';
 import { vlinkpaySettingsApp } from './vlinkpay-settings.tsx';
 import { paymentApp } from './payment.tsx';
 import { redeemApp } from './redeem.tsx';
+import { membershipRedeemApp } from './membership-redeem.tsx';
+import { adminRedeemCodesApp } from './admin-redeem-codes.tsx';
+import { adminMigrationApp } from './admin-migration.tsx';
+import { debugSettingsApp } from './debug-settings.tsx';
+import { app as debugUsersApp } from './debug-users.tsx';
+import { app as debugCheckUserApp } from './debug-check-user.tsx';
 
 // JWT Secret - in production this should be from environment variable
 const JWT_SECRET = new TextEncoder().encode(
@@ -34,7 +42,7 @@ const supabase = createClient(
   }
 );
 
-const KV_TABLE = "kv_store_89edbd69";
+const KV_TABLE = "kv_store_89edbd69"; // ← REVERT: Use admin data table
 
 // Helper to retry failed requests
 const retry = async <T>(fn: () => Promise<T>, retries = 3, delay = 200): Promise<T> => {
@@ -109,12 +117,77 @@ app.use('*', cors({
 app.route('/', authApp);
 app.route('/', membershipRoutes);
 app.route('/', customersApp);
+app.route('/', customersBookingApp); // NEW: Booking integration
+app.route('/', customersMembershipApp); // NEW: Membership integration
 app.route('/make-server-84f9c112/roles', rolesApp);
 app.route('/', promotionsApp);
 app.route('/', galleryApp);
 app.route('/', vlinkpaySettingsApp);
 app.route('/', paymentApp);
 app.route('/', redeemApp);
+app.route('/make-server-84f9c112', membershipRedeemApp);
+app.route('/make-server-84f9c112', adminRedeemCodesApp);
+app.route('/make-server-84f9c112', adminMigrationApp);
+app.route('/make-server-84f9c112', debugSettingsApp);
+app.route('/', debugUsersApp); // Debug: List all users
+app.route('/', debugCheckUserApp); // Debug: Check specific user
+
+// ========== DEBUG ENDPOINT (inline for reliability) ==========
+app.get('/make-server-84f9c112/debug/vlinkpay-settings', async (c) => {
+  try {
+    console.log('🔍 [DEBUG] Fetching VLinkPay settings from database...');
+    
+    const { data, error } = await supabase
+      .from(KV_TABLE)
+      .select('value')
+      .eq('key', 'vlinkpay_settings')
+      .maybeSingle();
+    
+    if (error) {
+      console.error('❌ [DEBUG] Error:', error);
+      return c.json({ success: false, error: error.message }, 500);
+    }
+    
+    if (!data) {
+      console.log('⚠️ [DEBUG] No settings found');
+      return c.json({ success: false, message: 'No settings found' }, 404);
+    }
+    
+    // Parse value - it might be string or object
+    let settings;
+    try {
+      settings = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+    } catch (parseError) {
+      console.error('❌ [DEBUG] Failed to parse settings:', parseError);
+      return c.json({ success: false, error: 'Invalid settings format' }, 500);
+    }
+    
+    console.log('📊 [DEBUG] Settings structure:', {
+      hasApiKey: !!settings.apiKey,
+      hasSecretKey: !!settings.secretKey,
+      allKeys: Object.keys(settings)
+    });
+    
+    return c.json({
+      success: true,
+      data: {
+        hasApiKey: !!settings.apiKey,
+        apiKeyLength: settings.apiKey?.length || 0,
+        hasSecretKey: !!settings.secretKey,
+        secretKeyLength: settings.secretKey?.length || 0,
+        merchantRefCode: settings.merchantRefCode,
+        sandboxEndpoint: settings.sandboxEndpoint,
+        redirectUrl: settings.redirectUrl,
+        isActive: settings.isActive,
+        allFields: Object.keys(settings),
+        updatedAt: settings.updatedAt
+      }
+    });
+  } catch (err: any) {
+    console.error('❌ [DEBUG] Exception:', err);
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
 
 // ========== TYPE DEFINITIONS ==========
 interface User {
@@ -345,7 +418,58 @@ async function createAppointment(data: any) {
     }
   }
 
-  // 2. Save Appointment
+  // 2. Calculate total amount for customer record
+  let totalAmount = 0;
+  try {
+    const serviceMenuData = await kv.get("settings:service-menu");
+    if (serviceMenuData) {
+      const flattenServices = (data: any): any[] => {
+        const flattened: any[] = [];
+        Object.keys(data).forEach((categoryKey) => {
+          const categoryData = data[categoryKey];
+          if (categoryData.groups) {
+            categoryData.groups.forEach((group: any, groupIndex: number) => {
+              if (group.items) {
+                group.items.forEach((item: any, itemIndex: number) => {
+                  const parsePrice = (val: any): number => {
+                    if (typeof val === 'number') return val;
+                    if (!val) return 0;
+                    const str = String(val).trim();
+                    if (str.includes('-')) {
+                      const parts = str.split('-');
+                      const prices = parts.map((p: string) => parseFloat(p.trim())).filter((p: number) => !isNaN(p));
+                      return prices.length > 0 ? Math.max(...prices) : 0;
+                    }
+                    if (str.includes('+')) {
+                      return parseFloat(str.replace('+', '')) || 0;
+                    }
+                    return parseFloat(str) || 0;
+                  };
+
+                  flattened.push({
+                    id: `${categoryKey}-${groupIndex}-${itemIndex}`,
+                    name: item.name,
+                    price: parsePrice(item.regular)
+                  });
+                });
+              }
+            });
+          }
+        });
+        return flattened;
+      };
+      
+      const allServices = flattenServices(serviceMenuData);
+      totalAmount = finalServiceIds.reduce((sum: number, id: string) => {
+        const service = allServices.find((s: any) => s.id === id);
+        return sum + (service?.price || 0);
+      }, 0);
+    }
+  } catch (e) {
+    console.warn("⚠️ [CREATE_APPT] Could not calculate total:", e);
+  }
+
+  // 3. Save Appointment
   const appointmentId = `appointment:${Date.now()}`;
   const appointment = {
     id: appointmentId,
@@ -364,6 +488,83 @@ async function createAppointment(data: any) {
   
   await kv.set(appointmentId, appointment);
   console.log("✅ [CREATE_APPT] Saved to KV:", appointmentId);
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 4. NEW: Create/Update Customer Record
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  console.log("📝 [CREATE_APPT] Creating/updating customer record...");
+  try {
+    // Import customer KV helper
+    const { customerKV } = await import('./kv_store_customers.tsx');
+    
+    // Normalize phone
+    const normalizedPhone = customerPhone.replace(/\D/g, '');
+    const detectRegion = (phone: string): 'US' | 'VN' | null => {
+      if (/^\d{10}$/.test(phone) && !phone.startsWith('0')) return 'US';
+      if (/^0\d{9}$/.test(phone)) return 'VN';
+      return null;
+    };
+    const region = detectRegion(normalizedPhone);
+    
+    if (!region) {
+      console.warn('⚠️ [CREATE_APPT] Invalid phone format for customer record');
+    } else {
+      // Check if customer exists
+      const existingCustomer = await customerKV.searchByPhone(normalizedPhone);
+      
+      if (existingCustomer && !existingCustomer.is_deleted) {
+        // Update existing
+        existingCustomer.full_name = customerName;
+        existingCustomer.email = customerEmail || existingCustomer.email;
+        existingCustomer.total_visits += 1;
+        existingCustomer.total_spent += totalAmount;
+        existingCustomer.last_visit = appointmentTime;
+        if (!existingCustomer.appointment_ids) existingCustomer.appointment_ids = [];
+        existingCustomer.appointment_ids.push(appointmentId);
+        existingCustomer.updated_at = new Date().toISOString();
+        
+        await customerKV.set(existingCustomer.id, existingCustomer);
+        console.log('✅ [CREATE_APPT] Customer updated:', existingCustomer.id);
+      } else {
+        // Create new
+        const formatPhoneUS = (phone: string) => {
+          if (phone.length !== 10) return phone;
+          return `(${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6)}`;
+        };
+        const formatPhoneVN = (phone: string) => {
+          if (phone.length !== 10) return phone;
+          return `${phone.slice(0, 4)}.${phone.slice(4, 7)}.${phone.slice(7)}`;
+        };
+        
+        const key = region === 'US' 
+          ? `customer_us:${normalizedPhone}`
+          : `customer_vn:${crypto.randomUUID()}`;
+        const phoneDisplay = region === 'US' ? formatPhoneUS(normalizedPhone) : formatPhoneVN(normalizedPhone);
+        
+        const newCustomer: any = {
+          id: key,
+          phone: normalizedPhone,
+          phone_display: phoneDisplay,
+          full_name: customerName,
+          region,
+          email: customerEmail || undefined,
+          total_visits: 1,
+          total_spent: totalAmount,
+          last_visit: appointmentTime,
+          appointment_ids: [appointmentId],
+          created_at: new Date().toISOString(),
+          created_by: 'system_chatbot',
+          is_deleted: false
+        };
+        
+        await customerKV.set(key, newCustomer);
+        console.log('✅ [CREATE_APPT] New customer created:', key);
+      }
+    }
+  } catch (customerIntegrationError) {
+    console.error('❌ [CREATE_APPT] Customer integration error:', customerIntegrationError);
+    // Don't fail the whole booking process
+  }
 
   // 3. Generate QR & Send Email
   let emailSent = false;
@@ -813,6 +1014,33 @@ async function createAppointment(data: any) {
       console.error("❌ [CREATE_APPT] Email/QR error:", err);
       emailError = err.message;
     }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 5. Broadcast Realtime Notification to Admin
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  try {
+    console.log("📡 [CREATE_APPT] Broadcasting realtime notification...");
+    
+    // Send realtime event to 'appointments' channel
+    await supabase.channel('appointments').send({
+      type: 'broadcast',
+      event: 'appointment_created',
+      payload: {
+        id: appointment.id,
+        customerName: appointment.customerName,
+        customerPhone: appointment.customerPhone,
+        appointmentTime: appointment.appointmentTime,
+        serviceNames: appointment.serviceNames,
+        status: appointment.status,
+        createdAt: appointment.createdAt
+      }
+    });
+    
+    console.log("✅ [CREATE_APPT] Realtime notification sent successfully");
+  } catch (broadcastError) {
+    console.error("❌ [CREATE_APPT] Realtime broadcast error:", broadcastError);
+    // Don't fail the whole booking if notification fails
   }
 
   return { appointment, emailSent, emailError, qrCodeUrl };
@@ -1313,6 +1541,85 @@ app.get("/make-server-84f9c112/customers/phone/:phone", async (c) => {
     return c.json({ success: true, data: null });
   } catch (error: any) {
     console.error(`❌ [LOOKUP CUSTOMER] Error:`, error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Get customers list with pagination (from kv_store_customers table)
+app.get("/make-server-84f9c112/customers", async (c) => {
+  try {
+    const page = parseInt(c.req.query('page') || '1');
+    const limit = parseInt(c.req.query('limit') || '20');
+    const region = (c.req.query('region') || 'US') as 'US' | 'VN';
+    
+    console.log(`📋 [GET_CUSTOMERS] Fetching page ${page}, limit ${limit}, region ${region}`);
+    
+    // Import customer KV helper
+    const { customerKV } = await import('./kv_store_customers.tsx');
+    
+    // Calculate offset for pagination
+    const offset = (page - 1) * limit;
+    
+    // Try to fetch customers by region first
+    let customers = await customerKV.getByRegion(region, limit, offset);
+    let totalCount = await customerKV.countByRegion(region);
+    
+    // FALLBACK: If no customers found with region filter, fetch ALL customers
+    if (customers.length === 0) {
+      console.log(`⚠️ [GET_CUSTOMERS] No customers found with region=${region}, fetching ALL`);
+      customers = await customerKV.getAll(limit, offset);
+      // For getAll, we need to count all rows
+      const { count } = await import('./kv_store_customers.tsx').then(m => 
+        m.customerKV.supabase.from('kv_store_customers').select('*', { count: 'exact', head: true })
+      ).then(r => r);
+      totalCount = count || 0;
+    }
+    
+    const totalPages = Math.ceil(totalCount / limit);
+    
+    console.log(`✅ [GET_CUSTOMERS] Found ${customers.length} customers (total: ${totalCount})`);
+    console.log(`📊 [GET_CUSTOMERS] Sample customer data:`, customers[0]);
+    
+    return c.json({
+      success: true,
+      data: {
+        customers,
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages,
+        }
+      }
+    });
+  } catch (error: any) {
+    console.error('❌ [GET_CUSTOMERS] Error:', error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Search customers (from kv_store_customers table)
+app.post("/make-server-84f9c112/customers/search", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { query, region, limit } = body;
+    
+    console.log(`🔍 [SEARCH_CUSTOMERS] Query: "${query}", region: ${region}`);
+    
+    // Import customer KV helper
+    const { customerKV } = await import('./kv_store_customers.tsx');
+    
+    // Perform search
+    const customers = await customerKV.search(query, region, limit || 20);
+    
+    console.log(`✅ [SEARCH_CUSTOMERS] Found ${customers.length} matching customers`);
+    
+    return c.json({
+      success: true,
+      data: customers
+    });
+  } catch (error: any) {
+    console.error('❌ [SEARCH_CUSTOMERS] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -2995,7 +3302,8 @@ app.post("/make-server-84f9c112/admin/menu/upload", async (c) => {
 
     // Generate signature
     const timestamp = Math.round(Date.now() / 1000).toString();
-    const folder = "bitcoin-nail-bar/menu";
+    const order = parseInt(orderStr || images.length.toString());
+    const folder = `bitcoin-nail-bar/menu/page-${order + 1}`;
     const signatureString = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
     
     const encoder = new TextEncoder();
@@ -3164,7 +3472,7 @@ app.put("/make-server-84f9c112/admin/menu/:id/update", async (c) => {
 
       // Upload new image to Cloudinary
       const timestamp = Math.round(Date.now() / 1000).toString();
-      const folder = "bitcoin-nail-bar/menu";
+      const folder = `bitcoin-nail-bar/menu/page-${existingImage.order + 1}`;
       const signatureString = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
       
       const encoder = new TextEncoder();
@@ -3392,8 +3700,17 @@ app.get("/make-server-84f9c112/settings/promotions", async (c) => {
 app.get("/make-server-84f9c112/proxy/vlink", async (c) => {
   try {
     console.log('🔍 [PROXY VLINK] Fetching from upstream...');
-    const response = await fetch('https://vlinkexchange.com/matching/public/active-markets?limit=500');
+    const response = await fetch('https://vlinkexchange.com/matching/public/active-markets?limit=500', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Referer': 'https://vlinkexchange.com/',
+        'Origin': 'https://vlinkexchange.com'
+      }
+    });
     if (!response.ok) {
+      // Try fallback to alternate API if primary fails
+      console.warn(`⚠️ [PROXY VLINK] Primary API failed (${response.status}), trying no-cors/alternate...`);
       throw new Error(`Upstream API failed: ${response.status} ${response.statusText}`);
     }
     const data = await response.json();

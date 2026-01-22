@@ -6,7 +6,7 @@ export const JWT_SECRET = new TextEncoder().encode(
   Deno.env.get('JWT_SECRET') || 'bitcoin-nail-bar-secret-key-change-in-production'
 );
 
-export const KV_TABLE = "kv_store_89edbd69";
+export const KV_TABLE = "kv_store_89edbd69"; // ← REVERT: Use admin data table
 
 // ========== SUPABASE CLIENT ==========
 // Use a single shared Supabase client to prevent connection reset issues

@@ -16,7 +16,7 @@ const supabase = createClient(
   }
 );
 
-const KV_TABLE = "kv_store_89edbd69";
+const KV_TABLE = "kv_store_89edbd69"; // ← REVERT: Use admin data table
 
 // Helper to retry failed requests
 const retry = async <T>(fn: () => Promise<T>, retries = 3, delay = 200): Promise<T> => {
@@ -96,12 +96,19 @@ const updateActiveMembership = (memberships: any[]): any[] => {
 // POST /make-server-84f9c112/redeem/validate
 app.post('/make-server-84f9c112/redeem/validate', async (c) => {
   try {
-    console.log('🎁 [REDEEM] Starting validation...');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🎁 [REDEEM] STARTING MEMBERSHIP ACTIVATION PROCESS');
+    console.log('═══════════════════════════════════════════════════════');
     
     const body = await c.req.json();
     const { code, userId } = body;
     
+    console.log('📦 [REDEEM] Request body received:', JSON.stringify(body, null, 2));
+    
     if (!code || !userId) {
+      console.error('❌ [REDEEM] Missing required fields');
+      console.error('   - code:', code ? '✓' : '✗');
+      console.error('   - userId:', userId ? '✓' : '✗');
       return c.json({ 
         success: false, 
         error: 'Code and userId (phone or email) are required' 
@@ -112,11 +119,16 @@ app.post('/make-server-84f9c112/redeem/validate', async (c) => {
     console.log(`🔍 [REDEEM] Validating code: ${normalizedCode} for user: ${userId}`);
     
     // 1. Get redeem code from KV
+    console.log(`📋 [REDEEM] Querying database for key: redeem_code:${normalizedCode}`);
     const redemption = await kv.get(`redeem_code:${normalizedCode}`);
     
     // 2. Validate code exists
     if (!redemption) {
-      console.log('❌ [REDEEM] Code not found');
+      console.log('❌ [REDEEM] Code not found in database:', normalizedCode);
+      console.log('🔍 [REDEEM] This usually means:');
+      console.log('   1. Payment was not completed via /payment/complete-order');
+      console.log('   2. VLinkPay redirect did not happen');
+      console.log('   3. User clicked "Activate" before complete-order finished');
       return c.json({ 
         success: false, 
         error: 'Mã không hợp lệ. Vui lòng kiểm tra lại.' 
@@ -141,8 +153,25 @@ app.post('/make-server-84f9c112/redeem/validate', async (c) => {
       }, 400);
     }
     
-    // 4.5. Call VLINKPAY External API to validate redeem code
-    console.log('🌐 [REDEEM] Calling VLINKPAY external API...');
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 🌐 VLINKPAY EXTERNAL API VALIDATION - REQUIRED FOR REVENUE TRACKING
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 
+    // IMPORTANT: This API call is REQUIRED to record revenue in UDSV wallet
+    // Step 3: Merchant confirms order by calling VLinkPay redeem API
+    // 
+    // Spec:
+    // POST: {SANDBOX_ENDPOINT}/gifthubs/public/merchant/redeem
+    // Header: Api-key: {API_KEY}
+    // Body: { "redeemCode": "", "merchantOrderCode": "" }
+    // 
+    // Success: 200 → Revenue recorded in UDSV wallet
+    // Failure: 400 → Revenue NOT recorded
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    console.log('🌐 [REDEEM] Calling VLINKPAY API to confirm order and record revenue...');
+    
+    let vlinkpayConfirmed = false;
     
     try {
       // Get VLINKPAY settings
@@ -156,21 +185,19 @@ app.post('/make-server-84f9c112/redeem/validate', async (c) => {
         }, 500);
       }
       
-      // Check if API key exists
-      if (!vlinkpaySettings.apiKey) {
-        console.error('❌ [REDEEM] VLINKPAY API key not configured');
+      if (!vlinkpaySettings.secretKey) {
+        console.error('❌ [REDEEM] VLINKPAY Secret key not configured');
         return c.json({ 
           success: false, 
-          error: 'API key chưa được cấu hình. Vui lòng liên hệ quản trị viên.' 
+          error: 'Secret key chưa được cấu hình. Vui lòng liên hệ quản trị viên.' 
         }, 500);
       }
       
-      // Decrypt API key
-      console.log('🔐 [REDEEM] Decrypting VLINKPAY API key...');
-      const decryptedApiKey = await decryptApiKey(vlinkpaySettings.apiKey);
-      console.log('✅ [REDEEM] API key decrypted successfully');
+      // Decrypt Secret key
+      console.log('🔐 [REDEEM] Decrypting VLINKPAY Secret key...');
+      const decryptedSecretKey = await decryptApiKey(vlinkpaySettings.secretKey);
+      console.log('✅ [REDEEM] Secret key decrypted successfully');
       
-      // Check if merchantOrderCode exists in redemption data
       if (!redemption.merchantOrderCode) {
         console.error('❌ [REDEEM] merchantOrderCode not found in redemption data');
         return c.json({ 
@@ -179,58 +206,154 @@ app.post('/make-server-84f9c112/redeem/validate', async (c) => {
         }, 400);
       }
       
-      // Prepare external API request
-      const externalApiUrl = `${vlinkpaySettings.sandboxEndpoint}/gifthubs/public/merchant/redeem`;
-      const externalPayload = {
-        redeemCode: normalizedCode,
-        merchantOrderCode: redemption.merchantOrderCode
-      };
+      const baseEndpoint = vlinkpaySettings.sandboxEndpoint.replace(/\/+$/, '');
+      const apiUrl = `${baseEndpoint}/gifthubs/public/merchant/redeem`;
       
-      console.log('📤 [REDEEM] Sending request to VLINKPAY:', {
-        url: externalApiUrl,
-        redeemCode: normalizedCode,
-        merchantOrderCode: redemption.merchantOrderCode
-      });
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // Try both original case and uppercase (VLinkPay might be case-sensitive)
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       
-      // Call external API
-      const externalResponse = await fetch(externalApiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Api-key': decryptedApiKey
-        },
-        body: JSON.stringify(externalPayload)
-      });
+      const codeVariations = [
+        normalizedCode,           // Uppercase version
+        code.trim()               // Original case from user input
+      ];
       
-      const externalData = await externalResponse.json();
+      let lastError = null;
       
-      console.log('📥 [REDEEM] VLINKPAY API response:', {
-        status: externalResponse.status,
-        ok: externalResponse.ok,
-        data: externalData
-      });
-      
-      // Check if external API failed
-      if (!externalResponse.ok) {
-        const errorMessage = externalData?.message || externalData?.error || 'VLINKPAY validation failed';
-        console.error('❌ [REDEEM] VLINKPAY API returned error:', errorMessage);
-        return c.json({ 
-          success: false, 
-          error: `Xác thực mã thất bại: ${errorMessage}` 
-        }, externalResponse.status);
+      // Retry up to 3 times with delay (VLinkPay might need time to sync)
+      for (let retryCount = 0; retryCount < 3; retryCount++) {
+        if (retryCount > 0) {
+          const delayMs = retryCount * 2000; // 2s, 4s
+          console.log(`⏳ [REDEEM] Waiting ${delayMs}ms before retry ${retryCount + 1}/3...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+        
+        for (const codeVariant of codeVariations) {
+          // Exact format per VLinkPay spec
+          const requestBody = {
+            redeemCode: codeVariant,
+            merchantOrderCode: redemption.merchantOrderCode
+          };
+          
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log(`🧪 [REDEEM] Attempt: retry=${retryCount + 1}, code=${codeVariant === normalizedCode ? 'UPPERCASE' : 'ORIGINAL'}`);
+          console.log('   URL:', apiUrl);
+          console.log('   Headers:', {
+            'Content-Type': 'application/json',
+            'Api-key': decryptedSecretKey ? `${decryptedSecretKey.substring(0, 4)}...${decryptedSecretKey.substring(decryptedSecretKey.length - 4)}` : 'MISSING'
+          });
+          console.log('   Body:', JSON.stringify(requestBody, null, 2));
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          
+          try {
+            const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Api-key': decryptedSecretKey
+              },
+              body: JSON.stringify(requestBody)
+            });
+            
+            const responseText = await response.text();
+            console.log('📥 [REDEEM] VLinkPay Raw Response:', responseText);
+            console.log('📥 [REDEEM] Status:', response.status, response.statusText);
+            
+            let responseData;
+            try {
+              responseData = JSON.parse(responseText);
+            } catch (e) {
+              console.error('❌ [REDEEM] Invalid JSON response from VLinkPay');
+              lastError = { message: 'Invalid JSON response', body: responseText };
+              continue;
+            }
+            
+            console.log('📥 [REDEEM] Parsed Response:', responseData);
+            
+            // Check success
+            if (response.ok && response.status === 200) {
+              console.log('✅ [REDEEM] SUCCESS! VLinkPay confirmed order');
+              console.log('💰 [REDEEM] Revenue will be recorded in UDSV wallet');
+              console.log('   Response data:', responseData);
+              vlinkpayConfirmed = true;
+              break;
+            } else {
+              const errorMsg = responseData?.message || responseData?.error || responseData?.code || 'Unknown error';
+              console.error(`❌ [REDEEM] VLinkPay returned error (${response.status}):`, errorMsg);
+              console.error('   Full response:', responseData);
+              lastError = {
+                status: response.status,
+                code: responseData?.code,
+                message: errorMsg,
+                response: responseData
+              };
+            }
+            
+          } catch (fetchError: any) {
+            console.error('❌ [REDEEM] Fetch error:', fetchError.message);
+            lastError = { message: fetchError.message, stack: fetchError.stack };
+          }
+        }
+        
+        if (vlinkpayConfirmed) break;
       }
       
-      console.log('✅ [REDEEM] VLINKPAY API validation successful');
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // Handle VLinkPay confirmation result
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      
+      if (!vlinkpayConfirmed) {
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('🚨 [REDEEM] VLINKPAY CONFIRMATION FAILED');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('⚠️  CRITICAL: Revenue will NOT be recorded in UDSV wallet');
+        console.error('   Last error:', lastError);
+        console.error('');
+        console.error('   Possible causes:');
+        console.error('   1. VLinkPay has not synced the code yet (timing issue)');
+        console.error('   2. Code format mismatch');
+        console.error('   3. merchantOrderCode not found in VLinkPay system');
+        console.error('   4. API endpoint or credentials incorrect');
+        console.error('');
+        console.error('   NEXT STEPS:');
+        console.error('   1. Check VLinkPay dashboard for this order');
+        console.error('   2. Contact VLinkPay support with:');
+        console.error(`      - redeemCode: ${normalizedCode}`);
+        console.error(`      - merchantOrderCode: ${redemption.merchantOrderCode}`);
+        console.error('   3. Manually confirm order in VLinkPay if needed');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
+        // STOP ACTIVATION if VLinkPay fails
+        let errorMessage = 'Lỗi xác thực thanh toán từ VLinkPay.';
+        
+        if (lastError?.code === 'InvalidApiKey' || lastError?.message === 'Api key is invalid') {
+          errorMessage = 'Cấu hình hệ thống lỗi (API Key không hợp lệ). Vui lòng liên hệ quản trị viên.';
+        } else if (lastError?.status === 400) {
+          errorMessage = lastError.message || 'Mã redeem không hợp lệ hoặc đã được sử dụng.';
+        } else if (lastError?.message) {
+          errorMessage = lastError.message;
+        }
+        
+        return c.json({ 
+          success: false, 
+          error: errorMessage,
+          details: lastError
+        }, 400);
+      } else {
+        console.log('✅ [REDEEM] VLinkPay confirmation successful - revenue recorded!');
+      }
       
     } catch (externalError: any) {
-      console.error('❌ [REDEEM] Error calling VLINKPAY external API:', externalError);
+      console.error('❌ [REDEEM] Critical error in VLinkPay confirmation process:', externalError);
+      console.error('   Stack:', externalError.stack);
+      
       return c.json({ 
         success: false, 
-        error: `Lỗi kết nối với hệ thống thanh toán: ${externalError.message}` 
+        error: `Lỗi hệ thống khi xác thực thanh toán: ${externalError.message}` 
       }, 500);
     }
     
-    console.log('✅ [REDEEM] Code is valid, proceeding with membership creation...');
+    console.log('✅ [REDEEM] Code validated successfully, proceeding with membership creation...');
     
     // 5. Get user's existing memberships
     let userMemberships = await kv.get(`user_memberships:${userId}`);

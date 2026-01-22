@@ -45,6 +45,7 @@ const SelectField = ({
         <SelectTrigger
           id={id}
           className={cn(
+            "!rounded-full !h-9 !py-1",
             error ? "border-destructive focus:ring-destructive" : "border-gray-200 bg-white",
             triggerClassName
           )}

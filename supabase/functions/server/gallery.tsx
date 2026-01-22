@@ -28,6 +28,18 @@ interface GalleryImage {
 // ============================================================================
 
 /**
+ * Sanitize folder name for Cloudinary
+ * Removes special characters, converts spaces to hyphens, lowercase
+ */
+function sanitizeFolderName(name: string): string {
+  return name
+    .trim()
+    .replace(/[^a-zA-Z0-9\s-]/g, "") // Remove special chars
+    .replace(/\s+/g, "-") // Spaces to hyphens
+    .toLowerCase(); // Lowercase
+}
+
+/**
  * Parse Cloudinary URL from environment variable
  */
 function parseCloudinaryConfig() {
@@ -192,8 +204,10 @@ galleryApp.post("/make-server-84f9c112/admin/gallery/upload", async (c) => {
 
     console.log(`📤 [GALLERY] Uploading image - Category: ${category}, Size: ${file.size}`);
 
-    // Upload to Cloudinary
-    const { url, publicId, width, height } = await uploadToCloudinary(file);
+    // Upload to Cloudinary with category-based folder structure
+    const sanitizedCategory = sanitizeFolderName(category);
+    const folderPath = `bitcoin-nail-bar/gallery/${sanitizedCategory}`;
+    const { url, publicId, width, height } = await uploadToCloudinary(file, folderPath);
 
     // Get existing images
     const images = (await kv.get("gallery:images")) || [];
@@ -343,8 +357,10 @@ galleryApp.put("/make-server-84f9c112/admin/gallery/:id", async (c) => {
     if (file && file instanceof File) {
       console.log(`🔄 [GALLERY] Replacing image - ID: ${id}`);
 
-      // Upload new image
-      const { url, publicId, width, height } = await uploadToCloudinary(file);
+      // Upload new image with category-based folder structure
+      const sanitizedCategory = sanitizeFolderName(existingImage.category);
+      const folderPath = `bitcoin-nail-bar/gallery/${sanitizedCategory}`;
+      const { url, publicId, width, height } = await uploadToCloudinary(file, folderPath);
 
       // Delete old image from Cloudinary
       await deleteFromCloudinary(existingImage.public_id);

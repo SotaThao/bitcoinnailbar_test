@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Instagram, Facebook, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { ChevronLeft, ChevronRight, X, Instagram, Facebook } from 'lucide-react';
+import { Button } from '../ui/button';
 import { useLanguage } from '../../context/LanguageContext';
-import { projectId, publicAnonKey } from '/utils/supabase/info';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
+import { optimizeCloudinaryUrl, optimizeCloudinaryThumbnail } from '@/utils/cloudinary';
 
 interface GalleryImage {
   id: string;
@@ -135,14 +136,14 @@ export function GallerySection() {
                            className="relative w-[300px] h-[200px] rounded-lg overflow-hidden flex-shrink-0 group grayscale hover:grayscale-0 transition-all duration-500 cursor-pointer border border-white/10"
                          >
                             <img 
-                              src={img.cloudinary_url} 
+                              src={optimizeCloudinaryThumbnail(img.cloudinary_url, 500)} 
                               alt={`Gallery ${i + 1}`} 
                               className="w-full h-full object-cover"
                             />
                             <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors"></div>
                             <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                <div className="bg-[#FF9800] p-2 rounded-full">
-                                  <Play className="h-4 w-4 text-black fill-current" />
+                                  <X className="h-4 w-4 text-black fill-current" />
                                </div>
                             </div>
                          </div>
@@ -214,7 +215,7 @@ export function GallerySection() {
                  className="relative w-full h-full flex items-center justify-center"
                >
                  <img 
-                    src={galleryImages[selectedIndex].cloudinary_url} 
+                    src={optimizeCloudinaryUrl(galleryImages[selectedIndex].cloudinary_url, { width: 1920 })} 
                     alt="Gallery View" 
                     className="max-w-full max-h-[80vh] object-contain rounded-md shadow-2xl"
                  />

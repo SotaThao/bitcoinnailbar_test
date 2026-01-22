@@ -16,7 +16,7 @@ const supabase = createClient(
   }
 );
 
-const KV_TABLE = "kv_store_89edbd69";
+const KV_TABLE = "kv_store_89edbd69"; // ← REVERT: Use admin data table
 
 // Helper to retry failed requests
 const retry = async <T>(fn: () => Promise<T>, retries = 3, delay = 200): Promise<T> => {
@@ -118,14 +118,6 @@ const decryptApiKey = async (encryptedText: string): Promise<string> => {
   }
 };
 
-// Generate unique redeem code
-const generateRedeemCode = (): string => {
-  const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude confusing chars (0, O, I, 1)
-  const segment1 = Array.from({ length: 5 }, () => charset[Math.floor(Math.random() * charset.length)]).join('');
-  const segment2 = Array.from({ length: 5 }, () => charset[Math.floor(Math.random() * charset.length)]).join('');
-  return `BTCNAIL-${segment1}-${segment2}`;
-};
-
 // Generate unique merchant order code
 const generateMerchantOrderCode = (): string => {
   return `ORDER-${Date.now()}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
@@ -140,8 +132,9 @@ const generateChecksum = (params: {
   timestamp: number;
   secretKey: string;
 }): string => {
-  // Format amount to 2 decimal places for checksum calculation
-  const formattedAmount = params.amount.toFixed(2);
+  // ⚠️ IMPORTANT: Amount format MUST match the format used in URL params
+  // Currently using INTEGER format (no decimals) to match URL
+  const formattedAmount = Math.floor(params.amount).toString();
   
   // Concatenate parameters for MD5 hash
   const dataString = `${formattedAmount}${params.merchantOrderCode}${params.email}${params.merchantRefCode}${params.timestamp}${params.secretKey}`;
@@ -150,12 +143,13 @@ const generateChecksum = (params: {
   const hash = createHash('md5').update(dataString).digest('hex');
   
   console.log('🔐 [CHECKSUM] Generated MD5 checksum for payment URL');
-  console.log('🔐 [CHECKSUM] Amount format:', formattedAmount);
+  console.log('🔐 [CHECKSUM] Amount format: INTEGER (no decimals)');
+  console.log('🔐 [CHECKSUM] Amount value:', formattedAmount);
   
   return hash;
 };
 
-// Build VLINKPAY payment URL (IFRAME)
+// Build VLINKPAY payment URL (without email, will be appended by frontend)
 const buildVLinkPayURL = (params: {
   sandboxEndpoint: string;
   amount: number;
@@ -203,11 +197,10 @@ const buildVLinkPayURL = (params: {
   console.log('🧪 [TEST] Original amount:', params.amount);
   console.log('🧪 [TEST] Formatted amount:', formattedAmount);
   console.log('🧪 [TEST] Example: 479.00 → "479"');
-  console.log('⚠️ [TEST] Previous cents test (47900) interpreted as $47,900 by VLINKPAY');
   
-  // Generate MD5 checksum (still using decimal format for now)
+  // Generate MD5 checksum with SAME amount format as URL
   const checksum = generateChecksum({
-    amount: params.amount,  // Will be converted to "479.00" in generateChecksum
+    amount: params.amount,  // Will be converted to INTEGER "479" (same as URL)
     merchantOrderCode: params.merchantOrderCode,
     email: params.customerEmail,
     merchantRefCode: params.merchantRefCode,
@@ -215,7 +208,7 @@ const buildVLinkPayURL = (params: {
     secretKey: params.secretKey
   });
   
-  console.log('⚠️ [TEST] Checksum uses DECIMAL format (479.00) while URL uses INTEGER (479)');
+  console.log('✅ [CHECKSUM] Using same INTEGER format for both checksum and URL');
   
   url.searchParams.append('amount', formattedAmount);  // ← Using INTEGER format
   url.searchParams.append('merchantOrderCode', params.merchantOrderCode);
@@ -266,37 +259,29 @@ app.post('/make-server-84f9c112/payment/create-link', async (c) => {
     const decryptedSecretKey = await decryptApiKey(settings.secretKey);
     console.log('✅ [PAYMENT] Secret key decrypted successfully');
     
-    // 2. Generate unique redeem code
-    let redeemCode = generateRedeemCode();
-    let codeExists = await kv.get(`redeem_code:${redeemCode}`);
-    
-    // Ensure uniqueness
-    while (codeExists) {
-      redeemCode = generateRedeemCode();
-      codeExists = await kv.get(`redeem_code:${redeemCode}`);
-    }
-    
-    console.log(`✅ [PAYMENT] Generated redeem code: ${redeemCode}`);
-    
-    // 3. Save redeem code to KV (status: pending)
+    // 2. Generate unique merchant order code (NO REDEEM CODE YET - VLinkPay will generate it)
     const merchantOrderCode = generateMerchantOrderCode();
-    const redemptionData = {
-      code: redeemCode,
+    console.log(`✅ [PAYMENT] Generated merchant order code: ${merchantOrderCode}`);
+    
+    // 3. Save order to KV (status: pending_payment, NO redeemCode yet)
+    const orderData = {
+      merchantOrderCode,
       planId: planId || null,
       membershipTier: tierName.toLowerCase(),
       duration,
       amount,
       customerEmail: email || null,
-      merchantOrderCode, // Add merchantOrderCode for external API validation
-      status: 'pending',
+      redeemCode: null, // ← VLinkPay will provide this after payment
+      status: 'pending_payment', // ← Waiting for payment completion
       createdAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+      paymentCompletedAt: null,
       redeemedAt: null,
       redeemedBy: null
     };
     
-    await kv.set(`redeem_code:${redeemCode}`, redemptionData);
-    console.log('💾 [PAYMENT] Saved redeem code to database');
+    await kv.set(`order:${merchantOrderCode}`, orderData);
+    console.log('💾 [PAYMENT] Saved order to database (awaiting payment)');
     
     // 4. Build VLINKPAY payment URL (without email, will be appended by frontend)
     const paymentUrl = buildVLinkPayURL({
@@ -318,8 +303,8 @@ app.post('/make-server-84f9c112/payment/create-link', async (c) => {
       success: true, 
       data: {
         paymentUrl: finalPaymentUrl,
-        redeemCode,
-        expiresAt: redemptionData.expiresAt
+        merchantOrderCode,
+        expiresAt: orderData.expiresAt
       },
       message: 'Payment link created successfully'
     });
@@ -328,6 +313,173 @@ app.post('/make-server-84f9c112/payment/create-link', async (c) => {
     return c.json({ 
       success: false, 
       error: `Failed to create payment link: ${error.message}` 
+    }, 500);
+  }
+});
+
+// POST /make-server-84f9c112/payment/complete-order
+// Called by frontend after VLinkPay redirect with redeemCode
+app.post('/make-server-84f9c112/payment/complete-order', async (c) => {
+  try {
+    console.log('🎉 [PAYMENT] Completing order with VLinkPay redeemCode...');
+    
+    const body = await c.req.json();
+    const { merchantOrderCode, redeemCode, planId, membershipTier, duration, amount, customerEmail } = body;
+    
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 🔄 FIX: Support finding order by redeemCode only (sessionStorage fallback)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    if (!redeemCode) {
+      return c.json({ 
+        success: false, 
+        error: 'redeemCode is required' 
+      }, 400);
+    }
+    
+    console.log(`🎫 [PAYMENT] VLinkPay Code: ${redeemCode}`);
+    
+    let orderData = null;
+    let foundMerchantOrderCode = merchantOrderCode;
+    
+    // If merchantOrderCode provided, use it directly
+    if (merchantOrderCode) {
+      console.log(`📦 [PAYMENT] Using provided merchantOrderCode: ${merchantOrderCode}`);
+      orderData = await kv.get(`order:${merchantOrderCode}`);
+    } else {
+      // Otherwise, search for pending order (sessionStorage lost scenario)
+      console.log('🔍 [PAYMENT] merchantOrderCode not provided, searching for pending order...');
+      
+      // Query all orders with prefix "order:"
+      const { data: allOrders, error } = await supabase
+        .from(KV_TABLE)
+        .select('key, value')
+        .like('key', 'order:%')
+        .eq('value->>status', 'pending_payment')
+        .order('key', { ascending: false })
+        .limit(50);
+      
+      if (error) {
+        console.error('❌ [PAYMENT] Error querying orders:', error);
+        // Don't throw, continue to check params
+      } else {
+        console.log(`📋 [PAYMENT] Found ${allOrders?.length || 0} pending orders`);
+        
+        // Find the most recent pending order (assuming it's the user's order)
+        if (allOrders && allOrders.length > 0) {
+          const latestOrder = allOrders[0];
+          orderData = typeof latestOrder.value === 'string' 
+            ? JSON.parse(latestOrder.value) 
+            : latestOrder.value;
+          foundMerchantOrderCode = orderData.merchantOrderCode;
+          console.log(`✅ [PAYMENT] Found pending order: ${foundMerchantOrderCode}`);
+        }
+      }
+    }
+
+    // 3. Fallback: Use provided params from localStorage (since we don't save pending orders anymore)
+    if (!orderData && membershipTier && amount) {
+        console.log('⚠️ [PAYMENT] Order not found in DB (LocalStorage Flow), using provided details');
+        orderData = {
+          merchantOrderCode: merchantOrderCode || `ORDER-${Date.now()}`,
+          planId,
+          membershipTier,
+          duration,
+          amount,
+          customerEmail,
+          status: 'pending_payment',
+          createdAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        };
+        foundMerchantOrderCode = orderData.merchantOrderCode;
+    }
+    
+    if (!orderData) {
+      console.error('❌ [PAYMENT] Order not found');
+      console.log('💡 [PAYMENT] This usually means:');
+      console.log('   1. User took too long to complete payment');
+      console.log('   2. Order was already completed');
+      console.log('   3. Invalid merchantOrderCode');
+      return c.json({ 
+        success: false, 
+        error: 'Order not found. Please contact support with code: ' + redeemCode
+      }, 404);
+    }
+    
+    if (orderData.status !== 'pending_payment') {
+      console.error('❌ [PAYMENT] Order already completed or invalid status:', orderData.status);
+      return c.json({ 
+        success: false, 
+        error: 'Order already completed or invalid' 
+      }, 400);
+    }
+    
+    // 2. Check if redeemCode already exists (prevent duplicates)
+    const existingCode = await kv.get(`redeem_code:${redeemCode}`);
+    if (existingCode) {
+      console.error('❌ [PAYMENT] Redeem code already exists:', redeemCode);
+      return c.json({ 
+        success: false, 
+        error: 'This redeem code has already been registered' 
+      }, 400);
+    }
+    
+    // 3. Create redeem code entry with VLinkPay code
+    const redemptionData = {
+      code: redeemCode, // ← VLinkPay generated code
+      planId: orderData.planId,
+      membershipTier: orderData.membershipTier,
+      duration: orderData.duration,
+      amount: orderData.amount,
+      customerEmail: orderData.customerEmail,
+      merchantOrderCode: foundMerchantOrderCode, // ← FIX: Use found order code, not input
+      status: 'pending', // ← Ready to be redeemed
+      createdAt: orderData.createdAt,
+      expiresAt: orderData.expiresAt,
+      paymentCompletedAt: new Date().toISOString(),
+      redeemedAt: null,
+      redeemedBy: null
+    };
+    
+    console.log('💾 [PAYMENT] Saving redeem code to database...');
+    console.log('📝 [PAYMENT] Redemption data:', JSON.stringify(redemptionData, null, 2));
+    
+    await kv.set(`redeem_code:${redeemCode}`, redemptionData);
+    console.log('✅ [PAYMENT] Saved VLinkPay redeem code to database');
+    
+    // Verify the save worked
+    const verifyCode = await kv.get(`redeem_code:${redeemCode}`);
+    if (!verifyCode) {
+      console.error('❌ [PAYMENT] CRITICAL: Code was not saved properly!');
+      throw new Error('Failed to save redeem code to database');
+    }
+    console.log('✅ [PAYMENT] Verified code exists in database');
+    
+    // 4. Update order status
+    orderData.redeemCode = redeemCode;
+    orderData.status = 'pending'; // ← Payment completed, code ready to redeem (will become 'used' after redemption)
+    orderData.paymentCompletedAt = new Date().toISOString();
+    
+    await kv.set(`order:${foundMerchantOrderCode}`, orderData);
+    console.log('✅ [PAYMENT] Order completed successfully');
+    
+    // TODO: Send email with redeem code to customer
+    
+    return c.json({ 
+      success: true, 
+      data: {
+        redeemCode,
+        membershipTier: redemptionData.membershipTier,
+        duration: redemptionData.duration,
+        expiresAt: redemptionData.expiresAt
+      },
+      message: 'Payment completed successfully'
+    });
+  } catch (error) {
+    console.error('❌ [PAYMENT] Error completing order:', error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to complete order: ${error.message}` 
     }, 500);
   }
 });
@@ -365,6 +517,97 @@ app.get('/make-server-84f9c112/payment/status/:code', async (c) => {
     return c.json({ 
       success: false, 
       error: `Failed to check payment status: ${error.message}` 
+    }, 500);
+  }
+});
+
+// DELETE /make-server-84f9c112/payment/cleanup-expired
+// Clean up expired pending payment orders (Owner only)
+app.delete('/make-server-84f9c112/payment/cleanup-expired', async (c) => {
+  try {
+    console.log('🧹 [PAYMENT CLEANUP] Starting cleanup of expired pending orders...');
+    
+    // Get all orders with prefix "order:"
+    const { data: allOrders, error } = await supabase
+      .from(KV_TABLE)
+      .select('key, value')
+      .like('key', 'order:%')
+      .eq('value->>status', 'pending_payment');
+    
+    if (error) {
+      console.error('❌ [PAYMENT CLEANUP] Error querying orders:', error);
+      throw new Error('Failed to query orders');
+    }
+    
+    console.log(`📋 [PAYMENT CLEANUP] Found ${allOrders?.length || 0} pending payment orders`);
+    
+    if (!allOrders || allOrders.length === 0) {
+      return c.json({
+        success: true,
+        message: 'No pending orders to clean up',
+        deleted: 0
+      });
+    }
+    
+    // Filter expired orders (older than 1 hour)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const expiredOrders = allOrders.filter(order => {
+      const orderData = typeof order.value === 'string' 
+        ? JSON.parse(order.value) 
+        : order.value;
+      const createdAt = new Date(orderData.createdAt);
+      return createdAt < oneHourAgo;
+    });
+    
+    console.log(`⏰ [PAYMENT CLEANUP] Found ${expiredOrders.length} expired orders (> 1 hour old)`);
+    
+    if (expiredOrders.length === 0) {
+      return c.json({
+        success: true,
+        message: 'No expired orders to clean up',
+        deleted: 0
+      });
+    }
+    
+    // Delete expired orders
+    let deletedCount = 0;
+    const errors = [];
+    
+    for (const order of expiredOrders) {
+      try {
+        const { error: deleteError } = await supabase
+          .from(KV_TABLE)
+          .delete()
+          .eq('key', order.key);
+        
+        if (deleteError) {
+          console.error(`❌ [PAYMENT CLEANUP] Failed to delete ${order.key}:`, deleteError);
+          errors.push({ key: order.key, error: deleteError.message });
+        } else {
+          deletedCount++;
+          console.log(`✅ [PAYMENT CLEANUP] Deleted expired order: ${order.key}`);
+        }
+      } catch (err) {
+        console.error(`❌ [PAYMENT CLEANUP] Exception deleting ${order.key}:`, err);
+        errors.push({ key: order.key, error: err.message });
+      }
+    }
+    
+    console.log(`✅ [PAYMENT CLEANUP] Cleanup complete. Deleted ${deletedCount}/${expiredOrders.length} expired orders`);
+    
+    return c.json({
+      success: true,
+      message: `Successfully cleaned up ${deletedCount} expired pending orders`,
+      deleted: deletedCount,
+      total: expiredOrders.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
+    
+  } catch (error) {
+    console.error('❌ [PAYMENT CLEANUP] Error during cleanup:', error);
+    return c.json({ 
+      success: false, 
+      error: `Failed to cleanup expired orders: ${error.message}` 
     }, 500);
   }
 });

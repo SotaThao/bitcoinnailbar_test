@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { UserPlus, Search, ChevronLeft, ChevronRight, MoreHorizontal, Edit, Trash2, Rocket } from 'lucide-react';
 import { Input } from '../ui/input';
 import { SearchInput } from '../ui/search-input';
+import { SelectField } from '../ui/select-field';
 import { Label } from '../ui/label';
 import { PillTabs, PillTabsContent, PillTabsList, PillTabsTrigger } from '../ui/pill-tabs';
 import { Skeleton } from '../ui/skeleton';
@@ -306,34 +307,32 @@ export default function StaffPayroll() {
 
                       {/* Role Filter */}
                       <div className="w-full md:w-48">
-                        <Select value={roleFilter} onValueChange={setRoleFilter}>
-                          <SelectTrigger className="bg-white border-gray-200">
-                            <SelectValue placeholder="All Roles" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Roles</SelectItem>
-                            {uniqueRoles.map((role: any) => (
-                              <SelectItem key={role} value={role}>{role}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <SelectField 
+                          value={roleFilter} 
+                          onValueChange={setRoleFilter}
+                          placeholder="All Roles"
+                        >
+                          <SelectItem value="all">All Roles</SelectItem>
+                          {uniqueRoles.map((role: any) => (
+                            <SelectItem key={role} value={role}>{role}</SelectItem>
+                          ))}
+                        </SelectField>
                       </div>
 
                       {/* Sort Order */}
                       <div className="w-full md:w-48">
-                        <Select value={sortOrder} onValueChange={setSortOrder}>
-                          <SelectTrigger className="bg-white border-gray-200">
-                            <SelectValue placeholder="Sort By" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="name-asc">Name (A-Z)</SelectItem>
-                            <SelectItem value="name-desc">Name (Z-A)</SelectItem>
-                            <SelectItem value="role-asc">Role (A-Z)</SelectItem>
-                            <SelectItem value="role-desc">Role (Z-A)</SelectItem>
-                            <SelectItem value="commission-asc">Commission (Low-High)</SelectItem>
-                            <SelectItem value="commission-desc">Commission (High-Low)</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <SelectField 
+                          value={sortOrder} 
+                          onValueChange={setSortOrder}
+                          placeholder="Sort By"
+                        >
+                          <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+                          <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+                          <SelectItem value="role-asc">Role (A-Z)</SelectItem>
+                          <SelectItem value="role-desc">Role (Z-A)</SelectItem>
+                          <SelectItem value="commission-asc">Commission (Low-High)</SelectItem>
+                          <SelectItem value="commission-desc">Commission (High-Low)</SelectItem>
+                        </SelectField>
                       </div>
                     </div>
 

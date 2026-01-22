@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug VLinkPay Settings</title>
+</head>
+<body>
+    <h1>Debug VLinkPay Settings</h1>
+    <button onclick="testDebug()">Test Debug Endpoint</button>
+    <pre id="output"></pre>
+
+    <script type="module">
+        import { projectId, publicAnonKey } from '/utils/supabase/info.js';
+        
+        window.testDebug = async function() {
+            const output = document.getElementById('output');
+            output.textContent = 'Loading...';
+            
+            try {
+                const response = await fetch(
+                    `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/debug/vlinkpay-settings`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${publicAnonKey}`,
+                        },
+                    }
+                );
+
+                const contentType = response.headers.get('content-type');
+                console.log('Content-Type:', contentType);
+                console.log('Status:', response.status);
+
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    output.textContent = 'ERROR: Non-JSON response\n\n' + text;
+                    return;
+                }
+
+                const result = await response.json();
+                output.textContent = JSON.stringify(result, null, 2);
+                
+                console.log('Result:', result);
+            } catch (err) {
+                output.textContent = 'ERROR: ' + err.message;
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -10,7 +10,8 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
+import { SelectItem } from '@/app/components/ui/select';
+import { SelectField } from '@/app/components/ui/select-field';
 import { Loader2, Save, RotateCcw } from 'lucide-react';
 
 export function MembershipTiersEditor() {
@@ -202,19 +203,14 @@ export function MembershipTiersEditor() {
                   </div>
                   <div className="space-y-2">
                     <Label>Billing Cycle</Label>
-                    <Select
+                    <SelectField
                       value={selectedTier.billing_cycle || 'year'}
                       onValueChange={(value) => handleTierChange('billing_cycle', value)}
                     >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select cycle" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="week">Weekly</SelectItem>
-                        <SelectItem value="month">Monthly</SelectItem>
-                        <SelectItem value="year">Yearly</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <SelectItem value="week">Weekly</SelectItem>
+                      <SelectItem value="month">Monthly</SelectItem>
+                      <SelectItem value="year">Yearly</SelectItem>
+                    </SelectField>
                   </div>
                   <div className="space-y-2">
                     <Label>Discount (%)</Label>

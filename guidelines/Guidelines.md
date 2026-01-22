@@ -63,3 +63,46 @@ Ví dụ:
 ✅ /docs/04-changelogs/NEW_FEATURE.md
 ❌ /STAGING_SETUP.md (sai - không được ở root)
 ❌ /docs/staging-setup.md (sai - chữ thường)
+
+4. Database Architecture - KV Store Tables
+
+🚨 CRITICAL: Hệ thống sử dụng 2 KV tables riêng biệt cho mục đích khác nhau:
+
+📊 **Homepage/Public Data → `kv_store_84f9c112`**
+- Service categories
+- Services menu
+- Gallery images
+- Promotions
+- Public-facing content
+
+🔐 **Admin/Backend Data → `kv_store_89edbd69`**
+- VLinkPay settings
+- Redeem codes
+- Membership data
+- Payment records
+- User management
+- Admin configurations
+- Auth tokens
+
+⚠️ **Backend Files Mapping:**
+
+**Admin Data (kv_store_89edbd69):**
+- /supabase/functions/server/index.tsx
+- /supabase/functions/server/helpers.tsx
+- /supabase/functions/server/payment.tsx
+- /supabase/functions/server/vlinkpay-settings.tsx
+- /supabase/functions/server/redeem.tsx
+- /supabase/functions/server/membership-redeem.tsx
+- /supabase/functions/server/admin-redeem-codes.tsx
+- /supabase/functions/server/auth.tsx
+- /supabase/functions/server/roles.tsx
+
+**Homepage Data (kv_store_84f9c112):**
+- /supabase/functions/server/gallery.tsx
+- /supabase/functions/server/promotions.tsx
+- Frontend services/categories queries
+
+❌ **NEVER MIX THE TWO TABLES!**
+- Không bao giờ lưu admin data vào kv_store_84f9c112
+- Không bao giờ lưu homepage data vào kv_store_89edbd69
+- Kiểm tra kỹ table name trước khi implement backend endpoint mới

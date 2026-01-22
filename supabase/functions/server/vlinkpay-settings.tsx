@@ -15,7 +15,7 @@ const supabase = createClient(
   }
 );
 
-const KV_TABLE = "kv_store_89edbd69";
+const KV_TABLE = "kv_store_89edbd69"; // ← REVERT: Use admin data table
 
 // Helper to retry failed requests
 const retry = async <T>(fn: () => Promise<T>, retries = 3, delay = 200): Promise<T> => {
@@ -175,7 +175,6 @@ app.get('/make-server-84f9c112/vlinkpay/settings', async (c) => {
     
     console.log('✅ [VLINKPAY SETTINGS] Settings found:', {
       hasMerchantRefCode: !!settings.merchantRefCode,
-      hasApiKey: !!settings.apiKey,
       hasSecretKey: !!settings.secretKey,
       hasSandboxEndpoint: !!settings.sandboxEndpoint,
       hasRedirectUrl: !!settings.redirectUrl
@@ -188,7 +187,7 @@ app.get('/make-server-84f9c112/vlinkpay/settings', async (c) => {
         merchantRefCode: settings.merchantRefCode,
         sandboxEndpoint: settings.sandboxEndpoint,
         redirectUrl: settings.redirectUrl,
-        apiKey: '***hidden***', // Hidden for security
+        secretKey: '***hidden***', // Hidden for security
         isActive: settings.isActive,
         updatedAt: settings.updatedAt
       }
@@ -210,33 +209,40 @@ app.post('/make-server-84f9c112/vlinkpay/settings', async (c) => {
     const body = await c.req.json();
     console.log('📝 [VLINKPAY SETTINGS] Received body:', {
       hasMerchantRefCode: !!body.merchantRefCode,
-      hasApiKey: !!body.apiKey,
       hasSecretKey: !!body.secretKey,
       hasSandboxEndpoint: !!body.sandboxEndpoint,
       hasRedirectUrl: !!body.redirectUrl
     });
     
-    const { merchantRefCode, apiKey, secretKey, sandboxEndpoint, redirectUrl } = body;
+    const { merchantRefCode, secretKey, sandboxEndpoint, redirectUrl } = body;
     
-    if (!merchantRefCode || !apiKey || !secretKey || !sandboxEndpoint || !redirectUrl) {
+    if (!merchantRefCode || !secretKey || !sandboxEndpoint || !redirectUrl) {
       console.error('❌ [VLINKPAY SETTINGS] Missing required fields');
       return c.json({ 
         success: false, 
-        error: 'merchantRefCode, apiKey, secretKey, sandboxEndpoint, and redirectUrl are required' 
+        error: 'merchantRefCode, secretKey, sandboxEndpoint, and redirectUrl are required' 
       }, 400);
     }
     
-    console.log('🔐 [VLINKPAY SETTINGS] Encrypting API key and secret key...');
-    const encryptedApiKey = await encryptApiKey(apiKey);
-    const encryptedSecretKey = await encryptApiKey(secretKey);
-    console.log('✅ [VLINKPAY SETTINGS] API key and secret key encrypted successfully');
+    // Normalize URLs - remove trailing slashes to prevent double slash issues
+    const normalizedSandboxEndpoint = sandboxEndpoint.trim().replace(/\/+$/, '');
+    const normalizedRedirectUrl = redirectUrl.trim().replace(/\/+$/, '');
     
+    console.log('🔧 [VLINKPAY SETTINGS] Normalized URLs:');
+    console.log('   Sandbox:', sandboxEndpoint, '→', normalizedSandboxEndpoint);
+    console.log('   Redirect:', redirectUrl, '→', normalizedRedirectUrl);
+    
+    console.log('🔐 [VLINKPAY SETTINGS] Encrypting secret key...');
+    const encryptedSecretKey = await encryptApiKey(secretKey);
+    console.log('✅ [VLINKPAY SETTINGS] Secret key encrypted successfully');
+    
+    // ⚠️ IMPORTANT: Only save secretKey, remove any old apiKey field
     const settings = {
       merchantRefCode,
-      apiKey: encryptedApiKey,
-      secretKey: encryptedSecretKey,
-      sandboxEndpoint,
-      redirectUrl,
+      secretKey: encryptedSecretKey,  // Only this field for authentication
+      sandboxEndpoint: normalizedSandboxEndpoint,
+      redirectUrl: normalizedRedirectUrl,
+      sandboxMode: normalizedSandboxEndpoint.includes('test') || normalizedSandboxEndpoint.includes('sandbox'),
       isActive: true,
       updatedAt: new Date().toISOString()
     };

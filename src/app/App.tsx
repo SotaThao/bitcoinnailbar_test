@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { projectId, publicAnonKey } from '@utils/supabase/info';
 
@@ -20,6 +20,9 @@ import ReviewsPage from '@/app/components/pages/ReviewsPage';
 import PublicCheckInPage from '@/app/components/pages/CheckInPage';
 import VIPPage from '@/app/components/pages/VIPPage';
 import MenuPage from '@/app/components/pages/MenuPage';
+import RedeemMembershipPage from '@/app/components/pages/RedeemMembershipPage';
+import PaymentSuccessPage from '@/app/pages/PaymentSuccessPage';
+import RedeemMembershipStandalonePage from '@/app/pages/RedeemMembershipStandalonePage';
 
 // Admin Pages (non-lazy)
 import AdminKioskCheckInPage from '@/app/pages/CheckInPage';
@@ -46,13 +49,14 @@ const AdminGallery = lazy(() => import('@/app/components/admin/GalleryManagement
 const UsersPage = lazy(() => import('@/app/pages/admin/UsersPage'));
 const RolePermissionsPage = lazy(() => import('@/app/pages/admin/RolePermissionsPage'));
 const VLinkPaySettingsPage = lazy(() => import('@/app/pages/admin/VLinkPaySettingsPage'));
+const RedeemCodesPage = lazy(() => import('@/app/pages/admin/RedeemCodesPage'));
 
 import { ProtectedAdminRoute } from '@/app/components/ProtectedAdminRoute';
 import { PromotionModal } from '@/app/components/PromotionModal';
-import { Toaster } from 'sonner';
 import { HelmetProvider } from 'react-helmet-async';
 import { LanguageProvider } from '@/app/context/LanguageContext';
 import { LoadingProvider } from '@/app/context/LoadingContext';
+import { NotificationProvider } from '@/app/context/NotificationContext';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { Loader2 } from 'lucide-react';
 
@@ -106,22 +110,22 @@ export default function App() {
           setPromotions(promotionsData);
 
           // Check if we should show the modal
-          // ONLY show on public pages (not admin routes)
-          const isAdminRoute = window.location.pathname.startsWith('/admin');
+          // ONLY show on homepage (not admin routes or other pages)
+          const isHomepage = window.location.pathname === '/';
           
-          if (!isAdminRoute) {
+          if (isHomepage) {
             const dismissedDate = localStorage.getItem('promotion-dismissed-date');
             const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
             // Show modal if:
-            // 1. Not on admin route
+            // 1. On homepage
             // 2. Not dismissed today
             // 3. There are featured promotions
             const hasFeaturedPromotions = Array.isArray(promotionsData) && 
               promotionsData.some((p: Promotion) => p.enabled && p.featured);
 
             console.log('🔍 Promotion Modal Check:', {
-              isAdminRoute,
+              isHomepage,
               dismissedDate,
               today,
               hasFeaturedPromotions,
@@ -165,81 +169,118 @@ export default function App() {
       <LanguageProvider>
         <LoadingProvider hasPromotionModal={showPromotionModal} modalRendered={modalRendered}>
           <Router>
-            <ScrollToTop />
-            <div className="min-h-screen bg-background">
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<HomePage />} />
-                <Route path="/services" element={<ServicesPage />} />
-                <Route path="/promotions" element={<PromotionsPage />} />
-                <Route path="/membership" element={<MembershipPage />} />
-                <Route path="/careers" element={<CareersPage />} />
-                <Route path="/gallery" element={<GalleryPage />} />
-                <Route path="/egift" element={<EGiftPage />} />
-                <Route path="/booking" element={<BookingPage />} />
-                <Route path="/locations" element={<LocationsPage />} />
-                <Route path="/reviews" element={<ReviewsPage />} />
-                <Route path="/vip" element={<VIPPage />} />
-                <Route path="/menu" element={<MenuPage />} />
-                <Route path="/coming-soon" element={<ComingSoonPage />} />
-                <Route path="/checkin/:id" element={<PublicCheckInPage />} />
-                
-                {/* Admin Routes */}
-                <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-                <Route path="/admin/dashboard" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminDashboard /></Suspense></ProtectedAdminRoute>} />
-                <Route path="/admin/services" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminServices /></Suspense></ProtectedAdminRoute>} />
-                <Route path="/admin/reviews" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminReviews /></Suspense></ProtectedAdminRoute>} />
-                <Route path="/admin/appointments" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminAppointments /></Suspense></ProtectedAdminRoute>} />
-                <Route path="/admin/staff-payroll" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminStaffPayroll /></Suspense></ProtectedAdminRoute>} />
-                <Route path="/admin/analytics" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminComingSoon /></Suspense></ProtectedAdminRoute>} />
-                <Route path="/admin/membership" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminMembership /></Suspense></ProtectedAdminRoute>} />
-                <Route path="/admin/check-in" element={<ProtectedAdminRoute><AdminKioskCheckInPage /></ProtectedAdminRoute>} />
-                
-                {/* Owner Routes */}
-                <Route path="/admin/users" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><UsersPage /></Suspense></ProtectedAdminRoute>} />
-                <Route path="/admin/role-permissions" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><RolePermissionsPage /></Suspense></ProtectedAdminRoute>} />
-                <Route path="/admin/vlinkpay-settings" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><VLinkPaySettingsPage /></Suspense></ProtectedAdminRoute>} />
-                <Route path="/admin/system-settings" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><AdminSettings /></Suspense></ProtectedAdminRoute>} />
-                
-                {/* Legacy Settings Route - Redirect to System Settings */}
-                <Route path="/admin/settings" element={<Navigate to="/admin/system-settings" replace />} />
-                
-                <Route path="/admin/debug-data" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><DebugData /></Suspense></ProtectedAdminRoute>} />
-                <Route path="/admin/gallery" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminGallery /></Suspense></ProtectedAdminRoute>} />
-                
-                {/* Auth Routes (NOT PROTECTED - these are for logging in) */}
-                <Route path="/admin/setup-owner" element={<SetupOwnerPage />} />
-                <Route path="/admin/login" element={<LoginPage />} />
-                <Route path="/admin/debug-auth" element={<DebugAuth />} />
-                <Route path="/admin/test-setup" element={<TestSetup />} />
-                <Route path="/admin/test-jwt" element={<TestJWT />} />
-                
-                {/* 404 */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-              
-              <Toaster 
-                position="bottom-center" 
-                toastOptions={{
-                  className: 'bg-white border-gray-200 text-gray-900',
-                  duration: 5000,
-                }}
-              />
-
-              {/* Promotion Modal - Shows featured promotions on homepage */}
-              {showPromotionModal && (
-                <PromotionModal
-                  promotions={promotions}
-                  onClose={handleClosePromotionModal}
-                  onRendered={() => setModalRendered(true)}
-                  language="en"
-                />
-              )}
-            </div>
+            <AppContent 
+              promotions={promotions}
+              showPromotionModal={showPromotionModal}
+              setShowPromotionModal={setShowPromotionModal}
+              handleClosePromotionModal={handleClosePromotionModal}
+              setModalRendered={setModalRendered}
+            />
           </Router>
         </LoadingProvider>
       </LanguageProvider>
     </HelmetProvider>
+  );
+}
+
+// Separate component inside Router to access useLocation
+function AppContent({ 
+  promotions, 
+  showPromotionModal, 
+  setShowPromotionModal,
+  handleClosePromotionModal,
+  setModalRendered
+}: {
+  promotions: Promotion[];
+  showPromotionModal: boolean;
+  setShowPromotionModal: (show: boolean) => void;
+  handleClosePromotionModal: () => void;
+  setModalRendered: (rendered: boolean) => void;
+}) {
+  const location = useLocation();
+
+  // Auto-hide modal when navigating away from homepage
+  useEffect(() => {
+    if (location.pathname !== '/' && showPromotionModal) {
+      console.log('🚪 Navigating away from homepage, closing PromotionModal');
+      setShowPromotionModal(false);
+    }
+  }, [location.pathname, showPromotionModal, setShowPromotionModal]);
+
+  return (
+    <NotificationProvider>
+      <ScrollToTop />
+      <div className="min-h-screen bg-background">
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/services" element={<ServicesPage />} />
+          <Route path="/promotions" element={<PromotionsPage />} />
+          <Route path="/membership" element={<MembershipPage />} />
+          <Route path="/careers" element={<CareersPage />} />
+          <Route path="/gallery" element={<GalleryPage />} />
+          <Route path="/egift" element={<EGiftPage />} />
+          <Route path="/booking" element={<BookingPage />} />
+          <Route path="/locations" element={<LocationsPage />} />
+          <Route path="/reviews" element={<ReviewsPage />} />
+          <Route path="/vip" element={<VIPPage />} />
+          <Route path="/menu" element={<MenuPage />} />
+          <Route path="/coming-soon" element={<ComingSoonPage />} />
+          <Route path="/checkin/:id" element={<PublicCheckInPage />} />
+          {/* REMOVED: /redeem-membership route - all redemption done via MembershipPage component */}
+          
+          {/* Standalone Redeem Membership Page (VLinkPay Redirect) */}
+          <Route path="/redeem-membership" element={<RedeemMembershipStandalonePage />} />
+          
+          {/* Payment Success Route */}
+          <Route path="/payment/success" element={<PaymentSuccessPage />} />
+          
+          {/* Admin Routes */}
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin/dashboard" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminDashboard /></Suspense></ProtectedAdminRoute>} />
+          <Route path="/admin/services" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminServices /></Suspense></ProtectedAdminRoute>} />
+          <Route path="/admin/reviews" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminReviews /></Suspense></ProtectedAdminRoute>} />
+          <Route path="/admin/appointments" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminAppointments /></Suspense></ProtectedAdminRoute>} />
+          <Route path="/admin/staff-payroll" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminStaffPayroll /></Suspense></ProtectedAdminRoute>} />
+          <Route path="/admin/analytics" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminComingSoon /></Suspense></ProtectedAdminRoute>} />
+          <Route path="/admin/membership" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminMembership /></Suspense></ProtectedAdminRoute>} />
+          <Route path="/admin/check-in" element={<ProtectedAdminRoute><AdminKioskCheckInPage /></ProtectedAdminRoute>} />
+          
+          {/* Owner Routes */}
+          <Route path="/admin/users" element={<Navigate to="/admin/role-permissions?tab=roles" replace />} />
+          <Route path="/admin/role-permissions" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><RolePermissionsPage /></Suspense></ProtectedAdminRoute>} />
+          <Route path="/admin/vlinkpay-settings" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><VLinkPaySettingsPage /></Suspense></ProtectedAdminRoute>} />
+          <Route path="/admin/redeem-codes" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><RedeemCodesPage /></Suspense></ProtectedAdminRoute>} />
+          <Route path="/admin/system-settings" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><AdminSettings /></Suspense></ProtectedAdminRoute>} />
+          
+          {/* Legacy Settings Route - Redirect to System Settings */}
+          <Route path="/admin/settings" element={<Navigate to="/admin/system-settings" replace />} />
+          
+          <Route path="/admin/debug-data" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><DebugData /></Suspense></ProtectedAdminRoute>} />
+          <Route path="/admin/gallery" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminGallery /></Suspense></ProtectedAdminRoute>} />
+          
+          {/* Auth Routes (NOT PROTECTED - these are for logging in) */}
+          <Route path="/admin/setup-owner" element={<SetupOwnerPage />} />
+          <Route path="/admin/login" element={<LoginPage />} />
+          <Route path="/admin/debug-auth" element={<DebugAuth />} />
+          <Route path="/admin/test-setup" element={<TestSetup />} />
+          <Route path="/admin/test-jwt" element={<TestJWT />} />
+          
+          {/* 404 */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+
+        {/* Promotion Modal - Shows featured promotions on homepage ONLY */}
+        {showPromotionModal && (
+          <PromotionModal
+            promotions={promotions}
+            onClose={handleClosePromotionModal}
+            onRendered={() => setModalRendered(true)}
+            language="en"
+          />
+        )}
+      </div>
+    </NotificationProvider>
   );
 }
 

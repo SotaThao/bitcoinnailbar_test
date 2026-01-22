@@ -230,5 +230,160 @@ async function fetchData() {
 
 ---
 
-**Last Updated:** January 20, 2026  
-**Version:** 2.0.0
+## 8. VLinkPay Integration & Payment Flow
+
+### Redeem Code Validation Policy
+**CRITICAL: MUST call VLinkPay external API for order confirmation**
+
+**Reason:**
+- VLinkPay requires merchant to confirm order redemption
+- This finalizes the transaction on VLinkPay's side
+- Prevents double-spending and fraud
+
+**Validation Steps:**
+```typescript
+// ✅ REQUIRED STEPS
+1. Check if code exists in local database
+2. Check if code is not expired
+3. Check if code has not been redeemed
+4. 🌐 CALL VLINKPAY API to confirm order (REQUIRED)
+5. Create membership & mark as redeemed
+```
+
+**VLinkPay API Call:**
+```typescript
+// 🌐 REQUIRED: Confirm order with VLinkPay
+const response = await fetch(`${sandboxEndpoint}/gifthubs/public/merchant/redeem`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Api-key': decryptedApiKey
+  },
+  body: JSON.stringify({
+    redeemCode: code,
+    merchantOrderCode: orderCode
+  })
+});
+
+// If API returns error, check logs for:
+// - Correct endpoint URL
+// - Correct headers format
+// - Correct request body format
+// - API response format
+```
+
+**Debugging:**
+- Detailed logs are in `/supabase/functions/server/redeem.tsx`
+- Check console for full request/response details
+- Verify endpoint/payload with VLinkPay documentation
+
+**Location in Code:**
+- File: `/supabase/functions/server/redeem.tsx`
+- Function: `POST /make-server-84f9c112/redeem/validate`
+- Lines: ~140-240 (VLinkPay API call section)
+
+### Payment Flow Architecture
+```
+1. User clicks "Buy Now" → Create order (pending_payment)
+   ↓
+2. Redirect to VLinkPay payment gateway
+   ↓
+3. User completes payment at VLinkPay
+   ↓
+4. VLinkPay redirects: /redeem-membership?redeemCode=XXX
+   ↓
+5. Frontend calls /payment/complete-order
+   - Gets order from sessionStorage
+   - Saves redeem_code:{CODE} to DB
+   - Updates order status to 'completed'
+   ↓
+6. User enters phone number & clicks "Activate"
+   ↓
+7. Backend validates locally (no VLinkPay call)
+   ↓
+8. Create membership & mark code as 'redeemed'
+```
+
+### Database Tables (KV Store)
+- **Orders**: `order:{merchantOrderCode}` → stored in `kv_store_89edbd69`
+- **Redeem Codes**: `redeem_code:{code}` → stored in `kv_store_89edbd69`
+- **User Memberships**: `user_memberships:{userId}` → stored in `kv_store_89edbd69`
+
+---
+
+**Last Updated:** January 23, 2026  
+**Version:** 2.1.0
+
+---
+
+## 9. Admin Notification System
+
+### Global Notification Requirements
+**CRITICAL: All admin notifications MUST sync with header bell icon**
+
+**Architecture:**
+- Centralized notification system using React Context
+- Bell icon in AdminLayout header with badge counter
+- Dropdown notification panel with list of unread notifications
+- Polling service fetches updates every 15-30 seconds
+
+**Notification Types:**
+1. **New Membership Purchase** - When redeem code created
+2. **New Promotion Added** - When admin adds/updates promotion
+3. **Payment Completed** - When order status changes to completed
+4. **Code Redeemed** - When customer activates membership
+
+**Implementation Requirements:**
+```typescript
+// ✅ MUST HAVE
+- Global NotificationContext provider in App.tsx
+- Bell icon in AdminLayout header (top-right)
+- Badge counter showing unread count
+- Dropdown menu listing notifications
+- Mark as read functionality
+- Sound notification (toggleable)
+- Toast notification (using sonner)
+
+// ✅ SYNC BEHAVIOR
+- All admin pages share same notification state
+- Real-time polling (15s interval)
+- Persist notification state in localStorage
+- Auto-clear old notifications (7 days)
+```
+
+**UI/UX Guidelines:**
+```tsx
+// Bell Icon Location
+<AdminLayout>
+  <header>
+    {/* ... other header items ... */}
+    <NotificationBell /> {/* Top-right corner */}
+  </header>
+</AdminLayout>
+
+// Notification Item Format
+{
+  id: string,
+  type: 'membership' | 'promotion' | 'payment' | 'redeem',
+  title: string,
+  description: string,
+  timestamp: Date,
+  read: boolean,
+  metadata: { code?, amount?, tier? }
+}
+```
+
+**Files to Modify:**
+- `/src/app/context/NotificationContext.tsx` (create)
+- `/src/app/components/AdminLayout.tsx` (add bell icon)
+- `/src/app/components/NotificationBell.tsx` (create)
+- `/src/app/App.tsx` (wrap with NotificationProvider)
+- `/src/app/pages/admin/RedeemCodesPage.tsx` (use notification hook)
+
+**Key Principle:**
+> "Notifications are GLOBAL - not page-specific. A new membership should trigger notification visible from ALL admin pages via header bell."
+
+---
+
+**Last Updated:** January 23, 2026  
+**Version:** 2.2.0

@@ -68,6 +68,9 @@ export function MembershipCard({ tier, visual, saveText, className, previewMode 
         throw new Error(data.error || 'Failed to create payment link');
       }
 
+      // Store merchantOrderCode in sessionStorage for later use
+      sessionStorage.setItem('pending_order', data.data.merchantOrderCode);
+      
       // Open payment modal with iframe
       setPaymentUrl(data.data.paymentUrl);
       setShowPaymentModal(true);

@@ -19,54 +19,72 @@ app.post('/make-server-84f9c112/auth/login', async (c) => {
   try {
     const { email, password } = await c.req.json();
 
-    // Validate input
-    if (!email || !password) {
-      return c.json({ success: false, error: 'Email and password are required' }, 400);
-    }
+    // Trim and normalize email
+    const cleanEmail = email.trim().toLowerCase();
 
-    console.log(`🔐 [LOGIN] Attempt for email: ${email}`);
+    console.log(`🔐 [LOGIN] Attempt for email: ${cleanEmail}`);
 
-    // Find user by email
-    const users = await kv.getByPrefix('user:');
-    const user = users.find((u: User) => u.email === email);
+    // Find user by email - Check both prefixes to be safe
+    const usersColon = await kv.getByPrefix('user:');
+    const usersHash = await kv.getByPrefix('user#');
+    
+    // Combine and find all matching users
+    const allUsers = [...usersColon, ...usersHash];
+    const matchingUsers = allUsers.filter((u: User) => u?.email?.toLowerCase() === cleanEmail);
 
-    if (!user) {
-      console.log(`❌ [LOGIN] User not found: ${email}`);
+    if (matchingUsers.length === 0) {
+      console.log(`❌ [LOGIN] User not found: ${cleanEmail}`);
       return c.json({ success: false, error: 'Invalid email or password' }, 401);
     }
 
-    // Check if user is active
-    if (!user.is_active) {
-      console.log(`❌ [LOGIN] User inactive: ${email}`);
-      return c.json({ success: false, error: 'Account is inactive' }, 403);
+    console.log(`🔐 [LOGIN] Found ${matchingUsers.length} potential user records`);
+
+    // Try to find ONE user with a valid password
+    let validUser = null;
+
+    for (const user of matchingUsers) {
+      // Check if user is active
+      if (!user.is_active) {
+        console.log(`❌ [LOGIN] User record inactive: ${user.id}`);
+        continue;
+      }
+
+      // Verify password
+      const isPasswordValid = await verifyPassword(password, user.password_hash);
+      if (isPasswordValid) {
+        validUser = user;
+        console.log(`✅ [LOGIN] Password matched for user ID: ${user.id}`);
+        break;
+      } else {
+        console.log(`❌ [LOGIN] Password mismatch for user ID: ${user.id}`);
+      }
     }
 
-    // Verify password
-    console.log(`🔐 [LOGIN] Verifying password for: ${email}`);
-    console.log(`🔐 [LOGIN] Password (plain):`, password);
-    console.log(`🔐 [LOGIN] Stored hash:`, user.password_hash);
-    
-    const passwordHashFromRequest = await hashPassword(password);
-    console.log(`🔐 [LOGIN] Hash from request:`, passwordHashFromRequest);
-    console.log(`🔐 [LOGIN] Hashes match:`, passwordHashFromRequest === user.password_hash);
-    
-    const isPasswordValid = await verifyPassword(password, user.password_hash);
-    if (!isPasswordValid) {
-      console.log(`❌ [LOGIN] Invalid password for: ${email}`);
+    if (!validUser) {
+      // If we found users but none had valid password
+      // Check if any were inactive which might be the reason, otherwise invalid password
+      const hasInactive = matchingUsers.some(u => !u.is_active);
+      if (hasInactive && matchingUsers.every(u => !u.is_active || !verifyPassword(password, u.password_hash))) {
+         return c.json({ success: false, error: 'Account is inactive' }, 403);
+      }
+
+      console.log(`❌ [LOGIN] No valid password match found for: ${cleanEmail}`);
       return c.json({ success: false, error: 'Invalid email or password' }, 401);
     }
+
+    const user = validUser;
 
     // Load permissions
     const permissions = await kv.get(`permissions:${user.id}`);
     user.permissions = permissions;
 
     // Generate JWT token
-    console.log(`🔐 [LOGIN] Generating JWT for: ${email}`);
+    console.log(`🔐 [LOGIN] Generating JWT for: ${cleanEmail}`);
     const token = await generateJWT(user);
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    // Update last login
+    // Update last login - Use the ID from the VALID user
     await kv.set(`user:${user.id}`, {
       ...user,
       last_login: now.toISOString(),
@@ -122,7 +140,10 @@ app.get('/make-server-84f9c112/auth/verify', async (c) => {
     console.log(`✅ [VERIFY JWT] Token verified for user:`, payload.email);
 
     // Get fresh user data from KV to ensure user is still active
-    const user = await kv.get(`user:${payload.sub}`);
+    let user = await kv.get(`user:${payload.sub}`);
+    if (!user) {
+      user = await kv.get(`user#${payload.sub}`);
+    }
 
     if (!user) {
       console.log(`❌ [VERIFY JWT] User not found: ${payload.sub}`);
@@ -244,7 +265,7 @@ app.post('/make-server-84f9c112/users', requireAuth, async (c) => {
     }
 
     // Check if email already exists
-    const users = await kv.getByPrefix('user:');
+    const users = await kv.getByPrefix('user#');
     const emailExists = users.some((user: User) => user.email === email);
     if (emailExists) {
       return c.json({ success: false, error: 'Email already in use' }, 400);
@@ -317,12 +338,10 @@ app.put('/make-server-84f9c112/users/:id', requireAuth, async (c) => {
     const { email, full_name, phone, role, password } = await c.req.json();
 
     // Get existing user
-    const user = await kv.get(`user:${userId}`);
+    let user = await kv.get(`user:${userId}`);
     if (!user) {
-      return c.json({ success: false, error: 'User not found' }, 404);
+      user = await kv.get(`user#${userId}`);
     }
-
-    // Cannot change owner role
     if (user.role === 'owner') {
       return c.json({ success: false, error: 'Cannot modify owner account' }, 403);
     }
@@ -384,12 +403,10 @@ app.put('/make-server-84f9c112/users/:id/permissions', requireAuth, async (c) =>
     const permissionUpdates = await c.req.json();
 
     // Get existing user
-    const user = await kv.get(`user:${userId}`);
+    let user = await kv.get(`user:${userId}`);
     if (!user) {
-      return c.json({ success: false, error: 'User not found' }, 404);
+      user = await kv.get(`user#${userId}`);
     }
-
-    // Cannot change owner permissions
     if (user.role === 'owner') {
       return c.json({ success: false, error: 'Cannot modify owner permissions' }, 403);
     }
@@ -441,12 +458,10 @@ app.post('/make-server-84f9c112/users/:id/deactivate', requireAuth, async (c) =>
     }
 
     // Get existing user
-    const user = await kv.get(`user:${userId}`);
+    let user = await kv.get(`user:${userId}`);
     if (!user) {
-      return c.json({ success: false, error: 'User not found' }, 404);
+      user = await kv.get(`user#${userId}`);
     }
-
-    // Cannot deactivate owner
     if (user.role === 'owner') {
       return c.json({ success: false, error: 'Cannot deactivate owner account' }, 403);
     }
@@ -487,12 +502,10 @@ app.post('/make-server-84f9c112/users/:id/activate', requireAuth, async (c) => {
     const userId = c.req.param('id');
 
     // Get existing user
-    const user = await kv.get(`user:${userId}`);
+    let user = await kv.get(`user:${userId}`);
     if (!user) {
-      return c.json({ success: false, error: 'User not found' }, 404);
+      user = await kv.get(`user#${userId}`);
     }
-
-    // Activate user
     const updatedUser = {
       ...user,
       is_active: true,

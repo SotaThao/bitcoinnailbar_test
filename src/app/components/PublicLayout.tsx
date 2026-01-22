@@ -560,11 +560,11 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
 
               {/* Payment Methods */}
               <div className="space-y-3 pt-2">
-                 <h4 className="text-xs font-bold tracking-[0.2em] text-gray-400 uppercase">{t('footer.accept') || 'SUPPORTED PAYMENT METHODS'}</h4>
+                 <h4 className="text-xs font-bold tracking-[0.2em] text-gray-400 uppercase not-italic">{t('footer.accept') || 'SUPPORTED PAYMENT METHODS'}</h4>
                  <div className="flex flex-wrap items-center gap-3">
                     {/* Bitcoin */}
                     <div className="group relative flex items-center justify-center w-12 h-12 rounded-lg text-[#9ca3af] hover:text-[#F7931A] transition-all duration-200" title="Bitcoin">
-                      <img src={image_2de9c9413dafd548ee75321859136c9ca435bffe} alt="Bitcoin" className="w-full h-full object-contain" />
+                      <img src="https://pwmrmcipniefewufwjjy.supabase.co/storage/v1/object/public/NailPage/Symbol.png" alt="Bitcoin" className="w-full h-full object-contain" />
                       <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-[#F7931A] text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg">
                         Bitcoin (BTC)
                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#F7931A] rotate-45"></div>
@@ -573,7 +573,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                     
                     {/* Ethereum */}
                     <div className="group relative flex items-center justify-center w-12 h-12 rounded-lg text-[#627EEA] hover:text-[#627EEA] transition-all duration-200" title="Ethereum">
-                      <img src={image_eb0bbc971a7468c60bd03f5a065452ed783bbdef} alt="Ethereum" className="w-full h-full object-contain" />
+                      <img src="https://pwmrmcipniefewufwjjy.supabase.co/storage/v1/object/public/NailPage/Etherum.png" alt="Ethereum" className="w-full h-full object-contain" />
                       <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-[#627EEA] text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg">
                         Ethereum (ETH)
                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#627EEA] rotate-45"></div>
@@ -590,8 +590,8 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                     </div>
                     
                     {/* Visa */}
-                    <div className="group relative flex items-center justify-center w-12 h-12 rounded-lg transition-all duration-200" title="Visa">
-                      <img src={image_9d0366157187675ee300a22d7203dd76c667cce9} alt="Visa" className="w-full h-full object-contain" />
+                    <div className="group relative flex items-center justify-center p-[0px] h-12 rounded-lg bg-[rgb(255,255,255)] border border-white/10 hover:border-[#1A1F6F] transition-all duration-200 px-[12px] py-[0px]" title="Visa">
+                      <img src="https://pwmrmcipniefewufwjjy.supabase.co/storage/v1/object/public/NailPage/visa_318-202971.avif" alt="Visa" className="h-8 w-auto object-contain m-1" />
                       <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-[#1A1F6F] text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg">
                         Visa Card
                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#1A1F6F] rotate-45"></div>
@@ -599,8 +599,8 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                     </div>
                     
                     {/* Mastercard */}
-                    <div className="group relative flex items-center justify-center w-12 h-12 rounded-lg transition-all duration-200" title="Mastercard">
-                      <img src={image_806e712a7137dc26b6a45d29177a47853f6cc4d2} alt="Mastercard" className="w-full h-full object-contain" />
+                    <div className="group relative flex items-center justify-center px-3 h-12 rounded-lg bg-[rgb(255,255,255)] border border-white/10 hover:border-red-600 transition-all duration-200" title="Mastercard">
+                      <img src="https://pwmrmcipniefewufwjjy.supabase.co/storage/v1/object/public/NailPage/Mastercard-logo.svg" alt="Mastercard" className="h-6 w-auto object-contain" />
                       <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg">
                         Mastercard
                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-red-600 rotate-45"></div>
@@ -608,8 +608,12 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                     </div>
                     
                     {/* Zelle */}
-                    <div className="group relative flex items-center justify-center px-3 h-12 rounded-lg bg-[#1A1F2E] border border-white/10 hover:border-[#6D1ED4] transition-all duration-200" title="Zelle">
-                      <span className="text-xs font-bold text-white">Zelle</span>
+                    <div className="group relative flex items-center justify-center px-3 h-12 rounded-lg bg-[rgb(255,255,255)] border border-white/10 hover:border-[#6D1ED4] transition-all duration-200" title="Zelle">
+                      <img 
+                        src="https://pwmrmcipniefewufwjjy.supabase.co/storage/v1/object/public/NailPage/Zelle_logo.svg%20(1).png" 
+                        alt="Zelle" 
+                        className="h-6 w-auto object-contain"
+                      />
                       <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-[#6D1ED4] text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg">
                         Zelle
                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#6D1ED4] rotate-45"></div>
@@ -617,35 +621,42 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                     </div>
                     
                     {/* Venmo */}
-                    <div className="group relative flex items-center justify-center px-3 h-12 rounded-lg bg-[#1A1F2E] border border-white/10 hover:border-[#3D95CE] transition-all duration-200" title="Venmo">
-                      <span className="text-xs font-bold text-white">Venmo</span>
+                    <div className="group relative flex items-center justify-center px-3 h-12 rounded-lg bg-[rgb(255,255,255)] border border-white/10 hover:border-[#3D95CE] transition-all duration-200" title="Venmo">
+                      <img 
+                        src="https://pwmrmcipniefewufwjjy.supabase.co/storage/v1/object/public/NailPage/Venmo-Woordmark-Logo.png" 
+                        alt="Venmo" 
+                        className="h-6 w-auto object-contain"
+                      />
                       <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-[#3D95CE] text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg">
                         Venmo
                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#3D95CE] rotate-45"></div>
                       </div>
                     </div>
                     
-                    {/* Cash App */}
-                    <div className="group relative flex items-center justify-center px-3 h-12 rounded-lg bg-[#1A1F2E] border border-white/10 hover:border-[#00D54B] transition-all duration-200" title="Cash App">
+                    {/* VLINKPAY */}
+                    <div className="group relative flex items-center justify-center px-3 h-12 rounded-lg bg-[rgb(255,255,255)] border border-white/10 hover:border-gray-400 transition-all duration-200" title="VLINKPAY">
                       <span className="text-xs font-bold text-white flex items-center gap-1">
+                        <img 
+                          src="https://pwmrmcipniefewufwjjy.supabase.co/storage/v1/object/public/NailPage/Logongang.png" 
+                          alt="VLINKPAY" 
+                          className="h-6 w-auto object-contain"
+                        />
+                      </span>
+                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-400 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg">
+                        VLINKPAY
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-400 rotate-45"></div>
+                      </div>
+                    </div>
+                    
+                    {/* Cash App */}
+                    <div className="group relative flex items-center justify-center px-3 h-12 rounded-lg bg-[rgb(255,255,255)] border border-white/10 hover:border-[#00D54B] transition-all duration-200" title="Cash App">
+                      <span className="text-xs font-bold text-[rgb(16,0,66)] flex items-center gap-1">
                         <DollarSign className="h-4 w-4" />
                         Cash App
                       </span>
                       <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-[#00D54B] text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg">
                         Cash App
                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#00D54B] rotate-45"></div>
-                      </div>
-                    </div>
-                    
-                    {/* VLINKPAY */}
-                    <div className="group relative flex items-center justify-center px-3 h-12 rounded-lg bg-[#1A1F2E] border border-white/10 hover:border-gray-400 transition-all duration-200" title="VLINKPAY">
-                      <span className="text-xs font-bold text-white flex items-center gap-1">
-                        <CreditCard className="h-4 w-4" />
-                        VLINKPAY
-                      </span>
-                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-400 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg">
-                        VLINKPAY
-                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-400 rotate-45"></div>
                       </div>
                     </div>
                  </div>

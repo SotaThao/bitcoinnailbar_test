@@ -1,17 +1,17 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import bitcoinLogo from 'figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png';
-import { LayoutDashboard, Calendar, DollarSign, BarChart3, LogOut, Scissors, Star, Bitcoin, User, Bell, Settings, Scan, CreditCard, Users2, Shield, Image, Wallet } from 'lucide-react';
+import { LayoutDashboard, Calendar, DollarSign, BarChart3, LogOut, Scissors, Star, Bitcoin, User, Bell, Settings, Scan, CreditCard, Users2, Shield, Image, Wallet, Gift, Database } from 'lucide-react';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { clearSession, getCurrentUser, getAuthToken } from '/utils/auth';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
+import { GlobalRealtimeListener } from './admin/GlobalRealtimeListener';
+import { NotificationBell } from './NotificationBell';
+import { Toaster } from 'sonner';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
-
-import { GlobalRealtimeListener } from './admin/GlobalRealtimeListener';
-import { NotificationPopover } from './admin/NotificationPopover';
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
@@ -63,7 +63,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   // Owner section (Only visible to owner role)
   const ownerNavLinks = [
-    { path: '/admin/users', label: 'User Management', icon: Users2 },
+    { path: '/admin/redeem-codes', label: 'Customers Data', icon: Database },
     { path: '/admin/role-permissions', label: 'Role & Permissions', icon: Shield },
     { path: '/admin/vlinkpay-settings', label: 'VLINKPAY Settings', icon: Wallet },
     { path: '/admin/system-settings', label: 'System Settings', icon: Settings },
@@ -80,7 +80,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Sidebar */}
       <aside className="hidden md:flex md:w-64 md:flex-col fixed inset-y-0 z-50 border-r border-gray-100 bg-white shadow-sm">
         {/* Logo */}
-        <div className="flex h-20 items-center gap-3 px-6">
+        <div className="flex h-20 items-center gap-3 px-6 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full shadow-[0_0_15px_rgba(255,152,0,0.5)]">
                <img src={bitcoinLogo} alt="Bitcoin" className="h-10 w-10 object-contain" />
@@ -92,8 +92,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-1">
+        {/* Navigation - Scrollable */}
+        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {/* Main Features */}
           {mainNavLinks.map((link) => {
             const Icon = link.icon;
@@ -183,8 +183,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           })}
         </nav>
 
-        {/* Sign Out */}
-        <div className="p-4 border-t border-gray-100">
+        {/* Sign Out - Fixed at bottom */}
+        <div className="p-4 border-t border-gray-100 flex-shrink-0">
           <Button 
             variant="ghost" 
             className="w-full justify-start gap-3 text-gray-500 hover:text-red-600 hover:bg-red-50 group"
@@ -217,7 +217,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
            </div>
 
            <div className="flex items-center gap-6">
-              <NotificationPopover />
+              <NotificationBell />
               <div className="flex items-center gap-3 pl-6 border-l border-gray-100">
                  <div className="text-right hidden lg:block">
                     <p className="text-sm font-bold text-gray-900">{currentUser?.full_name || 'Admin User'}</p>
@@ -292,6 +292,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <main className="flex-1 p-4 md:p-8 overflow-y-auto">
           {children}
         </main>
+
+        {/* Toast Notifications - Only in Admin Area */}
+        <Toaster 
+          position="bottom-right" 
+          toastOptions={{
+            className: 'bg-white border-gray-200 text-gray-900',
+            duration: 5000,
+          }}
+        />
       </div>
     </div>
   );

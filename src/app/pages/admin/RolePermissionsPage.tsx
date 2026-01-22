@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Shield } from 'lucide-react';
+import { Shield, Users } from 'lucide-react';
 import { getCurrentUser } from '/utils/auth';
 import { OwnerOnlyAccess } from '@/app/components/OwnerOnlyAccess';
 import AdminLayout from '@/app/components/AdminLayout';
-import RolesPageContent from './RolesPageContent';
+import UsersTab from '@/app/components/admin/UsersTab';
 import PermissionsPageContent from './PermissionsPageContent';
 
 type TabType = 'roles' | 'permissions';
@@ -61,7 +61,7 @@ export default function RolePermissionsPage() {
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >
-            <Shield className="h-4 w-4" />
+            <Users className="h-4 w-4" />
             Roles
           </button>
           <button
@@ -79,7 +79,7 @@ export default function RolePermissionsPage() {
 
         {/* Tab Content */}
         <div className="transition-all duration-200">
-          {activeTab === 'roles' ? <RolesPageContent /> : <PermissionsPageContent />}
+          {activeTab === 'roles' ? <UsersTab /> : <PermissionsPageContent />}
         </div>
       </div>
     </AdminLayout>

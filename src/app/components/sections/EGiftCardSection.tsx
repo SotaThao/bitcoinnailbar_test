@@ -52,7 +52,7 @@ export function EGiftCardSection() {
         <div className="absolute bottom-1/4 right-1/4 w-64 h-64 md:w-96 md:h-96 bg-[#F7931A]/20 rounded-full filter blur-[128px]" />
       </div>
 
-      <div className="container mx-auto px-4 relative z-10 mt-[-60px] mr-[0px] mb-[0px] ml-[0px]">
+      <div className="container mx-auto px-4 relative z-10 mt-[-60px]">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}

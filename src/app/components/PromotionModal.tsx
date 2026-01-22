@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -33,6 +34,7 @@ interface PromotionModalProps {
 }
 
 export function PromotionModal({ promotions, onClose, language = 'en', onRendered }: PromotionModalProps) {
+  const location = useLocation();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [dontShowToday, setDontShowToday] = useState(false);
 
@@ -102,6 +104,11 @@ export function PromotionModal({ promotions, onClose, language = 'en', onRendere
       window.location.href = link;
     }
   };
+
+  // Logic: Only show modal on homepage
+  if (location.pathname !== '/') {
+    return null;
+  }
 
   if (featuredPromotions.length === 0) return null;
 

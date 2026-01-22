@@ -308,15 +308,27 @@ export default function BookingPage() {
     
     setLookupLoading(true);
     try {
+      // Use appointment date if selected, otherwise use current date
+      const appointmentTime = selectedDate?.toISOString() || new Date().toISOString();
+      
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/customers/phone/${normalizedPhone}`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/customers/lookup/${normalizedPhone}?appointment_time=${appointmentTime}`,
         { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
       );
       const data = await response.json();
-      if (data.success && data.data) {
-        setCustomerName(data.data.name);
-        setCustomerEmail(data.data.email || '');
-        toast.success('Customer info loaded! 👤');
+      
+      if (data.success && data.found && data.data?.customer) {
+        setCustomerName(data.data.customer.full_name);
+        setCustomerEmail(data.data.customer.email || '');
+        
+        // Check membership validity
+        if (data.data.has_valid_membership && data.data.membership) {
+          toast.success(`Welcome back! 💎 ${data.data.membership.tier} Member`, {
+            description: `Your membership is active until ${new Date(data.data.membership.expires_at).toLocaleDateString()}`
+          });
+        } else {
+          toast.success('Customer info loaded! 👤');
+        }
       }
     } catch (error) {
       console.error('Error looking up customer:', error);
@@ -369,6 +381,56 @@ export default function BookingPage() {
       const trimmedEmail = customerEmail?.trim();
       const validEmail = trimmedEmail && trimmedEmail.length > 0 ? trimmedEmail : null;
 
+      // Generate appointment ID first
+      const appointmentId = `appointment:${Date.now()}`;
+      
+      // Calculate total amount
+      const totalAmount = calculateTotal();
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // STEP 1: Create/Update Customer Record
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      console.log('📝 [BOOKING] Creating/updating customer record...');
+      try {
+        const customerResponse = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/customers/book`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${publicAnonKey}`
+            },
+            body: JSON.stringify({
+              phone: customerPhone,
+              full_name: customerName,
+              email: validEmail,
+              appointment_id: appointmentId,
+              appointment_time: appointmentTime.toISOString(),
+              appointment_amount: totalAmount
+            })
+          }
+        );
+
+        const customerData = await customerResponse.json();
+        if (customerData.success) {
+          console.log('✅ [BOOKING] Customer record updated');
+          
+          // Check if customer has valid membership
+          if (customerData.data?.has_valid_membership) {
+            console.log(`💎 [BOOKING] Customer has active ${customerData.data.membership.tier} membership`);
+          }
+        } else {
+          console.warn('⚠️ [BOOKING] Customer update failed:', customerData.error);
+          // Don't fail the whole booking process
+        }
+      } catch (customerError) {
+        console.error('❌ [BOOKING] Customer integration error:', customerError);
+        // Continue with booking even if customer update fails
+      }
+
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // STEP 2: Create Appointment
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/appointments`, {
         method: 'POST',
         headers: {

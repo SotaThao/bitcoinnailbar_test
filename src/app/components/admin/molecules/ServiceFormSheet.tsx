@@ -16,13 +16,8 @@ import { Label } from '../../ui/label';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import { Switch } from '../../ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../ui/select';
+import { SelectItem } from '../../ui/select';
+import { SelectField } from '../../ui/select-field';
 import { validateServiceForm } from '../../../lib/service-menu-utils';
 import { toast } from 'sonner';
 import { Search, Plus, X, Check } from 'lucide-react';
@@ -241,22 +236,18 @@ export function ServiceFormSheet({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              <Select
+              <SelectField
                 value={formData.category}
                 onValueChange={(value) => setFormData({ ...formData, category: value })}
                 disabled={isSaving || (formData.serviceType === 'addon' && !!categories.find(cat => ['add-on', 'add-ons', 'addon'].includes(cat.name.toLowerCase())))}
+                placeholder="Select Category"
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat, index) => (
-                    <SelectItem key={`${cat.id}-${cat.name}-${index}`} value={cat.name}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {categories.map((cat, index) => (
+                  <SelectItem key={`${cat.id}-${cat.name}-${index}`} value={cat.name}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectField>
             </div>
 
             <div className="space-y-2">
@@ -320,7 +311,7 @@ export function ServiceFormSheet({
           {/* Service Type */}
           <div className="space-y-2">
             <Label htmlFor="serviceType">Service Type</Label>
-            <Select
+            <SelectField
               value={formData.serviceType}
               onValueChange={(value: 'regular' | 'addon') => {
                 const addonCategory = categories.find(cat => ['add-on', 'add-ons', 'addon'].includes(cat.name.toLowerCase()));
@@ -336,25 +327,22 @@ export function ServiceFormSheet({
                 });
               }}
               disabled={isSaving}
+              placeholder="Select Service Type"
+              triggerClassName="h-auto !py-6 px-4 [&>span]:text-left"
             >
-              <SelectTrigger className="h-auto py-6 px-4 [&>span]:text-left">
-                <SelectValue placeholder="Select Service Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="regular">
-                  <div className="flex flex-col items-start text-left">
-                    <span className="font-medium">Regular Service</span>
-                    <span className="text-xs text-gray-500">Standalone service (default)</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="addon">
-                  <div className="flex flex-col items-start text-left">
-                    <span className="font-medium">Add-on Service</span>
-                    <span className="text-xs text-gray-500">Enhancement for other services</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+              <SelectItem value="regular">
+                <div className="flex flex-col items-start text-left">
+                  <span className="font-medium">Regular Service</span>
+                  <span className="text-xs text-gray-500">Standalone service (default)</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="addon">
+                <div className="flex flex-col items-start text-left">
+                  <span className="font-medium">Add-on Service</span>
+                  <span className="text-xs text-gray-500">Enhancement for other services</span>
+                </div>
+              </SelectItem>
+            </SelectField>
           </div>
 
           {/* Add-ons Selection (Only show for REGULAR services) */}

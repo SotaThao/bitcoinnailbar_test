@@ -21,9 +21,7 @@ const CryptoItem = ({ icon, symbol, symbolColor, price, priceColor = '#4ade80', 
   
   return (
     <div className="flex items-center gap-2 px-4 shrink-0">
-      <div className="text-[12px]" style={{ color: symbolColor }}>
-        {icon}
-      </div>
+      {/* Icon removed - displaying incorrectly */}
       <span className="font-bold text-[12px] font-mono" style={{ color: symbolColor }}>
         {symbol}
       </span>

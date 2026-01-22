@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
+import { CategorySelector } from '@/app/components/ui/category-selector';
+import { ImageCategoryDialog } from '@/app/components/ui/image-category-dialog';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '@utils/supabase/info';
 import AdminLayout from '@/app/components/AdminLayout';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2, Upload, ImageIcon, Loader2, X, ZoomIn, Plus, Tag } from 'lucide-react';
+import { GripVertical, Trash2, Upload, ImageIcon, Loader2, X, ZoomIn, Plus, Tag, Edit2, Check, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '@/app/components/ui/utils';
 
 interface GalleryImage {
   id: string;
@@ -25,9 +28,13 @@ interface SortableItemProps {
   image: GalleryImage;
   onDelete: (id: string) => void;
   onPreview: (image: GalleryImage) => void;
+  onEdit: (image: GalleryImage) => void;
+  isSelected: boolean;
+  onToggleSelect: (id: string) => void;
+  isBulkMode: boolean;
 }
 
-function SortableItem({ image, onDelete, onPreview }: SortableItemProps) {
+function SortableItem({ image, onDelete, onPreview, onEdit, isSelected, onToggleSelect, isBulkMode }: SortableItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: image.id });
 
   const style = {
@@ -40,52 +47,106 @@ function SortableItem({ image, onDelete, onPreview }: SortableItemProps) {
     <div 
       ref={setNodeRef} 
       style={style} 
-      className="group relative aspect-square rounded-lg overflow-hidden bg-gray-100 border-2 border-gray-200 hover:border-[#FF9800] transition-all duration-300"
+      className={cn(
+        "group relative aspect-square rounded-lg overflow-hidden bg-gray-100 transition-all duration-300",
+        isSelected 
+          ? "ring-4 ring-primary ring-offset-2 border-2 border-primary" 
+          : "border-2 border-gray-200 hover:border-[#FF9800]"
+      )}
     >
-      {/* Drag Handle - Top Right */}
-      <button
-        {...attributes}
-        {...listeners}
-        className="absolute top-2 right-2 z-10 cursor-grab active:cursor-grabbing bg-white/90 backdrop-blur-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-white"
-      >
-        <GripVertical className="w-4 h-4 text-gray-600" />
-      </button>
+      {/* Checkbox - Top Left */}
+      {isBulkMode && (
+        <div className="absolute top-2 left-2 z-20">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSelect(image.id);
+            }}
+            className={cn(
+              "w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all shadow-lg",
+              isSelected
+                ? "bg-primary border-primary"
+                : "bg-white/90 border-gray-300 hover:border-primary"
+            )}
+          >
+            {isSelected && <Check className="w-4 h-4 text-primary-foreground" />}
+          </button>
+        </div>
+      )}
 
-      {/* Order Badge - Top Left */}
-      <div className="absolute top-2 left-2 z-10 bg-[#FF9800] text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
-        {image.order + 1}
-      </div>
+      {/* Order Badge */}
+      {!isBulkMode && (
+        <div className="absolute top-2 left-2 z-10 bg-[#FF9800] text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+          {image.order + 1}
+        </div>
+      )}
+
+      {/* Drag Handle - Top Right */}
+      {!isBulkMode && (
+        <button
+          {...attributes}
+          {...listeners}
+          className="absolute top-2 right-2 z-10 cursor-grab active:cursor-grabbing bg-white/90 backdrop-blur-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-white"
+        >
+          <GripVertical className="w-4 h-4 text-gray-600" />
+        </button>
+      )}
 
       {/* Image */}
       <img
         src={image.cloudinary_url}
         alt={`Gallery ${image.order + 1}`}
         className="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
-        onClick={() => onPreview(image)}
+        onClick={() => !isBulkMode && onPreview(image)}
       />
 
-      {/* Hover Overlay with Remove Icon */}
-      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(image.id);
-          }}
-          className="bg-red-600 hover:bg-red-700 text-white rounded-full p-3 shadow-xl transition-transform transform hover:scale-110"
-        >
-          <Trash2 className="w-5 h-5" />
-        </button>
+      {/* Category Badge - Bottom Left */}
+      <div className="absolute bottom-2 left-2 z-10 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+        {image.category}
       </div>
 
-      {/* Zoom Icon (secondary action on hover) */}
-      <div 
-        className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-        onClick={() => onPreview(image)}
-      >
-        <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 hover:bg-white transition-colors">
-          <ZoomIn className="w-4 h-4 text-gray-700" />
-        </div>
+      {/* Hover Overlay with Actions */}
+      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+        {!isBulkMode && (
+          <>
+            {/* Edit Category Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(image);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-xl transition-transform transform hover:scale-110"
+              title="Change category"
+            >
+              <Edit2 className="w-5 h-5" />
+            </button>
+
+            {/* Delete Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(image.id);
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-full p-3 shadow-xl transition-transform transform hover:scale-110"
+              title="Delete image"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          </>
+        )}
       </div>
+
+      {/* Zoom Icon (on non-bulk mode) */}
+      {!isBulkMode && (
+        <div 
+          className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+          onClick={() => onPreview(image)}
+        >
+          <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 hover:bg-white transition-colors">
+            <ZoomIn className="w-4 h-4 text-gray-700" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -102,6 +163,17 @@ export default function GalleryManagement() {
   const [selectedCategory, setSelectedCategory] = useState<string>('General');
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  
+  // Filter Management
+  const [filterCategory, setFilterCategory] = useState<string>('All');
+
+  // Bulk Selection & Edit
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  
+  // Image Category Edit
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingImage, setEditingImage] = useState<GalleryImage | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -206,6 +278,18 @@ export default function GalleryManagement() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this image from the gallery?')) return;
 
+    // OPTIMISTIC UPDATE: Remove from UI immediately
+    const deletedImage = images.find(img => img.id === id);
+    if (!deletedImage) return;
+
+    setImages((prev) => prev.filter((img) => img.id !== id));
+    
+    // Show immediate success feedback (optimistic)
+    const loadingToast = toast.loading('Deleting image...', {
+      description: 'Removing from server and Cloudinary',
+    });
+
+    // BACKGROUND: Call API to delete from backend/Cloudinary
     try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/gallery/${id}`,
@@ -216,15 +300,19 @@ export default function GalleryManagement() {
       );
 
       const data = await response.json();
-      if (data.success) {
-        setImages((prev) => prev.filter((img) => img.id !== id));
-        toast.success('Image deleted');
+      if (!data.success) {
+        // ROLLBACK: Restore image if API fails
+        console.error('Delete API failed, rolling back:', data.error);
+        setImages((prev) => [...prev, deletedImage].sort((a, b) => a.order - b.order));
+        toast.error('Failed to delete from server. Image restored.', { id: loadingToast });
       } else {
-        toast.error(data.error || 'Delete failed');
+        toast.success('Image deleted successfully', { id: loadingToast });
       }
     } catch (error) {
-      console.error('Delete error:', error);
-      toast.error('Failed to delete image');
+      // ROLLBACK: Restore image on network error
+      console.error('Delete error, rolling back:', error);
+      setImages((prev) => [...prev, deletedImage].sort((a, b) => a.order - b.order));
+      toast.error('Network error. Image restored.', { id: loadingToast });
     }
   };
 
@@ -302,30 +390,247 @@ export default function GalleryManagement() {
     }
   };
 
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) {
+  const handleEditCategory = (oldName: string, newName: string) => {
+    if (!newName.trim()) {
       toast.error('Category name cannot be empty');
       return;
     }
 
-    // Check if category already exists
-    const allCategories = [...serviceCategories, ...customCategories, 'General'];
-    if (allCategories.includes(newCategoryName.trim())) {
+    // Check if new name already exists
+    const allCategories = [...serviceCategories, ...customCategories.filter(c => c !== oldName), 'General'];
+    if (allCategories.includes(newName.trim())) {
       toast.error('Category already exists');
       return;
     }
 
-    // Save to localStorage as fallback until backend API is ready
-    const updatedCustomCategories = [...customCategories, newCategoryName.trim()];
+    // Update custom categories
+    const updatedCustomCategories = customCategories.map(cat => 
+      cat === oldName ? newName.trim() : cat
+    );
     setCustomCategories(updatedCustomCategories);
     localStorage.setItem('gallery_custom_categories', JSON.stringify(updatedCustomCategories));
+
+    // Update selected category if it was the edited one
+    if (selectedCategory === oldName) {
+      setSelectedCategory(newName.trim());
+    }
+
+    toast.success(`Category renamed to "${newName.trim()}"`);
+  };
+
+  const handleDeleteCategory = (category: string) => {
+    // Remove from custom categories
+    const updatedCustomCategories = customCategories.filter(cat => cat !== category);
+    setCustomCategories(updatedCustomCategories);
+    localStorage.setItem('gallery_custom_categories', JSON.stringify(updatedCustomCategories));
+
+    toast.success(`Category "${category}" deleted`);
+  };
+
+  // Single Image Category Edit
+  const handleEditImage = (image: GalleryImage) => {
+    setEditingImage(image);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateImageCategory = async (newCategory: string) => {
+    if (!editingImage) return;
+
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/gallery/${editingImage.id}/category`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${publicAnonKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ category: newCategory }),
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        setImages((prev) =>
+          prev.map((img) =>
+            img.id === editingImage.id ? { ...img, category: newCategory } : img
+          )
+        );
+        toast.success(`Image moved to "${newCategory}"`);
+      } else {
+        toast.error(data.error || 'Failed to update category');
+      }
+    } catch (error) {
+      console.error('Update category error:', error);
+      toast.error('Failed to update category');
+    }
+  };
+
+  // Bulk Selection
+  const handleToggleSelect = (id: string) => {
+    setSelectedImages((prev) =>
+      prev.includes(id) ? prev.filter((imgId) => imgId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    const allIds = filteredImages.map((img) => img.id);
+    setSelectedImages(allIds);
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedImages([]);
+  };
+
+  // Bulk Actions
+  const handleBulkUpdateCategory = async (newCategory: string) => {
+    if (selectedImages.length === 0) return;
+
+    try {
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const imageId of selectedImages) {
+        try {
+          const response = await fetch(
+            `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/gallery/${imageId}/category`,
+            {
+              method: 'PUT',
+              headers: {
+                Authorization: `Bearer ${publicAnonKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ category: newCategory }),
+            }
+          );
+
+          const data = await response.json();
+          if (data.success) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (error) {
+          failCount++;
+        }
+      }
+
+      // Update local state
+      setImages((prev) =>
+        prev.map((img) =>
+          selectedImages.includes(img.id) ? { ...img, category: newCategory } : img
+        )
+      );
+
+      if (successCount > 0) {
+        toast.success(`Updated ${successCount} image${successCount > 1 ? 's' : ''} to "${newCategory}"`);
+      }
+      if (failCount > 0) {
+        toast.error(`Failed to update ${failCount} image${failCount > 1 ? 's' : ''}`);
+      }
+
+      // Reset selection
+      setSelectedImages([]);
+      setIsBulkMode(false);
+    } catch (error) {
+      console.error('Bulk update error:', error);
+      toast.error('Failed to update images');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedImages.length === 0) return;
+
+    if (!confirm(`Delete ${selectedImages.length} selected image${selectedImages.length > 1 ? 's' : ''}?`)) {
+      return;
+    }
+
+    // OPTIMISTIC UPDATE: Remove from UI immediately
+    const deletedImages = images.filter(img => selectedImages.includes(img.id));
+    const remainingImages = images.filter(img => !selectedImages.includes(img.id));
     
-    // Set as selected category
-    setSelectedCategory(newCategoryName.trim());
-    setNewCategoryName('');
-    setShowNewCategoryInput(false);
+    setImages(remainingImages);
     
-    toast.success(`Category "${newCategoryName.trim()}" added`);
+    // Show loading toast
+    const loadingToast = toast.loading(`Deleting ${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''}...`, {
+      description: 'Removing from server and Cloudinary',
+    });
+    
+    // Store for potential rollback
+    const failedDeletes: GalleryImage[] = [];
+
+    // BACKGROUND: Call API to delete from backend/Cloudinary
+    try {
+      for (const imageId of selectedImages) {
+        try {
+          const response = await fetch(
+            `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/gallery/${imageId}`,
+            {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${publicAnonKey}` },
+            }
+          );
+
+          const data = await response.json();
+          if (!data.success) {
+            // Track failed deletes
+            const failedImage = deletedImages.find(img => img.id === imageId);
+            if (failedImage) {
+              failedDeletes.push(failedImage);
+            }
+          }
+        } catch (error) {
+          // Track failed deletes
+          const failedImage = deletedImages.find(img => img.id === imageId);
+          if (failedImage) {
+            failedDeletes.push(failedImage);
+          }
+        }
+      }
+
+      // ROLLBACK: Restore failed deletes
+      if (failedDeletes.length > 0) {
+        setImages((prev) => [...prev, ...failedDeletes].sort((a, b) => a.order - b.order));
+        toast.error(`Failed to delete ${failedDeletes.length} image${failedDeletes.length > 1 ? 's' : ''}. Restored.`, { id: loadingToast });
+      } else {
+        toast.success(`Successfully deleted ${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''}`, { id: loadingToast });
+      }
+
+      // Reset selection
+      setSelectedImages([]);
+      setIsBulkMode(false);
+    } catch (error) {
+      // ROLLBACK ALL: Restore all images on critical error
+      console.error('Bulk delete error, rolling back all:', error);
+      setImages((prev) => [...prev, ...deletedImages].sort((a, b) => a.order - b.order));
+      toast.error('Failed to delete images. All restored.', { id: loadingToast });
+      
+      // Reset selection
+      setSelectedImages([]);
+      setIsBulkMode(false);
+    }
+  };
+
+  // Get all unique categories from images
+  const getAllCategories = () => {
+    const categories = new Set<string>(['All', 'General', ...serviceCategories, ...customCategories]);
+    images.forEach(img => {
+      if (img.category) {
+        categories.add(img.category);
+      }
+    });
+    return Array.from(categories);
+  };
+
+  // Filter images by category
+  const filteredImages = filterCategory === 'All' 
+    ? images 
+    : images.filter(img => img.category === filterCategory);
+
+  // Count images by category
+  const getCategoryCount = (category: string) => {
+    if (category === 'All') return images.length;
+    return images.filter(img => img.category === category).length;
   };
 
   if (loading) {
@@ -342,89 +647,58 @@ export default function GalleryManagement() {
     <AdminLayout>
       <div className="p-4 lg:p-6 max-w-7xl mx-auto p-[0px]">
         {/* Upload Section */}
-        <Card className="p-4 lg:p-6 mb-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-foreground mb-2">Upload Images</h2>
-            <p className="text-sm text-muted-foreground">Select images to upload (max 10MB each, supports multiple files)</p>
-          </div>
-
-          {/* Category Selector */}
-          <div className="mb-4 pb-4 border-b border-border">
-            <label className="block text-sm font-medium text-foreground mb-2">
-              <Tag className="w-4 h-4 inline mr-2" />
-              Select Category
-            </label>
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedCategory}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === '_new_') {
-                    setShowNewCategoryInput(true);
-                  } else {
-                    setSelectedCategory(value);
-                    setShowNewCategoryInput(false);
-                  }
-                }}
-                className="flex-1 sm:flex-initial sm:min-w-[250px] bg-input-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-              >
-                <option value="General">General</option>
-                {serviceCategories.map((category) => (
-                  <option key={category} value={category}>
-                    📋 {category} (from Services)
-                  </option>
-                ))}
-                {customCategories.map((category) => (
-                  <option key={category} value={category}>
-                    ✨ {category} (Custom)
-                  </option>
-                ))}
-                <option value="_new_">➕ Add New Category...</option>
-              </select>
-
-              {showNewCategoryInput && (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleAddCategory();
-                      }
-                    }}
-                    placeholder="Enter category name"
-                    className="bg-input-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                    autoFocus
-                  />
-                  <Button
-                    type="button"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2"
-                    onClick={handleAddCategory}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="px-4 py-2"
-                    onClick={() => {
-                      setShowNewCategoryInput(false);
-                      setNewCategoryName('');
-                      setSelectedCategory('General');
-                    }}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
+        <Card className="p-6 lg:p-8 mb-8 border-none shadow-lg bg-card/50 backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <Upload className="w-5 h-5 text-primary" />
+                Upload Gallery Images
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Add new photos to your portfolio.
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              💡 Categories from Services List are shown for reference. Creating new categories here won't affect Services.
-            </p>
+            
+            {/* Category Selector - Compact on Desktop */}
+            <div className="flex-1 md:max-w-md">
+              <CategorySelector
+                selectedCategory={selectedCategory}
+                serviceCategories={serviceCategories}
+                customCategories={customCategories}
+                onSelectCategory={setSelectedCategory}
+                onAddCategory={(category) => {
+                  // Check if category already exists
+                  const allCategories = [...serviceCategories, ...customCategories, 'General'];
+                  if (allCategories.includes(category)) {
+                    toast.error('Category already exists');
+                    return;
+                  }
+
+                  // Save to localStorage
+                  const updatedCustomCategories = [...customCategories, category];
+                  setCustomCategories(updatedCustomCategories);
+                  localStorage.setItem('gallery_custom_categories', JSON.stringify(updatedCustomCategories));
+                  
+                  // Set as selected category
+                  setSelectedCategory(category);
+                  toast.success(`Category "${category}" added`);
+                }}
+                onEditCategory={handleEditCategory}
+                onDeleteCategory={handleDeleteCategory}
+              />
+            </div>
           </div>
 
-          <label className="block">
+          {/* Upload Dropzone */}
+          <label 
+            className={`
+              relative block w-full rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer overflow-hidden group
+              ${uploading 
+                ? 'border-primary/50 bg-primary/5 cursor-wait' 
+                : 'border-border bg-accent/10 hover:border-primary/70 hover:bg-accent/30 hover:shadow-inner'
+              }
+            `}
+          >
             <input
               type="file"
               accept="image/*"
@@ -434,31 +708,51 @@ export default function GalleryManagement() {
               className="hidden"
               id="gallery-upload"
             />
-            <Button
-              type="button"
-              disabled={uploading}
-              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-base"
-              onClick={() => document.getElementById('gallery-upload')?.click()}
-            >
+            
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
               {uploading ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Uploading to {selectedCategory}...
-                </>
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center"
+                >
+                  <div className="relative">
+                    <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping blur-sm"></div>
+                    <div className="relative bg-background rounded-full p-4 shadow-sm border border-border">
+                      <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                    </div>
+                  </div>
+                  <h3 className="mt-4 text-lg font-semibold text-primary">Uploading Images...</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Adding to {selectedCategory}</p>
+                </motion.div>
               ) : (
-                <>
-                  <Upload className="w-5 h-5 mr-2" />
-                  Upload to {selectedCategory}
-                </>
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="p-4 rounded-full bg-background shadow-sm border border-border group-hover:scale-110 group-hover:border-primary/50 transition-all duration-300">
+                    <Upload className="w-8 h-8 text-primary/80 group-hover:text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                      Click to upload or drag and drop
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      SVG, PNG, JPG or GIF (max. 10MB)
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-background/50 px-3 py-1.5 rounded-full border border-border/50">
+                    <span className="flex items-center">
+                      <div className="w-2 h-2 rounded-full bg-green-500 mr-1.5"></div>
+                      Multiple files
+                    </span>
+                    <span className="w-px h-3 bg-border"></span>
+                    <span className="flex items-center">
+                      <Tag className="w-3 h-3 mr-1.5" />
+                      Category: <span className="font-medium text-foreground ml-1">{selectedCategory}</span>
+                    </span>
+                  </div>
+                </div>
               )}
-            </Button>
+            </div>
           </label>
-
-          <div className="mt-4 pt-4 border-t border-border">
-            <p className="text-xs text-muted-foreground">
-              💡 Tip: You can select multiple images at once for batch upload
-            </p>
-          </div>
         </Card>
 
         {/* Images List */}
@@ -472,65 +766,196 @@ export default function GalleryManagement() {
           </Card>
         ) : (
           <div>
-            <p className="text-sm text-gray-600 mb-4">
-              {images.length} image{images.length !== 1 ? 's' : ''} • Drag to reorder
-            </p>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={images.map((img) => img.id)} strategy={rectSortingStrategy}>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {images.map((image) => (
-                    <SortableItem
-                      key={image.id}
-                      image={image}
-                      onDelete={handleDelete}
-                      onPreview={setPreviewImage}
-                    />
-                  ))}
+            {/* Category Filter Tabs */}
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                <Tag className="w-4 h-4" />
+                Filter by Category
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {getAllCategories().map((category) => {
+                  const count = getCategoryCount(category);
+                  const isActive = filterCategory === category;
+                  
+                  return (
+                    <button
+                      key={category}
+                      onClick={() => setFilterCategory(category)}
+                      className={`
+                        px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200
+                        ${isActive 
+                          ? 'bg-primary text-primary-foreground shadow-md scale-105' 
+                          : 'bg-card border border-border text-foreground hover:bg-accent hover:border-primary/50'
+                        }
+                      `}
+                    >
+                      {category}
+                      <span className={`ml-2 text-xs ${isActive ? 'opacity-90' : 'opacity-60'}`}>
+                        ({count})
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Images Grid */}
+            {filteredImages.length === 0 ? (
+              <Card className="p-12">
+                <div className="text-center text-muted-foreground">
+                  <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                  <p className="text-base font-medium">No images in "{filterCategory}"</p>
+                  <p className="text-sm mt-1">Try selecting a different category</p>
                 </div>
-              </SortableContext>
-            </DndContext>
+              </Card>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {filteredImages.length} image{filteredImages.length !== 1 ? 's' : ''} 
+                      {filterCategory !== 'All' && ` in ${filterCategory}`}
+                    </p>
+                    
+                    {/* Bulk Mode Toggle */}
+                    <Button
+                      variant={isBulkMode ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setIsBulkMode(!isBulkMode);
+                        if (isBulkMode) {
+                          setSelectedImages([]);
+                        }
+                      }}
+                      className="gap-2"
+                    >
+                      <Layers className="w-4 h-4" />
+                      {isBulkMode ? 'Done' : 'Select Multiple'}
+                    </Button>
+                  </div>
+                  
+                  {!isBulkMode && (
+                    <p className="text-xs text-muted-foreground">
+                      💡 Drag to reorder
+                    </p>
+                  )}
+                </div>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={filteredImages.map((img) => img.id)} strategy={rectSortingStrategy}>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                      {filteredImages.map((image) => (
+                        <SortableItem
+                          key={image.id}
+                          image={image}
+                          onDelete={handleDelete}
+                          onPreview={setPreviewImage}
+                          onEdit={handleEditImage}
+                          isSelected={selectedImages.includes(image.id)}
+                          onToggleSelect={handleToggleSelect}
+                          isBulkMode={isBulkMode}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              </>
+            )}
           </div>
         )}
       </div>
 
-      {/* Preview Modal */}
+      {/* Bulk Actions Bar */}
       <AnimatePresence>
-        {previewImage && (
+        {isBulkMode && selectedImages.length > 0 && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
-            onClick={() => setPreviewImage(null)}
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
           >
-            <button
-              onClick={() => setPreviewImage(null)}
-              className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors p-2"
-            >
-              <X className="w-8 h-8" />
-            </button>
+            <Card className="p-4 shadow-2xl border-2 border-primary/20 bg-card/95 backdrop-blur-md">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-primary/10 text-primary rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                    {selectedImages.length}
+                  </div>
+                  <span className="text-sm font-medium text-foreground">
+                    {selectedImages.length} image{selectedImages.length > 1 ? 's' : ''} selected
+                  </span>
+                </div>
 
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-w-5xl w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <img
-                src={previewImage.cloudinary_url}
-                alt="Preview"
-                className="w-full h-auto max-h-[85vh] object-contain rounded-lg shadow-2xl"
-              />
-              <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm rounded-lg px-4 py-2">
-                <p className="text-white text-sm">
-                  {previewImage.width} × {previewImage.height}
-                </p>
+                <div className="h-6 w-px bg-border" />
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAll}
+                    className="text-xs"
+                  >
+                    Select All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDeselectAll}
+                    className="text-xs"
+                  >
+                    Deselect All
+                  </Button>
+                </div>
+
+                <div className="h-6 w-px bg-border" />
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      setEditingImage(null);
+                      setEditDialogOpen(true);
+                    }}
+                    className="gap-2 bg-blue-600 hover:bg-blue-700 text-[rgb(255,255,255)]"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    Change Category
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    className="gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete Selected
+                  </Button>
+                </div>
               </div>
-            </motion.div>
+            </Card>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Image Category Edit Dialog */}
+      <ImageCategoryDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        currentCategory={editingImage?.category}
+        serviceCategories={serviceCategories}
+        customCategories={customCategories}
+        onConfirm={(category) => {
+          if (editingImage) {
+            // Single image edit
+            handleUpdateImageCategory(category);
+          } else {
+            // Bulk edit
+            handleBulkUpdateCategory(category);
+          }
+        }}
+        title={editingImage ? "Change Image Category" : "Change Category for Selected Images"}
+        description={editingImage ? "Select a new category for this image" : `Select a new category for ${selectedImages.length} selected images`}
+        isMultiple={!editingImage}
+      />
     </AdminLayout>
   );
 }

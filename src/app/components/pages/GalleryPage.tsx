@@ -1,22 +1,39 @@
 import { useState, useEffect, useCallback } from 'react';
 import PublicLayout from '../PublicLayout';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ZoomIn, ChevronLeft, ChevronRight, Instagram, Loader2 } from 'lucide-react';
+import { X, ZoomIn, ChevronLeft, ChevronRight, Instagram, Loader2, Facebook } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { Button } from '../ui/button';
 import { projectId, publicAnonKey } from '@utils/supabase/info';
+import { optimizeCloudinaryUrl, optimizeCloudinaryThumbnail } from '@/utils/cloudinary';
 
 interface GalleryImage {
   id: string;
   cloudinary_url: string;
   order: number;
+  category: string;
 }
+
+// Helper function to ensure URLs have https:// prefix
+const ensureHttps = (url: string): string => {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `https://${url}`;
+};
 
 export default function GalleryPage() {
   const { t } = useLanguage();
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [socialMedia, setSocialMedia] = useState({
+    facebook: '',
+    instagram: '',
+  });
   
   // Fetch images from backend
   useEffect(() => {
@@ -31,6 +48,12 @@ export default function GalleryPage() {
         const data = await response.json();
         if (data.success) {
           setImages(data.data);
+          
+          // Extract unique categories
+          const uniqueCategories = Array.from(
+            new Set(data.data.map((img: GalleryImage) => img.category))
+          ).filter(Boolean) as string[];
+          setCategories(uniqueCategories);
         }
       } catch (error) {
         console.error('Error fetching gallery images:', error);
@@ -42,15 +65,46 @@ export default function GalleryPage() {
     fetchImages();
   }, []);
 
+  // Fetch social media links
+  useEffect(() => {
+    const fetchSocialMedia = async () => {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/settings/social-media`,
+          {
+            headers: { Authorization: `Bearer ${publicAnonKey}` },
+          }
+        );
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          setSocialMedia({
+            facebook: result.data.facebook || '',
+            instagram: result.data.instagram || '',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch social media links:', error);
+      }
+    };
+
+    fetchSocialMedia();
+  }, []);
+
+  // Filter images by category
+  const filteredImages = selectedCategory === 'all' 
+    ? images 
+    : images.filter(img => img.category === selectedCategory);
+  
   const showNext = useCallback((e?: any) => {
     e?.stopPropagation();
-    setSelectedIndex((prev) => (prev === null ? null : (prev + 1) % images.length));
-  }, [images.length]);
+    setSelectedIndex((prev) => (prev === null ? null : (prev + 1) % filteredImages.length));
+  }, [filteredImages.length]);
 
   const showPrev = useCallback((e?: any) => {
     e?.stopPropagation();
-    setSelectedIndex((prev) => (prev === null ? null : (prev - 1 + images.length) % images.length));
-  }, [images.length]);
+    setSelectedIndex((prev) => (prev === null ? null : (prev - 1 + filteredImages.length) % filteredImages.length));
+  }, [filteredImages.length]);
 
   const closeLightbox = useCallback(() => setSelectedIndex(null), []);
 
@@ -85,19 +139,52 @@ export default function GalleryPage() {
             </p>
           </motion.div>
 
+          {/* Category Filter Tabs */}
+          {categories.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-3 mb-12">
+              <button
+                onClick={() => setSelectedCategory('all')}
+                className={`px-6 py-2 rounded-full font-medium transition-all ${
+                  selectedCategory === 'all'
+                    ? 'bg-[#FF9800] text-black shadow-lg shadow-[#FF9800]/30'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                }`}
+              >
+                All
+              </button>
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-6 py-2 rounded-full font-medium transition-all capitalize ${
+                    selectedCategory === category
+                      ? 'bg-[#FF9800] text-black shadow-lg shadow-[#FF9800]/30'
+                      : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          )}
+          
           {/* Masonry-style Grid */}
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-12 h-12 text-[#FF9800] animate-spin" />
             </div>
-          ) : images.length === 0 ? (
+          ) : filteredImages.length === 0 ? (
             <div className="text-center py-20">
-              <p className="text-gray-400 text-xl">No images available yet.</p>
+              <p className="text-gray-400 text-xl">
+                {selectedCategory === 'all' 
+                  ? 'No images available yet.' 
+                  : `No images in "${selectedCategory}" category.`}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               <AnimatePresence mode='popLayout'>
-                {images.map((img, index) => (
+                {filteredImages.map((img, index) => (
                   <motion.div
                     key={img.id}
                     layout
@@ -109,7 +196,7 @@ export default function GalleryPage() {
                     onClick={() => setSelectedIndex(index)}
                   >
                     <img 
-                      src={img.cloudinary_url} 
+                      src={optimizeCloudinaryThumbnail(img.cloudinary_url, 600)} 
                       alt={`Gallery Image ${index + 1}`}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
@@ -136,13 +223,27 @@ export default function GalleryPage() {
             className="mt-20 text-center"
           >
             <a 
-              href="https://instagram.com" 
-              target="_blank" 
-              rel="noopener noreferrer"
+              href={socialMedia.instagram ? ensureHttps(socialMedia.instagram) : (socialMedia.facebook ? ensureHttps(socialMedia.facebook) : '#')} 
+              target={socialMedia.instagram || socialMedia.facebook ? '_blank' : '_self'}
+              rel={socialMedia.instagram || socialMedia.facebook ? 'noopener noreferrer' : undefined}
               className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full text-white font-bold tracking-wider uppercase hover:shadow-lg hover:shadow-purple-500/30 transition-all transform hover:-translate-y-1"
             >
-              <Instagram className="h-5 w-5" />
-              Follow us on Instagram
+              {socialMedia.instagram ? (
+                <>
+                  <Instagram className="h-5 w-5" />
+                  Follow us on Instagram
+                </>
+              ) : socialMedia.facebook ? (
+                <>
+                  <Facebook className="h-5 w-5" />
+                  Follow us on Facebook
+                </>
+              ) : (
+                <>
+                  <Instagram className="h-5 w-5" />
+                  Follow us on Instagram
+                </>
+              )}
             </a>
           </motion.div>
         </div>
@@ -181,7 +282,7 @@ export default function GalleryPage() {
                   className="relative w-full h-full flex items-center justify-center"
                 >
                   <img 
-                    src={images[selectedIndex].cloudinary_url} 
+                    src={optimizeCloudinaryUrl(filteredImages[selectedIndex].cloudinary_url, { width: 1920 })} 
                     alt="Gallery View" 
                     className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
                   />
@@ -197,7 +298,7 @@ export default function GalleryPage() {
 
               {/* Thumbnails */}
               <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 overflow-x-auto px-4 py-2">
-                {images.map((img, idx) => (
+                {filteredImages.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={(e) => {
@@ -209,7 +310,7 @@ export default function GalleryPage() {
                     }`}
                   >
                      <img 
-                        src={img.cloudinary_url} 
+                        src={optimizeCloudinaryThumbnail(img.cloudinary_url, 200)} 
                         alt="thumbnail" 
                         className="w-full h-full object-cover"
                      />

@@ -17,10 +17,9 @@ const PageImage = forwardRef<HTMLDivElement, { image: MenuImage }>(function Page
   return (
     <div ref={ref} className="h-full w-full bg-white lg:bg-transparent flex items-center justify-center relative overflow-hidden">
       <img
-        src={image.cloudinary_url}
+        src={optimizeCloudinaryUrl(image.cloudinary_url, { width: 1200, quality: 90 })}
         alt={`Menu page ${image.order + 1}`}
         className="w-full h-full object-contain"
-        loading="lazy"
       />
     </div>
   );
@@ -404,4 +403,20 @@ export default function MenuPage() {
       </div>
     </PublicLayout>
   );
+}
+
+// Utility function to optimize Cloudinary URLs
+function optimizeCloudinaryUrl(url: string, options: { width?: number; quality?: number }) {
+  const urlObj = new URL(url);
+  const queryParams = new URLSearchParams(urlObj.search);
+
+  if (options.width) {
+    queryParams.set('w', options.width.toString());
+  }
+  if (options.quality) {
+    queryParams.set('q', options.quality.toString());
+  }
+
+  urlObj.search = queryParams.toString();
+  return urlObj.toString();
 }

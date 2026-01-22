@@ -11,11 +11,30 @@ interface RedeemCodeInputProps {
 
 export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
   const [code, setCode] = useState('');
-  const [userIdentifier, setUserIdentifier] = useState('');
+  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [result, setResult] = useState<any>(null);
+
+  // Format phone number to US format: (xxx) xxx-xxxx
+  const formatPhoneNumber = (value: string) => {
+    const phoneNumber = value.replace(/\D/g, '');
+    const limitedPhone = phoneNumber.slice(0, 10);
+    
+    if (limitedPhone.length <= 3) {
+      return limitedPhone;
+    } else if (limitedPhone.length <= 6) {
+      return `(${limitedPhone.slice(0, 3)}) ${limitedPhone.slice(3)}`;
+    } else {
+      return `(${limitedPhone.slice(0, 3)}) ${limitedPhone.slice(3, 6)}-${limitedPhone.slice(6)}`;
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setPhone(formatted);
+  };
 
   const handleRedeem = async () => {
     // Validate inputs
@@ -23,8 +42,10 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
       setError('Vui lòng nhập mã redeem');
       return;
     }
-    if (!userIdentifier.trim()) {
-      setError('Vui lòng nhập số điện thoại hoặc email');
+    
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (phoneDigits.length !== 10) {
+      setError('Vui lòng nhập đúng số điện thoại (10 số)');
       return;
     }
 
@@ -34,7 +55,7 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
 
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/redeem/validate`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/membership/redeem`,
         {
           method: 'POST',
           headers: {
@@ -42,8 +63,8 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
             Authorization: `Bearer ${publicAnonKey}`,
           },
           body: JSON.stringify({
-            code: code.toUpperCase().trim(),
-            userId: userIdentifier.trim(),
+            redeemCode: code.toUpperCase().trim(),
+            phone: phoneDigits,
           }),
         }
       );
@@ -51,16 +72,16 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to redeem code');
+        throw new Error(data.message || 'Không thể kích hoạt membership');
       }
 
       setSuccess(true);
-      setResult(data.data);
+      setResult(data);
       setCode('');
-      setUserIdentifier('');
+      setPhone('');
       
       if (onSuccess) {
-        onSuccess(data.data);
+        onSuccess(data);
       }
     } catch (err: any) {
       const errorMessage = err.message || 'Đã xảy ra lỗi. Vui lòng thử lại.';
@@ -93,12 +114,16 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
               <h4 className="text-green-400 font-semibold mb-1">
                 Kích hoạt thành công!
               </h4>
-              <p className="text-sm text-gray-300 mb-2">
-                {result.activeMembership?.tier.toUpperCase()} Membership đã được áp dụng
-              </p>
-              <p className="text-xs text-gray-400">
-                Thời hạn: {new Date(result.activeMembership?.endDate).toLocaleDateString('vi-VN')}
-              </p>
+              {result.membership && (
+                <>
+                  <p className="text-sm text-gray-300 mb-2">
+                    {result.membership.tier.toUpperCase()} Membership đã được kích hoạt
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Hết hạn: {new Date(result.membership.expiresAt).toLocaleDateString('vi-VN')}
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -121,6 +146,7 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
 
       {/* Input Fields */}
       <div className="space-y-4">
+        {/* Redeem Code Input */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
             Mã Redeem Code
@@ -130,30 +156,37 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             onKeyPress={handleKeyPress}
-            placeholder="BTCNAIL-XXXXX-XXXXX"
-            className="w-full h-12 bg-[#1f2937] border-gray-700 text-white placeholder:text-gray-500 focus:border-[#FF9800] focus:ring-[#FF9800]/20 rounded-xl font-mono text-center tracking-wider"
+            placeholder="XXXXXXXXXXXXXX"
+            className="w-full h-12 bg-[#1f2937] border-gray-700 text-white placeholder:text-gray-500 focus:border-[#FF9800] focus:ring-[#FF9800]/20 rounded-xl font-mono tracking-wider"
             disabled={loading}
           />
+          <p className="text-xs text-gray-500 mt-1.5">
+            📧 Kiểm tra email để lấy mã redeem code
+          </p>
         </div>
 
+        {/* Phone Input */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
-            Số điện thoại hoặc Email
+            Số điện thoại
           </label>
           <Input
-            type="text"
-            value={userIdentifier}
-            onChange={(e) => setUserIdentifier(e.target.value)}
+            type="tel"
+            value={phone}
+            onChange={handlePhoneChange}
             onKeyPress={handleKeyPress}
-            placeholder="0901234567 hoặc email@example.com"
+            placeholder="(555) 123-4567"
             className="w-full h-12 bg-[#1f2937] border-gray-700 text-white placeholder:text-gray-500 focus:border-[#FF9800] focus:ring-[#FF9800]/20 rounded-xl"
             disabled={loading}
           />
+          <p className="text-xs text-gray-500 mt-1.5">
+            Định dạng Mỹ: (xxx) xxx-xxxx
+          </p>
         </div>
 
         <Button
           onClick={handleRedeem}
-          disabled={loading || !code.trim() || !userIdentifier.trim()}
+          disabled={loading || !code.trim() || phone.replace(/\D/g, '').length !== 10}
           className="w-full h-12 bg-gradient-to-r from-[#FF9800] to-[#F57C00] hover:from-[#F57C00] hover:to-[#FF9800] text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
@@ -174,7 +207,7 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              Đang xử lý...
+              Đang kích hoạt...
             </span>
           ) : (
             'Kích hoạt Membership'
