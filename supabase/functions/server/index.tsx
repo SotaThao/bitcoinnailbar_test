@@ -41,9 +41,23 @@ const retry = async <T>(fn: () => Promise<T>, retries = 3, delay = 200): Promise
   try {
     return await fn();
   } catch (error: any) {
-    // Retry on network/connection errors
-    if (retries > 0 && (String(error).includes("connection error") || String(error).includes("connection reset") || String(error).includes("network connection lost") || String(error).includes("gateway error") || String(error).includes("TypeError"))) {
-      console.warn(`⚠️ Request failed, retrying... (${retries} left). Error: ${error.message || error}`);
+    const errorStr = String(error);
+    
+    // Check if error is HTML (Cloudflare error page)
+    const isHTMLError = errorStr.includes('<!DOCTYPE html>') || errorStr.includes('<html');
+    
+    // Retry on network/connection errors and HTML error pages
+    const isRetryable = 
+      errorStr.includes("connection error") || 
+      errorStr.includes("connection reset") || 
+      errorStr.includes("network connection lost") || 
+      errorStr.includes("gateway error") ||
+      errorStr.includes("Internal server error") ||
+      errorStr.includes("TypeError") ||
+      isHTMLError;
+    
+    if (retries > 0 && isRetryable) {
+      console.warn(`⚠️ [RETRY] Request failed, retrying... (${retries} left). Error type: ${isHTMLError ? 'HTML Error Page (500)' : 'Connection Error'}`);
       await new Promise(r => setTimeout(r, delay));
       return retry(fn, retries - 1, delay * 2);
     }
@@ -2763,6 +2777,31 @@ app.put("/make-server-84f9c112/settings/categories", async (c) => {
   }
 });
 
+// Reorder categories (drag & drop)
+app.put("/make-server-84f9c112/settings/categories/reorder", async (c) => {
+  try {
+    const { categories } = await c.req.json();
+    
+    if (!Array.isArray(categories)) {
+      return c.json({ success: false, error: "Invalid categories array" }, 400);
+    }
+    
+    // Update displayOrder for each category based on array position
+    const reorderedCategories = categories.map((cat, index) => ({
+      ...cat,
+      displayOrder: index,
+    }));
+    
+    await kv.set("settings:categories", reorderedCategories);
+    console.log(`✅ [REORDER CATEGORIES] Successfully reordered ${reorderedCategories.length} categories`);
+    
+    return c.json({ success: true, data: reorderedCategories });
+  } catch (error: any) {
+    console.error("❌ [REORDER CATEGORIES] Error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // Add new category
 app.post("/make-server-84f9c112/settings/categories", async (c) => {
   try {
@@ -3514,14 +3553,15 @@ async function seedBuiltInRoles() {
   try {
     console.log('🌱 [SEED] Checking for built-in roles...');
     
-    // Increase timeout to 15 seconds
+    // Increase timeout to 30 seconds (longer for database connection issues)
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Seed timeout after 15s')), 15000)
+      setTimeout(() => reject(new Error('Seed timeout after 30s')), 30000)
     );
     
     const seedPromise = (async () => {
       try {
-        const existingRoles = await kv.getByPrefix('role:');
+        // Use higher retry count for seed operation (5 retries with 500ms initial delay)
+        const existingRoles = await retry(() => kv.getByPrefix('role:'), 5, 500);
         
         // Check if built-in roles already exist
         const hasAdminRole = existingRoles.some((r: any) => r.name === 'admin' && r.is_built_in);
@@ -3590,11 +3630,12 @@ async function seedBuiltInRoles() {
 console.log('🚀 [SERVER] Bitcoin Nail Bar Server Starting...');
 console.log('🔍 [SERVER] Check-in endpoint: /make-server-84f9c112/check-in');
 
-// Seed roles in background (non-blocking) - wrapped in setTimeout to be truly async
+// Seed roles in background (non-blocking) - wait 2 seconds for database to be ready
 setTimeout(() => {
   seedBuiltInRoles().catch(err => {
     console.error('⚠️  [SEED] Background seed failed, but server is running:', err);
+    console.log('💡 [SEED] This is normal if database is still warming up. Roles will be created on first access.');
   });
-}, 100);
+}, 2000);
 
 Deno.serve(app.fetch);

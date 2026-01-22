@@ -48,11 +48,11 @@ export function EGiftCardSection() {
       {/* Background Effects */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#FF9800]/10 via-transparent to-transparent" />
       <div className="absolute inset-0 opacity-30">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#FF9800]/20 rounded-full filter blur-[128px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#F7931A]/20 rounded-full filter blur-[128px]" />
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 md:w-96 md:h-96 bg-[#FF9800]/20 rounded-full filter blur-[128px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 md:w-96 md:h-96 bg-[#F7931A]/20 rounded-full filter blur-[128px]" />
       </div>
 
-      <div className="container mx-auto px-4 relative z-10">
+      <div className="container mx-auto px-4 relative z-10 mt-[-60px] mr-[0px] mb-[0px] ml-[0px]">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}

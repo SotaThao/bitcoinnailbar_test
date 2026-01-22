@@ -175,7 +175,7 @@ export default function App() {
                 <Route path="/membership" element={<MembershipPage />} />
                 <Route path="/careers" element={<CareersPage />} />
                 <Route path="/gallery" element={<GalleryPage />} />
-                <Route path="/e-gift" element={<EGiftPage />} />
+                <Route path="/egift" element={<EGiftPage />} />
                 <Route path="/booking" element={<BookingPage />} />
                 <Route path="/locations" element={<LocationsPage />} />
                 <Route path="/reviews" element={<ReviewsPage />} />

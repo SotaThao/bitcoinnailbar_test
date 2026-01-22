@@ -20,17 +20,17 @@ export function LanguageSwitcher({ align = "end" }: LanguageSwitcherProps) {
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger className={cn(
         "group outline-none select-none",
-        "rounded-full border border-white/10 bg-black/40 backdrop-blur-md",
-        "text-[#FF9800] hover:text-[#FF9800] hover:bg-black/60 hover:border-[#FF9800]/50",
-        "flex items-center gap-2 h-9 px-4 transition-all duration-300",
-        "data-[state=open]:bg-black/80 data-[state=open]:border-[#FF9800]",
+        "flex items-center gap-[4px] h-6 transition-all duration-300",
         "cursor-pointer z-50"
       )}>
-        <Globe className="w-3.5 h-3.5 group-hover:animate-pulse" />
-        <span className="font-bold text-xs uppercase tracking-wider min-w-[20px] text-center">
-          {language}
-        </span>
-        <ChevronDown className="w-3 h-3 opacity-50 group-data-[state=open]:rotate-180 transition-transform duration-200" />
+        {/* Language Indicator - Vertical Layout */}
+        <div className="flex flex-col gap-[2px] items-center justify-center h-6">
+          <Globe className="w-4 h-4 text-[#F7931A]" />
+          <span className="font-bold text-[9px] leading-none text-[#F7931A] uppercase tracking-tight">
+            {language}
+          </span>
+        </div>
+        <ChevronDown className="w-4 h-4 text-[#F7931A] group-data-[state=open]:rotate-180 transition-transform duration-200" />
       </DropdownMenuTrigger>
       
       <DropdownMenuContent 

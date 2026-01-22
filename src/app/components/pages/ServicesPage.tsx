@@ -1,18 +1,85 @@
 import React from 'react';
+import { useState, useEffect } from 'react';
 import PublicLayout from '../PublicLayout';
 import { SEOHead } from '../shared/SEOHead';
 import { useLanguage } from '../../context/LanguageContext';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { Button } from '../ui/button';
 import { PrimaryButton } from '../PrimaryButton';
-import { Check, Bitcoin, Sparkles, Gem, ArrowRight, Zap, Crown } from 'lucide-react';
+import { Check, Bitcoin, Sparkles, Gem, ArrowRight, Zap, Crown, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import image_9b76d043322193ecba98cb79a9c58c5abe8efbf0 from 'figma:asset/9b76d043322193ecba98cb79a9c58c5abe8efbf0.png';
 import { AnimatedButton } from '../ui/animated-button';
+import { useServiceCategories } from '../../hooks/useServiceCategories';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
+import Masonry, { ResponsiveMasonry } from 'react-responsive-masonry';
 
 export default function ServicesPage() {
   const { t } = useLanguage();
+  const [serviceData, setServiceData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Load categories from backend
+  const { categories: rawCategories, loading: categoriesLoading } = useServiceCategories();
+  
+  // Filter active categories and sort by displayOrder
+  const categories = rawCategories
+    .filter((cat: any) => cat.status === 'active')
+    .sort((a: any, b: any) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
+
+  // Fetch service menu data
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/settings/service-menu`,
+          {
+            headers: { Authorization: `Bearer ${publicAnonKey}` },
+          }
+        );
+        const result = await response.json();
+        if (result.success && result.data) {
+          setServiceData(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch services:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServices();
+  }, []);
+
+  // Get all owner recommended services from all categories
+  const getOwnerRecommendedServices = () => {
+    if (!serviceData) return [];
+    
+    const recommended: any[] = [];
+    Object.keys(serviceData).forEach((categoryKey) => {
+      const categoryData = serviceData[categoryKey];
+      if (categoryData?.groups) {
+        categoryData.groups.forEach((group: any) => {
+          if (group.items) {
+            group.items.forEach((item: any) => {
+              if (item.owner_recommended === true) {
+                recommended.push({
+                  ...item,
+                  categoryKey,
+                  groupName: group.name
+                });
+              }
+            });
+          }
+        });
+      }
+    });
+    
+    return recommended;
+  };
+
+  const ownerRecommendedServices = getOwnerRecommendedServices();
 
   return (
     <PublicLayout>
@@ -103,7 +170,6 @@ export default function ServicesPage() {
               <div className="text-center mb-16">
                  <h2 className="text-4xl font-serif font-bold mb-4">{t('services_page.menu_title')}</h2>
                  <div className="w-24 h-1 bg-[#FF9800] mx-auto"></div>
-                 <p className="mt-4 text-gray-500">{t('services_page.service_menu.subtitle')}</p>
               </div>
 
               {/* Signature Services (Special Highlight) */}
@@ -120,72 +186,181 @@ export default function ServicesPage() {
                       </div>
                       <p className="text-gray-400 mb-8 max-w-2xl">{t('services_page.categories.signature.desc')}</p>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                         {Array.isArray(t('services_page.categories.signature.items')) && (t('services_page.categories.signature.items') as any[]).map((item, idx) => (
-                            <div key={idx} className="bg-white/5 rounded-xl p-6 border border-white/10 hover:border-[#FF9800]/50 transition-colors flex flex-col min-h-[160px]">
-                               <h4 className="font-bold text-lg mb-2 text-[#FF9800] line-clamp-2 min-h-[3.5rem] flex items-start">{item.name}</h4>
-                               <p className="text-sm text-gray-400 mb-4 flex-1">{item.desc}</p>
-                               <div className="font-bold text-xl mt-auto">{item.price}</div>
+                      {loading ? (
+                        // Skeleton loading
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          {[...Array(3)].map((_, idx) => (
+                            <div key={idx} className="bg-white/5 rounded-xl p-6 border border-white/10 animate-pulse">
+                              <div className="h-6 bg-white/10 rounded w-3/4 mb-2"></div>
+                              <div className="h-4 bg-white/10 rounded w-full mb-2"></div>
+                              <div className="h-4 bg-white/10 rounded w-2/3 mb-4"></div>
+                              <div className="h-6 bg-white/10 rounded w-1/3 mt-auto"></div>
                             </div>
-                         ))}
-                      </div>
+                          ))}
+                        </div>
+                      ) : ownerRecommendedServices.length > 0 ? (
+                        // Dynamic data from API
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          {ownerRecommendedServices.slice(0, 6).map((item, idx) => (
+                            <div key={idx} className="bg-white/5 rounded-xl p-6 border border-white/10 hover:border-[#FF9800]/50 transition-colors flex flex-col min-h-[160px] relative group">
+                              {/* Owner's Pick Badge */}
+                              <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-[#FF9800]/20 border border-[#FF9800]/50">
+                                <Sparkles className="h-3 w-3 text-[#FF9800]" />
+                                <span className="text-[10px] font-bold text-[#FF9800] uppercase tracking-wide">Pick</span>
+                              </div>
+                              
+                              <h4 className="font-bold text-lg mb-2 text-[#FF9800] line-clamp-2 min-h-[3.5rem] flex items-start pr-16">{item.name}</h4>
+                              <div className="text-xs text-gray-500 mb-3 flex items-center gap-1">
+                                <span className="text-gray-400">{item.groupName}</span>
+                              </div>
+                              <div className="flex-1"></div>
+                              <div className="flex items-baseline gap-3 mt-auto">
+                                <div className="font-bold text-xl">${item.regular || item.price || 0}</div>
+                                {item.member && (
+                                  <div className="text-sm text-[#FF9800]/80">VIP: ${item.member}</div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        // Fallback: Show translation data if no owner recommended services
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          {Array.isArray(t('services_page.categories.signature.items')) && (t('services_page.categories.signature.items') as any[]).map((item, idx) => (
+                            <div key={idx} className="bg-white/5 rounded-xl p-6 border border-white/10 hover:border-[#FF9800]/50 transition-colors flex flex-col min-h-[160px]">
+                              <h4 className="font-bold text-lg mb-2 text-[#FF9800] line-clamp-2 min-h-[3.5rem] flex items-start">{item.name}</h4>
+                              <p className="text-sm text-gray-400 mb-4 flex-1">{item.desc}</p>
+                              <div className="font-bold text-xl mt-auto">{item.price}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                    </div>
                 </div>
               </div>
 
-              {/* Detailed Menu Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                 {['acrylic', 'dipping', 'gel', 'waxing', 'pedicure', 'manicure', 'kids', 'additional'].map((key) => {
-                    const categoryName = t(`services_page.service_menu.categories.${key}`);
-                    const categoryData = t(`services_page.service_menu.data.${key}`);
-                    
-                    if (!categoryData || !categoryData.groups) return null;
+              {/* Detailed Menu Grid - Masonry Layout */}
+              {loading || categoriesLoading ? (
+                // Skeleton Loading
+                <ResponsiveMasonry
+                  columnsCountBreakPoints={{ 350: 1, 1024: 2 }}
+                >
+                  <Masonry gutter="5rem">
+                    {[...Array(6)].map((_, idx) => (
+                      <div key={idx} className="bg-gray-50 rounded-2xl p-8 border border-gray-100 animate-pulse">
+                        <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
+                        <div className="space-y-6">
+                          {[...Array(3)].map((_, i) => (
+                            <div key={i}>
+                              <div className="h-4 bg-gray-200 rounded w-1/4 mb-3"></div>
+                              <div className="space-y-3">
+                                {[...Array(4)].map((_, j) => (
+                                  <div key={j} className="flex justify-between items-center">
+                                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                                    <div className="h-4 bg-gray-200 rounded w-16"></div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </Masonry>
+                </ResponsiveMasonry>
+              ) : (
+                // Real Data
+                <ResponsiveMasonry
+                  columnsCountBreakPoints={{ 350: 1, 1024: 2 }}
+                >
+                  <Masonry gutter="5rem">
+                    {categories.map((category: any) => {
+                      const categoryData = serviceData?.[category.key];
+                      
+                      // Check if category has data and groups
+                      const hasServices = categoryData?.groups && categoryData.groups.length > 0;
 
-                    return (
-                       <div id={key} key={key} className="bg-gray-50 rounded-2xl p-8 border border-gray-100 hover:shadow-xl transition-shadow relative overflow-hidden group scroll-mt-24">
-                          {/* Decorative BG Icon - Simplified */}
+                      return (
+                        <div id={category.key} key={category.id} className="bg-gray-50 rounded-2xl p-8 border border-gray-100 hover:shadow-xl transition-shadow relative overflow-hidden group scroll-mt-24 w-full mt-[40px] mr-0 lg:mr-[40px] mb-[0px] ml-[0px]">
+                          {/* Decorative BG Icon */}
                           <div className="absolute -right-6 -top-6 text-gray-200 opacity-30 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                             <Sparkles size={150} />
+                            <Sparkles size={150} />
                           </div>
 
                           <h3 className="text-2xl font-serif font-bold text-gray-900 mb-6 relative z-10 flex items-center gap-3">
-                             {categoryName}
+                            {category.name}
                           </h3>
                           
-                          <div className="space-y-8 relative z-10">
-                             {categoryData.groups.map((group: any, gIdx: number) => (
-                                <div key={gIdx}>
-                                   <h4 className="text-sm font-bold text-[#FF9800] uppercase tracking-wider mb-4 border-b border-[#FF9800]/20 pb-2 inline-block">
+                          {!hasServices ? (
+                            // Empty State - No Services
+                            <div className="relative z-10 text-center py-12">
+                              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-200/50 mb-4">
+                                <Sparkles className="h-8 w-8 text-gray-400" />
+                              </div>
+                              <p className="text-gray-500 text-sm">{t('services_page.no_services')}</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-8 relative z-10">
+                              {categoryData.groups.map((group: any, gIdx: number) => {
+                                // Filter out addon services from display
+                                const regularServices = group.items?.filter((item: any) => 
+                                  item.serviceType?.toLowerCase() !== 'addon'
+                                ) || [];
+                                
+                                // Sort by owner recommended (recommended first)
+                                const sortedServices = [...regularServices].sort((a: any, b: any) => {
+                                  if (a.owner_recommended && !b.owner_recommended) return -1;
+                                  if (!a.owner_recommended && b.owner_recommended) return 1;
+                                  return 0;
+                                });
+                                
+                                if (sortedServices.length === 0) return null;
+                                
+                                return (
+                                  <div key={gIdx}>
+                                    <h4 className="text-sm font-bold text-[#FF9800] uppercase tracking-wider mb-4 border-b border-[#FF9800]/20 pb-2 inline-block">
                                       {group.name}
-                                   </h4>
-                                   <div className="space-y-4">
-                                      {group.items.map((item: any, iIdx: number) => (
-                                         <div key={iIdx} className="flex justify-between items-start pb-2 border-b border-gray-200/50 last:border-0 hover:bg-white/50 p-2 rounded-lg transition-colors">
-                                            <div>
-                                               <span className="font-medium text-gray-800">{item.name}</span>
+                                    </h4>
+                                    <div className="space-y-4">
+                                      {sortedServices.map((item: any, iIdx: number) => (
+                                        <div key={iIdx} className="flex justify-between items-start pb-2 border-b border-gray-200/50 last:border-0 hover:bg-white/50 p-2 rounded-lg transition-colors">
+                                          <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                              <span className="font-medium text-gray-800">{item.name}</span>
+                                              {item.owner_recommended && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FF9800]/10 border border-[#FF9800]/30 text-[10px] font-bold text-[#FF9800] uppercase tracking-wide">
+                                                  <Sparkles className="h-3 w-3" />
+                                                  Pick
+                                                </span>
+                                              )}
                                             </div>
-                                            <div className="text-right pl-4">
-                                               <div className="font-bold text-gray-900">${item.regular}</div>
-                                               {item.member && (
-                                                  <div className="text-xs text-[#FF9800] font-bold">VIP: ${item.member}</div>
-                                               )}
-                                            </div>
-                                         </div>
+                                          </div>
+                                          <div className="text-right pl-4">
+                                            <div className="font-bold text-gray-900">${item.regular || item.price || 0}</div>
+                                            {item.member && (
+                                              <div className="text-xs text-[#FF9800] font-bold">VIP: ${item.member}</div>
+                                            )}
+                                          </div>
+                                        </div>
                                       ))}
-                                   </div>
-                                </div>
-                             ))}
-                          </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                           
                           <div className="mt-8 pt-6 border-t border-dashed border-gray-300 relative z-10">
-                              <Link to="/booking" className="inline-flex items-center text-sm font-bold text-gray-900 hover:text-[#FF9800] transition-colors uppercase tracking-wider">
-                                  {t('services_page.book_category')} <ArrowRight className="ml-2 h-4 w-4" />
-                              </Link>
+                            <Link to="/booking" className="inline-flex items-center text-sm font-bold text-gray-900 hover:text-[#FF9800] transition-colors uppercase tracking-wider">
+                              {t('services_page.book_category')} <ArrowRight className="ml-2 h-4 w-4" />
+                            </Link>
                           </div>
-                       </div>
-                    );
-                 })}
-              </div>
+                        </div>
+                      );
+                    })}
+                  </Masonry>
+                </ResponsiveMasonry>
+              )}
            </div>
         </div>
       </section>

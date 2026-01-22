@@ -96,7 +96,7 @@ export function MembershipSection({ showRedeemSection = false }: MembershipSecti
                 <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
               <p className="text-gray-400 text-sm mt-3">
-                Đã thanh toán? Kích hoạt membership ngay
+                {t('home.membership.redeem_prompt')}
               </p>
             </motion.div>
           </div>

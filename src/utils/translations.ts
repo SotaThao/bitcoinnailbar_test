@@ -225,6 +225,7 @@ export const translations = {
         entry_level: "ENTRY LEVEL",
         period: "/year",
         valued_at: "VALUED AT",
+        redeem_prompt: "Already paid? Activate your membership now",
         plans: {
           silver: {
             name: "SILVER",
@@ -567,7 +568,8 @@ export const translations = {
             { name: "Nail Art", price: "$15+", desc: "Custom designs, gems, and artistic nail enhancements." }
           ]
         }
-      }
+      },
+      no_services: "No services available"
     },
     footer: {
       desc: "Premium nail care services with a futuristic twist. The world's first crypto-integrated luxury salon.",
@@ -937,6 +939,7 @@ export const translations = {
         entry_level: "CƠ BẢN",
         period: "/năm",
         valued_at: "TRỊ GIÁ",
+        redeem_prompt: "Đã thanh toán? Kích hoạt membership ngay",
         plans: {
           silver: {
             name: "BẠC",
@@ -1279,7 +1282,8 @@ export const translations = {
             { name: "Vẽ Móng Nghệ Thuật", price: "$15+", desc: "Thiết kế tùy chỉnh, đá quý và trang trí móng nghệ thuật." }
           ]
         }
-      }
+      },
+      no_services: "Chưa có dịch vụ"
     },
     footer: {
       desc: "Dịch vụ ch��m sóc móng cao cấp mang phong cách tương lai. Salon sang trọng tích hợp crypto đầu tiên trên thế giới.",

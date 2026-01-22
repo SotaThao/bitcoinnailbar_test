@@ -506,11 +506,7 @@ export default function AdminCheckInPage() {
         scannerRef.current = html5QrCode;
         
         await html5QrCode.start(
-          { 
-             facingMode: facingMode,
-             width: { min: 640, ideal: 1280, max: 1920 },
-             height: { min: 480, ideal: 720, max: 1080 } 
-          }, 
+          { facingMode: facingMode }, // Only pass facingMode - library doesn't support multiple keys
           { 
             fps: 15, // Keep at 15 for performance
             qrbox: 280, // Increased from 250 to 280

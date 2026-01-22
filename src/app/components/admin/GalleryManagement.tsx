@@ -7,7 +7,7 @@ import AdminLayout from '@/app/components/AdminLayout';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2, Upload, ImageIcon, Loader2, X, ZoomIn } from 'lucide-react';
+import { GripVertical, Trash2, Upload, ImageIcon, Loader2, X, ZoomIn, Plus, Tag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface GalleryImage {
@@ -95,6 +95,13 @@ export default function GalleryManagement() {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [previewImage, setPreviewImage] = useState<GalleryImage | null>(null);
+  
+  // Category Management
+  const [serviceCategories, setServiceCategories] = useState<string[]>([]);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('General');
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -105,6 +112,7 @@ export default function GalleryManagement() {
 
   useEffect(() => {
     fetchImages();
+    fetchServiceCategories();
   }, []);
 
   const fetchImages = async () => {
@@ -133,6 +141,12 @@ export default function GalleryManagement() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    // Validate category selection
+    if (!selectedCategory || selectedCategory === '_new_') {
+      toast.error('Please select a valid category before uploading');
+      return;
+    }
+
     // Validate file type and size
     for (const file of Array.from(files)) {
       if (!file.type.startsWith('image/')) {
@@ -153,7 +167,7 @@ export default function GalleryManagement() {
       try {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('category', 'Gallery');
+        formData.append('category', selectedCategory); // Use selected category
 
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/gallery/upload`,
@@ -182,7 +196,7 @@ export default function GalleryManagement() {
     e.target.value = ''; // Reset input
 
     if (successCount > 0) {
-      toast.success(`${successCount} image${successCount > 1 ? 's' : ''} uploaded successfully`);
+      toast.success(`${successCount} image${successCount > 1 ? 's' : ''} uploaded to ${selectedCategory}`);
     }
     if (failCount > 0) {
       toast.error(`Failed to upload ${failCount} image${failCount > 1 ? 's' : ''}`);
@@ -251,6 +265,69 @@ export default function GalleryManagement() {
     }
   };
 
+  const fetchServiceCategories = async () => {
+    try {
+      // Fetch service categories from existing API
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/settings/categories`,
+        {
+          headers: { Authorization: `Bearer ${publicAnonKey}` },
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        // Extract category names from service categories
+        const categoryNames = data.data
+          .filter((cat: any) => cat.status === 'active')
+          .map((cat: any) => cat.name);
+        setServiceCategories(categoryNames);
+      }
+      
+      // Load custom categories from localStorage as fallback
+      const savedCustomCategories = localStorage.getItem('gallery_custom_categories');
+      if (savedCustomCategories) {
+        setCustomCategories(JSON.parse(savedCustomCategories));
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      // Don't show error toast - just use empty arrays as fallback
+      setServiceCategories([]);
+      setCustomCategories([]);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast.error('Category name cannot be empty');
+      return;
+    }
+
+    // Check if category already exists
+    const allCategories = [...serviceCategories, ...customCategories, 'General'];
+    if (allCategories.includes(newCategoryName.trim())) {
+      toast.error('Category already exists');
+      return;
+    }
+
+    // Save to localStorage as fallback until backend API is ready
+    const updatedCustomCategories = [...customCategories, newCategoryName.trim()];
+    setCustomCategories(updatedCustomCategories);
+    localStorage.setItem('gallery_custom_categories', JSON.stringify(updatedCustomCategories));
+    
+    // Set as selected category
+    setSelectedCategory(newCategoryName.trim());
+    setNewCategoryName('');
+    setShowNewCategoryInput(false);
+    
+    toast.success(`Category "${newCategoryName.trim()}" added`);
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -267,8 +344,84 @@ export default function GalleryManagement() {
         {/* Upload Section */}
         <Card className="p-4 lg:p-6 mb-6">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Upload Images</h2>
-            <p className="text-sm text-gray-600">Select images to upload (max 10MB each, supports multiple files)</p>
+            <h2 className="text-lg font-semibold text-foreground mb-2">Upload Images</h2>
+            <p className="text-sm text-muted-foreground">Select images to upload (max 10MB each, supports multiple files)</p>
+          </div>
+
+          {/* Category Selector */}
+          <div className="mb-4 pb-4 border-b border-border">
+            <label className="block text-sm font-medium text-foreground mb-2">
+              <Tag className="w-4 h-4 inline mr-2" />
+              Select Category
+            </label>
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedCategory}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '_new_') {
+                    setShowNewCategoryInput(true);
+                  } else {
+                    setSelectedCategory(value);
+                    setShowNewCategoryInput(false);
+                  }
+                }}
+                className="flex-1 sm:flex-initial sm:min-w-[250px] bg-input-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+              >
+                <option value="General">General</option>
+                {serviceCategories.map((category) => (
+                  <option key={category} value={category}>
+                    📋 {category} (from Services)
+                  </option>
+                ))}
+                {customCategories.map((category) => (
+                  <option key={category} value={category}>
+                    ✨ {category} (Custom)
+                  </option>
+                ))}
+                <option value="_new_">➕ Add New Category...</option>
+              </select>
+
+              {showNewCategoryInput && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAddCategory();
+                      }
+                    }}
+                    placeholder="Enter category name"
+                    className="bg-input-background border border-input rounded-lg px-4 py-2.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                    autoFocus
+                  />
+                  <Button
+                    type="button"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2"
+                    onClick={handleAddCategory}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="px-4 py-2"
+                    onClick={() => {
+                      setShowNewCategoryInput(false);
+                      setNewCategoryName('');
+                      setSelectedCategory('General');
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              💡 Categories from Services List are shown for reference. Creating new categories here won't affect Services.
+            </p>
           </div>
 
           <label className="block">
@@ -284,25 +437,25 @@ export default function GalleryManagement() {
             <Button
               type="button"
               disabled={uploading}
-              className="w-full sm:w-auto bg-[#FF9F1C] hover:bg-[#F97316] text-white px-8 py-6 text-base"
+              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-base"
               onClick={() => document.getElementById('gallery-upload')?.click()}
             >
               {uploading ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Uploading...
+                  Uploading to {selectedCategory}...
                 </>
               ) : (
                 <>
                   <Upload className="w-5 h-5 mr-2" />
-                  Upload Images
+                  Upload to {selectedCategory}
                 </>
               )}
             </Button>
           </label>
 
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-xs text-gray-500">
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-xs text-muted-foreground">
               💡 Tip: You can select multiple images at once for batch upload
             </p>
           </div>

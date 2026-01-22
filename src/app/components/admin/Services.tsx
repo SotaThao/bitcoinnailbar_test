@@ -3,6 +3,7 @@ import { Button } from '../ui/button';
 import { SearchInput } from '../ui/search-input';
 import { Plus, Scissors, ImageIcon, PlusCircle } from 'lucide-react';
 import AdminLayout from '../AdminLayout';
+import { projectId, publicAnonKey } from '@utils/supabase/info';
 
 // New imports - Atomic components
 import { ServiceCategorySidebar } from './molecules/ServiceCategorySidebar';
@@ -226,7 +227,7 @@ export default function AdminServices() {
     console.log(`🗑️ [Services.tsx] handleDeleteCategory called with ID: ${categoryId}`);
     const success = await deleteCategory(categoryId);
     if (success) {
-      console.log(`✅ [Services.tsx] Category ${categoryId} deleted successfully`);
+      console.log(`��� [Services.tsx] Category ${categoryId} deleted successfully`);
       // Optionally switch to another tab if deleted category was active
       if (allCategories.length > 0) {
         const remainingCategories = allCategories.filter(cat => cat.id !== categoryId);
@@ -236,6 +237,34 @@ export default function AdminServices() {
       }
     } else {
       console.error(`❌ [Services.tsx] Failed to delete category ${categoryId}`);
+    }
+  };
+
+  // Handle category reorder (drag & drop)
+  const handleReorderCategories = async (newOrder: ServiceCategory[]) => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/settings/categories/reorder`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${publicAnonKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ categories: newOrder }),
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        console.log(`✅ [Services.tsx] Categories reordered successfully`);
+        // Refresh categories to get updated order
+        await refreshCategories();
+      } else {
+        console.error(`❌ [Services.tsx] Failed to reorder categories:`, data.error);
+      }
+    } catch (error) {
+      console.error(`❌ [Services.tsx] Error reordering categories:`, error);
     }
   };
 
@@ -267,6 +296,7 @@ export default function AdminServices() {
                   onAddCategory={() => handleOpenCategorySheet()}
                   onEditCategory={handleOpenCategorySheet}
                   onDeleteCategory={handleDeleteCategory}
+                  onReorder={handleReorderCategories}
                 />
               </div>
 

@@ -1,12 +1,13 @@
+import { useState, useEffect, useRef } from 'react';
 import image_806e712a7137dc26b6a45d29177a47853f6cc4d2 from 'figma:asset/806e712a7137dc26b6a45d29177a47853f6cc4d2.png';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import bitcoinLogo from 'figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png';
 import image_2de9c9413dafd548ee75321859136c9ca435bffe from 'figma:asset/2de9c9413dafd548ee75321859136c9ca435bffe.png';
 import image_eb0bbc971a7468c60bd03f5a065452ed783bbdef from 'figma:asset/eb0bbc971a7468c60bd03f5a065452ed783bbdef.png';
 import image_5eb8a93cb1061aa87f464278bcfce42201277b32 from 'figma:asset/5eb8a93cb1061aa87f464278bcfce42201277b32.png';
 import image_9d0366157187675ee300a22d7203dd76c667cce9 from 'figma:asset/9d0366157187675ee300a22d7203dd76c667cce9.png';
 import bitcoinIcon from 'figma:asset/8504cf526757125a74c4095fde998e4033127268.png';
-import { Sparkles, Calendar, MapPin, Star, Menu, X, Bitcoin, Facebook, Instagram, Wallet, CreditCard, Gem, DollarSign, Coins, ChevronDown, PenTool, Droplets, Scissors, Footprints, Hand, Baby, PlusCircle, Crown } from 'lucide-react';
+import { Sparkles, Calendar, MapPin, Star, Menu, X, Bitcoin, Facebook, Instagram, Wallet, CreditCard, Gem, DollarSign, Coins, ChevronDown, PenTool, Droplets, Scissors, Footprints, Hand, Baby, PlusCircle, Crown, Gift } from 'lucide-react';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -23,7 +24,6 @@ import { BrandLogo } from './BrandLogo';
 import { useLanguage } from '../context/LanguageContext';
 import { useLoadingState } from '../context/LoadingContext';
 import { useSequentialLoad } from '../hooks/useSequentialLoad';
-import { useState, useEffect } from 'react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 
 interface PublicLayoutProps {
@@ -62,12 +62,18 @@ const ensureHttps = (url: string): string => {
 
 export default function PublicLayout({ children }: PublicLayoutProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { t } = useLanguage();
   const { hasPromotionModal, modalRendered } = useLoadingState();
   const { loadCryptoTicker, loadChatbot } = useSequentialLoad({ hasPromotionModal, modalRendered });
+  
+  // State for desktop hover dropdown
+  const [desktopServicesOpen, setDesktopServicesOpen] = useState(false);
+  // useRef to store timeout ID for delayed close
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const [socialMedia, setSocialMedia] = useState({
     facebook: '',
@@ -76,6 +82,9 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
   });
 
   const [menuItems, setMenuItems] = useState<Array<MenuItem>>([]);
+  const [serviceCategories, setServiceCategories] = useState<Array<{ id: string; name: string; key: string; displayOrder: number }>>([]);
+  const [hasUploadedMenu, setHasUploadedMenu] = useState(false);
+  const [menuDisplayMode, setMenuDisplayMode] = useState<'menu-flipbook' | 'services-list'>('services-list');
 
   // Hide header when payment modal is open
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -163,16 +172,98 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
     fetchMenuItems();
   }, []);
 
+  // Fetch service categories
+  useEffect(() => {
+    const fetchServiceCategories = async () => {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/settings/categories`,
+          {
+            headers: { Authorization: `Bearer ${publicAnonKey}` },
+          }
+        );
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.length > 0) {
+          // Filter active categories and sort by displayOrder
+          const activeCategories = result.data
+            .filter((cat: any) => cat.status === 'active')
+            .sort((a: any, b: any) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
+          setServiceCategories(activeCategories);
+        }
+      } catch (error) {
+        console.error('Failed to fetch service categories:', error);
+      }
+    };
+
+    fetchServiceCategories();
+  }, []);
+
+  // Fetch homepage menu display mode
+  useEffect(() => {
+    const fetchMenuMode = async () => {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/settings/homepage-menu`,
+          {
+            headers: { Authorization: `Bearer ${publicAnonKey}` },
+          }
+        );
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          setMenuDisplayMode(result.data.mode);
+        }
+      } catch (error) {
+        console.error('Failed to fetch menu display mode:', error);
+      }
+    };
+
+    fetchMenuMode();
+  }, []);
+
+  // Handle smooth scroll to hash anchor on navigation
+  useEffect(() => {
+    // Wait for page to load
+    const handleHashScroll = () => {
+      const hash = location.hash;
+      if (hash) {
+        // Remove # from hash
+        const elementId = hash.substring(1);
+        const element = document.getElementById(elementId);
+        
+        if (element) {
+          // Use setTimeout to ensure page has rendered
+          setTimeout(() => {
+            const headerOffset = 144; // Height of fixed header (80px nav + 64px crypto ticker)
+            const elementPosition = element.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }, 100);
+        }
+      }
+    };
+
+    // Handle hash on initial load and route changes
+    handleHashScroll();
+  }, [location]);
+
   const navLinks = [
     { path: '/', label: t('nav.home') },
+    { path: '/#about', label: t('nav.about_us') },
     { path: '/menu', label: t('nav.services'), dropdown: true }, // Changed from /services to /menu
     { path: '/promotions', label: t('nav.promotions') || 'Promotions' },
+    { path: '/egift', label: t('nav.egift') || 'E-GIFT', highlighted: true },
     { path: '/membership', label: t('nav.membership') || 'Membership' },
     { path: '/careers', label: t('nav.careers') || 'Careers' },
     { path: '/gallery', label: t('nav.gallery') || 'Gallery' },
   ];
 
-  const eGiftLink = { path: '/e-gift', label: t('nav.egift') || 'E-GIFT' };
+  const eGiftLink = { path: '/egift', label: t('nav.egift') || 'E-GIFT' };
   const isHomePage = location.pathname === '/';
 
   return (
@@ -196,13 +287,38 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             <BrandLogo />
 
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-2">
+            <nav className="hidden xl:flex items-center gap-1">
               {navLinks.map((link, index) => (
                 link.dropdown ? (
-                  <DropdownMenu key={index}>
-                    <DropdownMenuTrigger asChild>
+                  <DropdownMenu 
+                    key={index}
+                    open={desktopServicesOpen}
+                    onOpenChange={setDesktopServicesOpen}
+                    modal={false}
+                  >
+                    <DropdownMenuTrigger 
+                      asChild
+                      onMouseEnter={() => {
+                        // Clear any pending close timeout
+                        if (closeTimeoutRef.current) {
+                          clearTimeout(closeTimeoutRef.current);
+                        }
+                        setDesktopServicesOpen(true);
+                      }}
+                      onMouseLeave={() => {
+                        if (closeTimeoutRef.current) {
+                          clearTimeout(closeTimeoutRef.current);
+                        }
+                        closeTimeoutRef.current = setTimeout(() => setDesktopServicesOpen(false), 200);
+                      }}
+                    >
                       <Button
+                        type="button"
                         variant="ghost"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
                         className={`h-9 text-gray-300 hover:text-[#FF9800] hover:bg-white/5 data-[state=open]:text-[#FF9800] data-[state=open]:bg-white/5 ${
                           location.pathname === link.path ? 'text-[#FF9800] bg-white/5' : ''
                         }`}
@@ -210,27 +326,57 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                         {link.label} <ChevronDown className="ml-1 h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="bg-[#0B0F19] border-white/10 text-gray-300 min-w-[260px] p-2">
-                      {/* Service List Link - Hidden */}
-                      {/* <DropdownMenuItem asChild className="focus:bg-white/10 focus:text-[#FF9800] cursor-pointer rounded-lg mb-1">
-                        <Link to="/services" className="flex items-center gap-3 py-2.5 px-3">
-                           <span className="font-medium">Service List</span>
-                        </Link>
-                      </DropdownMenuItem> */}
-                      
-                      {/* Divider - Removed since Service List is hidden */}
-                      {/* {menuItems.length > 0 && <div className="h-px bg-white/10 my-1 mx-2" />} */}
-                      
-                      {/* Menu Items - Dynamic */}
-                      {menuItems.map((item) => (
-                        <DropdownMenuItem key={item.id} asChild className="focus:bg-white/10 focus:text-[#FF9800] cursor-pointer rounded-lg mb-1">
-                          <Link to={`/menu?page=${item.order}`} className="flex items-center gap-3 py-2 px-3">
-                            <span>{item.name}</span>
-                          </Link>
-                        </DropdownMenuItem>
-                      ))}
+                    <DropdownMenuContent 
+                      className="bg-[#0B0F19] border-white/10 text-gray-300 min-w-[260px] p-2"
+                      onMouseEnter={() => {
+                        // Clear any pending close timeout
+                        if (closeTimeoutRef.current) {
+                          clearTimeout(closeTimeoutRef.current);
+                        }
+                        setDesktopServicesOpen(true);
+                      }}
+                      onMouseLeave={() => {
+                        if (closeTimeoutRef.current) {
+                          clearTimeout(closeTimeoutRef.current);
+                        }
+                        closeTimeoutRef.current = setTimeout(() => setDesktopServicesOpen(false), 200);
+                      }}
+                    >
+                      {/* Show menu based on system settings: 'menu-flipbook' (uploaded) or 'services-list' (categories) */}
+                      {menuDisplayMode === 'menu-flipbook' ? (
+                        // Show uploaded menu items
+                        menuItems.map((item) => (
+                          <DropdownMenuItem key={item.id} asChild className="focus:bg-white/10 focus:text-[#FF9800] cursor-pointer rounded-lg mb-1">
+                            <Link to={`/menu?page=${item.order}`} className="flex items-center gap-3 py-2 px-3">
+                              <span>{item.name}</span>
+                            </Link>
+                          </DropdownMenuItem>
+                        ))
+                      ) : (
+                        // Show service categories from backend
+                        serviceCategories.map((category) => (
+                          <DropdownMenuItem key={category.id} asChild className="focus:bg-white/10 focus:text-[#FF9800] cursor-pointer rounded-lg mb-1">
+                            <Link to={`/services#${category.key}`} className="flex items-center gap-3 py-2 px-3">
+                              <span>{category.name}</span>
+                            </Link>
+                          </DropdownMenuItem>
+                        ))
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                ) : link.highlighted ? (
+                  // E-GIFT Button - Highlighted
+                  <Link key={index} to={link.path}>
+                    <Button
+                      variant="ghost"
+                      className="group relative h-9 overflow-hidden border border-[#FF9800]/30 font-bold text-[#FF9800] hover:border-[#FF9800] hover:text-white hover:bg-transparent"
+                    >
+                      <span className="absolute inset-0 w-0 bg-[#FF9800] transition-all duration-300 ease-out group-hover:w-full" />
+                      <span className="relative z-10 flex items-center gap-2">
+                        🎁 {link.label}
+                      </span>
+                    </Button>
+                  </Link>
                 ) : (
                   <Link key={index} to={link.path}>
                     <Button
@@ -244,61 +390,105 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   </Link>
                 )
               ))}
-              {/* E-GIFT Button - Highlighted */}
-              <Link to={eGiftLink.path}>
-                <Button
-                  variant="ghost"
-                  className="group relative h-9 overflow-hidden border border-[#FF9800]/30 font-bold text-[#FF9800] hover:border-[#FF9800] hover:text-white hover:bg-transparent"
-                >
-                  <span className="absolute inset-0 w-0 bg-[#FF9800] transition-all duration-300 ease-out group-hover:w-full" />
-                  <span className="relative z-10 flex items-center gap-2">
-                    🎁 {eGiftLink.label}
-                  </span>
-                </Button>
-              </Link>
             </nav>
 
             {/* CTA Button (Desktop) */}
-            <div className="hidden lg:flex items-center gap-2">
+            <div className="hidden xl:flex items-center gap-2">
               <LanguageSwitcher align="end" />
               <Link to="/booking">
                 <PrimaryButton 
                   startIcon={<Calendar className="h-4 w-4" />}
                   className="text-white shadow-[0_0_10px_rgba(255,152,0,0.3)]"
                 >
-                  {t('nav.booking')}
+                  {t('coming_soon.book_now')}
                 </PrimaryButton>
               </Link>
             </div>
 
             {/* Mobile Menu Button */}
-            <button
-              className="lg:hidden p-2 rounded-lg text-white hover:bg-white/10"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
+            <div className="xl:hidden flex items-center gap-2">
+              <LanguageSwitcher align="end" />
+              <button
+                className="p-2 rounded-lg text-white hover:bg-white/10"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
+            </div>
           </div>
 
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
-            <div className="lg:hidden py-4 border-t border-white/10 bg-[#0B0F19]">
+            <div className="xl:hidden py-4 border-t border-white/10 bg-[#0B0F19]">
               <nav className="flex flex-col gap-2 w-full">
                 {navLinks.map((link, index) => (
                   link.dropdown ? (
-                    // Services - Direct link to first menu page on mobile
+                    // Services - Dropdown on mobile
+                    <DropdownMenu key={index}>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className={`w-full justify-center text-gray-300 hover:text-[#FF9800] hover:bg-white/5 data-[state=open]:text-[#FF9800] data-[state=open]:bg-white/5 ${
+                            location.pathname === link.path ? 'text-[#FF9800] bg-white/5' : ''
+                          }`}
+                        >
+                          {link.label} <ChevronDown className="ml-1 h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="bg-[#0B0F19] border-white/10 text-gray-300 min-w-[260px] p-2">
+                        {/* Show menu based on system settings: 'menu-flipbook' (uploaded) or 'services-list' (categories) */}
+                        {menuDisplayMode === 'menu-flipbook' ? (
+                          // Show uploaded menu items
+                          menuItems.map((item) => (
+                            <DropdownMenuItem 
+                              key={item.id} 
+                              asChild 
+                              className="focus:bg-white/10 focus:text-[#FF9800] cursor-pointer rounded-lg mb-1"
+                            >
+                              <Link 
+                                to={`/menu?page=${item.order}`} 
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="flex items-center gap-3 py-2 px-3"
+                              >
+                                <span>{item.name}</span>
+                              </Link>
+                            </DropdownMenuItem>
+                          ))
+                        ) : (
+                          // Fallback: Show service categories from backend
+                          serviceCategories.map((category) => (
+                            <DropdownMenuItem 
+                              key={category.id} 
+                              asChild 
+                              className="focus:bg-white/10 focus:text-[#FF9800] cursor-pointer rounded-lg mb-1"
+                            >
+                              <Link 
+                                to={`/services#${category.key}`} 
+                                onClick={() => setMobileMenuOpen(false)}
+                                className="flex items-center gap-3 py-2 px-3"
+                              >
+                                <span>{category.name}</span>
+                              </Link>
+                            </DropdownMenuItem>
+                          ))
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : link.highlighted ? (
+                    // E-Gift - Highlighted with icon and orange color
                     <Link
                       key={index}
-                      to="/menu?page=1"
+                      to={link.path}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="w-full"
+                      className="w-full flex justify-center"
                     >
                       <Button
                         variant="ghost"
-                        className={`w-full justify-start text-gray-300 hover:text-[#FF9800] hover:bg-white/5 ${
-                          location.pathname === link.path ? 'text-[#FF9800] bg-white/5' : ''
+                        className={`justify-center font-bold text-[#FF9800] hover:text-[#FF9800] hover:bg-[#FF9800]/10 border border-[#FF9800]/30 px-6 ${
+                          location.pathname === link.path ? 'bg-[#FF9800]/10' : ''
                         }`}
                       >
+                        <Gift className="h-4 w-4 mr-2" />
                         {link.label}
                       </Button>
                     </Link>
@@ -312,7 +502,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                     >
                       <Button
                         variant="ghost"
-                        className={`w-full justify-start text-gray-300 hover:text-[#FF9800] hover:bg-white/5 ${
+                        className={`w-full justify-center text-gray-300 hover:text-[#FF9800] hover:bg-white/5 ${
                           location.pathname === link.path ? 'text-[#FF9800] bg-white/5' : ''
                         }`}
                       >
@@ -321,21 +511,6 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                     </Link>
                   )
                 ))}
-                {/* E-GIFT Mobile */}
-                <Link to={eGiftLink.path} onClick={() => setMobileMenuOpen(false)} className="w-full">
-                  <Button
-                    variant="ghost"
-                    className="group relative w-full justify-start overflow-hidden border border-[#FF9800]/30 font-bold text-[#FF9800] hover:border-[#FF9800] hover:text-white hover:bg-transparent active:border-[#FF9800] active:text-white active:bg-transparent"
-                  >
-                    <span className="absolute inset-0 w-0 bg-[#FF9800] transition-all duration-300 ease-out group-hover:w-full group-active:w-full" />
-                    <span className="relative z-10 flex items-center gap-2">
-                      🎁 {eGiftLink.label}
-                    </span>
-                  </Button>
-                </Link>
-                <div className="px-4 py-2 w-full">
-                  <LanguageSwitcher align="start" />
-                </div>
                 <Link to="/booking" onClick={() => setMobileMenuOpen(false)} className="w-full">
                   <PrimaryButton className="w-full gap-2 bg-[#FF9800] text-[#0B0F19]">
                     <Calendar className="h-4 w-4" />

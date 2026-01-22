@@ -32,7 +32,8 @@ export function BrandLogo({
         <img 
           src={bitcoinLogo} 
           alt="Bitcoin Nail Bar Logo" 
-          className={`${sizeClasses[size]} object-contain`} 
+          className={`${sizeClasses[size]} object-contain flex-shrink-0`}
+          style={{ maxWidth: '100%', height: 'auto' }}
         />
       </div>
       {showText && (

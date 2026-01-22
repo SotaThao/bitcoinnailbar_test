@@ -29,9 +29,10 @@ export default function BookingPage() {
   const { categories: rawCategories, loading: categoriesLoading } = useServiceCategories();
   const { services: rawServices, loading: servicesLoading } = useServiceMenu();
   
-  // Filter active categories and map with icons
+  // Filter active categories, sort by displayOrder, and map with icons
   const serviceCategories = rawCategories
     .filter((cat: any) => cat.status === 'active')
+    .sort((a: any, b: any) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999))
     .map((cat: any) => ({
       id: cat.key,
       name: cat.name,

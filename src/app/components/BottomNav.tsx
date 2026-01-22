@@ -3,6 +3,7 @@ import { Home, Scissors, Calendar, Crown, Gift } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { motion } from 'motion/react';
 import { useState, useEffect } from 'react';
+import { projectId, publicAnonKey } from '/utils/supabase/info';
 
 export function BottomNav() {
   const location = useLocation();
@@ -10,6 +11,9 @@ export function BottomNav() {
 
   // Hide BottomNav when payment modal is open
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  
+  // Menu display mode: 'menu-flipbook' or 'services-list'
+  const [menuDisplayMode, setMenuDisplayMode] = useState<'menu-flipbook' | 'services-list'>('services-list');
 
   useEffect(() => {
     const checkPaymentModal = () => {
@@ -22,6 +26,29 @@ export function BottomNav() {
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
     return () => observer.disconnect();
+  }, []);
+
+  // Fetch menu display mode from backend
+  useEffect(() => {
+    const fetchMenuMode = async () => {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/settings/homepage-menu`,
+          {
+            headers: { Authorization: `Bearer ${publicAnonKey}` },
+          }
+        );
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          setMenuDisplayMode(result.data.mode);
+        }
+      } catch (error) {
+        console.error('Failed to fetch menu display mode:', error);
+      }
+    };
+
+    fetchMenuMode();
   }, []);
 
   // Hide BottomNav on booking page (mobile only)
@@ -41,7 +68,7 @@ export function BottomNav() {
       icon: Home 
     },
     { 
-      path: '/menu?page=1', 
+      path: menuDisplayMode === 'menu-flipbook' ? '/menu?page=1' : '/services', 
       label: t('bottom_nav.services'),
       icon: Scissors 
     },

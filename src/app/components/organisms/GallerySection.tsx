@@ -122,7 +122,7 @@ export function GallerySection() {
                transition={{ 
                  repeat: Infinity, 
                  ease: "linear", 
-                 duration: 40 
+                 duration: galleryImages.length * 3 // 3 seconds per image
                }}
                style={{ width: "fit-content" }}
              >

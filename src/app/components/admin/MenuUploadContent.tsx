@@ -2,7 +2,8 @@ import { Button } from '@/app/components/ui/button';
 import { Card } from '@/app/components/ui/card';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '@utils/supabase/info';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { useState, useEffect } from 'react';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, TouchSensor } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2, Upload, ExternalLink, ImageIcon, Loader2, Edit2, X, Check, Image } from 'lucide-react';
@@ -94,15 +95,18 @@ function SortableItem({
 
   return (
     <div ref={setNodeRef} style={style} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      <div className="flex items-center gap-3 p-3">
-        <button 
-          {...attributes} 
-          {...listeners} 
-          className={`text-gray-400 hover:text-gray-600 ${isEditing ? 'cursor-not-allowed opacity-30' : 'cursor-grab active:cursor-grabbing'}`}
-          disabled={isEditing}
-        >
+      <div 
+        {...attributes} 
+        {...listeners}
+        className={`flex items-center gap-3 p-3 ${
+          isEditing 
+            ? 'cursor-default' 
+            : 'cursor-grab active:cursor-grabbing hover:bg-gray-50'
+        } transition-colors`}
+      >
+        <div className={`text-gray-400 ${isEditing ? 'opacity-30' : ''}`}>
           <GripVertical className="w-5 h-5" />
-        </button>
+        </div>
         
         {/* Image Preview */}
         <div className="relative">
@@ -209,7 +213,17 @@ export default function MenuUploadContent() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Desktop: Move 8px to start dragging
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 1000, // Mobile: Hold 1s before dragging
+        tolerance: 5, // Allow 5px movement during hold
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -402,11 +416,6 @@ export default function MenuUploadContent() {
 
   return (
     <div className="max-w-4xl">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Menu Images</h2>
-        <p className="text-gray-600">Upload and manage menu pages for the flipbook viewer</p>
-      </div>
-
       {/* Upload Section */}
       <Card className="p-6 mb-6">
         {!selectedFile ? (
@@ -499,15 +508,6 @@ export default function MenuUploadContent() {
             <p className="text-sm text-gray-500">
               Images will be displayed in the order shown below. Drag to reorder.
             </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.open('/menu', '_blank')}
-              className="border-gray-200 text-gray-600 hover:bg-gray-50"
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Preview
-            </Button>
           </div>
         )}
       </Card>

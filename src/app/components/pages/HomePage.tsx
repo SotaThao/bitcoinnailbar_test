@@ -84,8 +84,10 @@ export default function HomePage() {
       {/* Why choose us features */}
       <FeaturesSection />
       
-      {/* Bitcoin payment acceptance */}
-      <BitcoinSection />
+      {/* Bitcoin payment acceptance - "Future of Beauty" section */}
+      <div id="about">
+        <BitcoinSection />
+      </div>
       
       {/* Navigable sections with IDs */}
       <div id="promotions">
