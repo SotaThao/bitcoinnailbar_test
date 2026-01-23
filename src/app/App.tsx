@@ -1,11 +1,9 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router';
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { projectId, publicAnonKey } from '@utils/supabase/info';
+import { projectId, publicAnonKey } from '/utils/supabase/info';
 
-// Disable console logs in production
 import '@/utils/disableConsoleLogs';
 
-// Public Pages
 import HomePage from '@/app/components/pages/HomePage';
 import ServicesPage from '@/app/components/pages/ServicesPage';
 import BookingPage from '@/app/components/pages/BookingPage';
@@ -20,11 +18,9 @@ import ReviewsPage from '@/app/components/pages/ReviewsPage';
 import PublicCheckInPage from '@/app/components/pages/CheckInPage';
 import VIPPage from '@/app/components/pages/VIPPage';
 import MenuPage from '@/app/components/pages/MenuPage';
-import RedeemMembershipPage from '@/app/components/pages/RedeemMembershipPage';
 import PaymentSuccessPage from '@/app/pages/PaymentSuccessPage';
 import RedeemMembershipStandalonePage from '@/app/pages/RedeemMembershipStandalonePage';
 
-// Admin Pages (non-lazy)
 import AdminKioskCheckInPage from '@/app/pages/CheckInPage';
 import ComingSoon from '@/app/pages/ComingSoon';
 import SetupOwnerPage from '@/app/pages/admin/SetupOwnerPage';
@@ -33,7 +29,6 @@ import DebugAuth from '@/app/pages/admin/DebugAuth';
 import TestSetup from '@/app/pages/admin/TestSetup';
 import TestJWT from '@/app/pages/admin/TestJWT';
 
-// Admin Pages - Lazy Loaded
 const AdminDashboard = lazy(() => import('@/app/components/admin/Dashboard'));
 const AdminAppointments = lazy(() => import('@/app/components/admin/Appointments'));
 const AdminServices = lazy(() => import('@/app/components/admin/Services'));
@@ -45,8 +40,6 @@ const AdminMembership = lazy(() => import('@/app/components/admin/MembershipPage
 const DebugData = lazy(() => import('@/app/components/admin/DebugData'));
 const AdminGallery = lazy(() => import('@/app/components/admin/GalleryManagement'));
 
-// Owner Pages - Lazy Loaded
-const UsersPage = lazy(() => import('@/app/pages/admin/UsersPage'));
 const RolePermissionsPage = lazy(() => import('@/app/pages/admin/RolePermissionsPage'));
 const VLinkPaySettingsPage = lazy(() => import('@/app/pages/admin/VLinkPaySettingsPage'));
 const RedeemCodesPage = lazy(() => import('@/app/pages/admin/RedeemCodesPage'));
@@ -88,7 +81,6 @@ export default function App() {
   const [showPromotionModal, setShowPromotionModal] = useState(false);
   const [modalRendered, setModalRendered] = useState(false);
 
-  // Fetch promotions and check if modal should be shown
   useEffect(() => {
     const fetchPromotions = async () => {
       try {
@@ -105,22 +97,15 @@ export default function App() {
         console.log('📦 Promotions API Response:', result);
 
         if (result.success && result.data) {
-          // Backend returns { success: true, data: { promotions: [...] } }
           const promotionsData = result.data.promotions || [];
           setPromotions(promotionsData);
 
-          // Check if we should show the modal
-          // ONLY show on homepage (not admin routes or other pages)
           const isHomepage = window.location.pathname === '/';
           
           if (isHomepage) {
             const dismissedDate = localStorage.getItem('promotion-dismissed-date');
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            const today = new Date().toISOString().split('T')[0];
 
-            // Show modal if:
-            // 1. On homepage
-            // 2. Not dismissed today
-            // 3. There are featured promotions
             const hasFeaturedPromotions = Array.isArray(promotionsData) && 
               promotionsData.some((p: Promotion) => p.enabled && p.featured);
 
@@ -133,7 +118,6 @@ export default function App() {
             });
 
             if (dismissedDate !== today && hasFeaturedPromotions) {
-              // Small delay to ensure page has loaded
               setTimeout(() => {
                 setShowPromotionModal(true);
               }, 500);
@@ -147,7 +131,6 @@ export default function App() {
 
     fetchPromotions();
 
-    // Listen for promotions-updated event (fired when admin saves changes)
     const handlePromotionsUpdated = () => {
       console.log('🔄 Promotions updated, refetching...');
       fetchPromotions();
@@ -183,7 +166,6 @@ export default function App() {
   );
 }
 
-// Separate component inside Router to access useLocation
 function AppContent({ 
   promotions, 
   showPromotionModal, 
@@ -199,7 +181,6 @@ function AppContent({
 }) {
   const location = useLocation();
 
-  // Auto-hide modal when navigating away from homepage
   useEffect(() => {
     if (location.pathname !== '/' && showPromotionModal) {
       console.log('🚪 Navigating away from homepage, closing PromotionModal');
@@ -212,7 +193,6 @@ function AppContent({
       <ScrollToTop />
       <div className="min-h-screen bg-background">
         <Routes>
-          {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/promotions" element={<PromotionsPage />} />
@@ -227,15 +207,8 @@ function AppContent({
           <Route path="/menu" element={<MenuPage />} />
           <Route path="/coming-soon" element={<ComingSoonPage />} />
           <Route path="/checkin/:id" element={<PublicCheckInPage />} />
-          {/* REMOVED: /redeem-membership route - all redemption done via MembershipPage component */}
-          
-          {/* Standalone Redeem Membership Page (VLinkPay Redirect) */}
           <Route path="/redeem-membership" element={<RedeemMembershipStandalonePage />} />
-          
-          {/* Payment Success Route */}
           <Route path="/payment/success" element={<PaymentSuccessPage />} />
-          
-          {/* Admin Routes */}
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/admin/dashboard" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminDashboard /></Suspense></ProtectedAdminRoute>} />
           <Route path="/admin/services" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminServices /></Suspense></ProtectedAdminRoute>} />
@@ -245,32 +218,22 @@ function AppContent({
           <Route path="/admin/analytics" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminComingSoon /></Suspense></ProtectedAdminRoute>} />
           <Route path="/admin/membership" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminMembership /></Suspense></ProtectedAdminRoute>} />
           <Route path="/admin/check-in" element={<ProtectedAdminRoute><AdminKioskCheckInPage /></ProtectedAdminRoute>} />
-          
-          {/* Owner Routes */}
           <Route path="/admin/users" element={<Navigate to="/admin/role-permissions?tab=roles" replace />} />
           <Route path="/admin/role-permissions" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><RolePermissionsPage /></Suspense></ProtectedAdminRoute>} />
           <Route path="/admin/vlinkpay-settings" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><VLinkPaySettingsPage /></Suspense></ProtectedAdminRoute>} />
           <Route path="/admin/redeem-codes" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><RedeemCodesPage /></Suspense></ProtectedAdminRoute>} />
           <Route path="/admin/system-settings" element={<ProtectedAdminRoute requireOwner><Suspense fallback={<AdminLoadingFallback />}><AdminSettings /></Suspense></ProtectedAdminRoute>} />
-          
-          {/* Legacy Settings Route - Redirect to System Settings */}
           <Route path="/admin/settings" element={<Navigate to="/admin/system-settings" replace />} />
-          
           <Route path="/admin/debug-data" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><DebugData /></Suspense></ProtectedAdminRoute>} />
           <Route path="/admin/gallery" element={<ProtectedAdminRoute><Suspense fallback={<AdminLoadingFallback />}><AdminGallery /></Suspense></ProtectedAdminRoute>} />
-          
-          {/* Auth Routes (NOT PROTECTED - these are for logging in) */}
           <Route path="/admin/setup-owner" element={<SetupOwnerPage />} />
           <Route path="/admin/login" element={<LoginPage />} />
           <Route path="/admin/debug-auth" element={<DebugAuth />} />
           <Route path="/admin/test-setup" element={<TestSetup />} />
           <Route path="/admin/test-jwt" element={<TestJWT />} />
-          
-          {/* 404 */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
 
-        {/* Promotion Modal - Shows featured promotions on homepage ONLY */}
         {showPromotionModal && (
           <PromotionModal
             promotions={promotions}
@@ -284,7 +247,6 @@ function AppContent({
   );
 }
 
-// Loading fallback for admin lazy-loaded routes
 function AdminLoadingFallback() {
   return (
     <div className="flex items-center justify-center min-h-screen">

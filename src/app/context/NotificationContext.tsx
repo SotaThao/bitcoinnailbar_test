@@ -124,15 +124,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
       if (result.success) {
         const codes = result.data;
-        const currentCodes = codes.map((c: any) => c.code);
+        
+        // ✅ FILTER: Only track PENDING codes (đã thanh toán, chờ sử dụng)
+        const pendingCodes = codes.filter((c: any) => c.status === 'pending');
+        const currentCodes = pendingCodes.map((c: any) => c.code);
         
         // Detect new codes (only if we have previous data)
         if (previousCodesRef.current.length > 0) {
-          const newCodes = codes.filter((c: any) => 
+          const newCodes = pendingCodes.filter((c: any) => 
             !previousCodesRef.current.includes(c.code)
           );
           
-          // Add notification for each new code
+          // Add notification for each new PENDING code
           newCodes.forEach((code: any) => {
             addNotification({
               type: 'membership',

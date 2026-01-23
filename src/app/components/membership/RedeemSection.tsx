@@ -102,17 +102,26 @@ export function RedeemSection() {
                       <CheckCircle className="w-4 h-4" />
                       {t('redeem.instructions.step4.title')}
                     </h4>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-gray-400 mb-2">
                       {t('redeem.instructions.step4.desc')}
                     </p>
+                    <ul className="text-xs text-gray-500 space-y-1 ml-4 list-disc">
+                      <li>Enter your redeem code and phone number in the form</li>
+                      <li>One account can redeem multiple codes</li>
+                      <li>Same tier extends your membership duration</li>
+                      <li>Higher tier upgrades and replaces current membership</li>
+                    </ul>
                   </div>
                 </div>
               </div>
 
               {/* Info Box */}
               <div className="mt-6 p-4 bg-blue-900/20 border border-blue-700/30 rounded-xl">
-                <p className="text-xs text-blue-300">
+                <p className="text-xs text-blue-300 mb-2">
                   💡 <strong>{t('redeem.instructions.note')}</strong> {t('redeem.instructions.note_desc')}
+                </p>
+                <p className="text-xs text-yellow-300">
+                  ⚠️ <strong>Important:</strong> You cannot downgrade to a lower tier. Only same-tier or upgrades are allowed.
                 </p>
               </div>
             </motion.div>

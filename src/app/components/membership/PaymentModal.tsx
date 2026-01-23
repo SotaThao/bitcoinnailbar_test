@@ -63,12 +63,15 @@ export function PaymentModal({
 
       if (event.data?.type === 'payment-success') {
         handlePaymentSuccess(event.data.redeemCode);
+      } else if (event.data?.type === 'close-modal') {
+        console.log('📥 [MODAL] Received close-modal message from iframe');
+        onClose();
       }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, []);
+  }, [onClose]);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -256,7 +259,7 @@ export function PaymentModal({
                 </p>
               </div>
 
-              <div className="relative bg-gray-100 rounded-xl overflow-hidden mt-6 md:mt-10 h-[480px] md:h-[600px] lg:h-[650px]">
+              <div className="relative bg-gray-100 rounded-xl overflow-hidden h-[calc(90vh-280px)] min-h-[400px] max-h-[600px]">
                 <iframe
                   src={iframeUrl}
                   className="w-full h-full border-0"

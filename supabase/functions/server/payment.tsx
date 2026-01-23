@@ -120,7 +120,7 @@ const decryptApiKey = async (encryptedText: string): Promise<string> => {
 
 // Generate unique merchant order code
 const generateMerchantOrderCode = (): string => {
-  return `ORDER-${Date.now()}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
+  return `BNB-${Date.now()}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
 };
 
 // Generate MD5 checksum for VLINKPAY
@@ -381,7 +381,7 @@ app.post('/make-server-84f9c112/payment/complete-order', async (c) => {
     if (!orderData && membershipTier && amount) {
         console.log('⚠️ [PAYMENT] Order not found in DB (LocalStorage Flow), using provided details');
         orderData = {
-          merchantOrderCode: merchantOrderCode || `ORDER-${Date.now()}`,
+          merchantOrderCode: merchantOrderCode || generateMerchantOrderCode(), // ✅ FIX: Use BNB- prefix instead of ORDER-
           planId,
           membershipTier,
           duration,

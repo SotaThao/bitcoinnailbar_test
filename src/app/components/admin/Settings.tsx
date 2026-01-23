@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { LoadingSpinner } from './atoms/LoadingSpinner';
 import { projectId, publicAnonKey } from '@utils/supabase/info';

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { CheckCircle, Loader2, XCircle, Gift, Phone, Sparkles } from 'lucide-react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
+import { MembershipUpgradeDialog } from '@/app/components/membership/MembershipUpgradeDialog';
 
 export default function RedeemMembershipStandalonePage() {
   const [searchParams] = useSearchParams();
@@ -11,6 +12,9 @@ export default function RedeemMembershipStandalonePage() {
   const [error, setError] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [membershipData, setMembershipData] = useState<any>(null);
+  const [showUpgradeConfirm, setShowUpgradeConfirm] = useState(false);
+  const [currentMembership, setCurrentMembership] = useState<any>(null);
+  const [upgradeInfo, setUpgradeInfo] = useState<{ from: string; to: string } | null>(null);
 
   useEffect(() => {
     handlePaymentCallback();
@@ -36,6 +40,92 @@ export default function RedeemMembershipStandalonePage() {
     // Clear error when user starts typing
     if (phoneError) {
       setPhoneError('');
+    }
+  };
+
+  // Tier hierarchy for comparison
+  const TIER_PRIORITY: Record<string, number> = {
+    'gold': 1,
+    'platinum': 2,
+    'diamond': 3
+  };
+
+  // Check if user has existing membership and validate tier hierarchy
+  const checkExistingMembership = async (userId: string, newTier: string): Promise<{ canProceed: boolean; needsConfirmation: boolean; message?: string }> => {
+    try {
+      console.log('🔍 [CHECK] Checking existing membership for:', userId);
+      
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/membership/active/${encodeURIComponent(userId)}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${publicAnonKey}`,
+          },
+        }
+      );
+
+      // If response is not OK, skip check and let backend validate
+      if (!response.ok) {
+        console.log('⚠️ [CHECK] Membership check failed, proceeding without check');
+        return { canProceed: true, needsConfirmation: false };
+      }
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('❌ [CHECK] Failed to parse membership response:', parseError);
+        return { canProceed: true, needsConfirmation: false };
+      }
+
+      console.log('📥 [CHECK] Membership response:', data);
+
+      if (!data.success || !data.data || !data.data.activeMembership) {
+        // No existing membership - can proceed without confirmation
+        return { canProceed: true, needsConfirmation: false };
+      }
+
+      const activeMembership = data.data.activeMembership;
+      const currentTier = activeMembership.tier.toLowerCase();
+      const newTierLower = newTier.toLowerCase();
+
+      const currentPriority = TIER_PRIORITY[currentTier] || 0;
+      const newPriority = TIER_PRIORITY[newTierLower] || 0;
+
+      console.log('⚖️  [CHECK] Tier comparison:', {
+        current: currentTier,
+        currentPriority,
+        new: newTierLower,
+        newPriority
+      });
+
+      // Same tier - will extend, no need for confirmation
+      if (currentTier === newTierLower) {
+        return { canProceed: true, needsConfirmation: false };
+      }
+
+      // Lower tier - cannot proceed
+      if (newPriority <= currentPriority) {
+        return {
+          canProceed: false,
+          needsConfirmation: false,
+          message: `Cannot activate ${newTier.toUpperCase()} membership. You currently have a ${currentTier.toUpperCase()} membership (higher or equal tier). Only upgrades are allowed.`
+        };
+      }
+
+      // Higher tier - needs confirmation (will replace current membership)
+      setCurrentMembership(activeMembership);
+      setUpgradeInfo({ from: currentTier, to: newTierLower });
+      return {
+        canProceed: true,
+        needsConfirmation: true
+      };
+
+    } catch (error: any) {
+      console.error('❌ [CHECK] Error checking membership:', error);
+      // If check fails, proceed without confirmation (backend will validate)
+      return { canProceed: true, needsConfirmation: false };
     }
   };
 
@@ -150,6 +240,26 @@ export default function RedeemMembershipStandalonePage() {
       return;
     }
 
+    // Check existing membership and tier hierarchy
+    const tierCheck = await checkExistingMembership(phoneNumber.trim(), membershipData?.membershipTier || '');
+    
+    if (!tierCheck.canProceed) {
+      // Cannot proceed - show error
+      setError(tierCheck.message || 'Cannot activate this membership');
+      return;
+    }
+
+    if (tierCheck.needsConfirmation) {
+      // Needs confirmation - show dialog
+      setShowUpgradeConfirm(true);
+      return;
+    }
+
+    // Can proceed directly - continue with activation
+    await performActivation();
+  };
+
+  const performActivation = async () => {
     setStatus('activating');
     setError('');
     setPhoneError('');
@@ -392,27 +502,25 @@ export default function RedeemMembershipStandalonePage() {
                 </p>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                {/* Book Now CTA - Primary */}
-                <a
-                  href="/booking"
-                  className="flex-1 relative group overflow-hidden rounded-xl p-1 transition-all"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-[#FF9800] via-amber-500 to-[#FF9800] animate-gradient-x" />
-                  <div className="relative bg-gradient-to-r from-[#FF9800] to-amber-500 hover:from-[#F57C00] hover:to-amber-600 py-4 px-6 rounded-lg font-bold text-white text-lg shadow-xl transition-all transform group-hover:scale-[1.02] active:scale-[0.98] text-center">
-                    📅 Book Now
-                  </div>
-                </a>
-
-                {/* Go to Homepage - Secondary */}
-                <a
-                  href="/"
-                  className="flex-1 py-4 px-6 bg-gray-700/50 hover:bg-gray-600/50 border-2 border-gray-600/50 hover:border-gray-500 text-white font-bold rounded-xl transition-all text-center text-lg"
-                >
-                  🏠 Go to Homepage
-                </a>
-              </div>
+              {/* Close Button */}
+              <button
+                onClick={() => {
+                  // Send message to parent window to close the modal
+                  if (window.parent !== window) {
+                    console.log('📤 [IFRAME] Sending close message to parent window');
+                    window.parent.postMessage({ type: 'close-modal' }, '*');
+                  } else {
+                    // If not in iframe, redirect to homepage
+                    window.location.href = '/';
+                  }
+                }}
+                className="w-full relative group overflow-hidden rounded-xl p-1 transition-all"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-[#FF9800] via-amber-500 to-[#FF9800] animate-gradient-x" />
+                <div className="relative bg-gradient-to-r from-[#FF9800] to-amber-500 hover:from-[#F57C00] hover:to-amber-600 py-4 px-8 rounded-lg font-bold text-white text-lg shadow-xl transition-all transform group-hover:scale-[1.02] active:scale-[0.98] text-center">
+                  ✓ CLOSE
+                </div>
+              </button>
             </div>
           )}
 
@@ -444,6 +552,16 @@ export default function RedeemMembershipStandalonePage() {
           </p>
         </div>
       </div>
+
+      {/* Membership Upgrade Dialog */}
+      {showUpgradeConfirm && (
+        <MembershipUpgradeDialog
+          currentMembership={currentMembership}
+          upgradeInfo={upgradeInfo}
+          onConfirm={performActivation}
+          onCancel={() => setShowUpgradeConfirm(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router';
 import { Home, Sparkles, Calendar, Crown, MapPin } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { motion } from 'motion/react';

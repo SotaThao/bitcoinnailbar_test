@@ -3,6 +3,7 @@ import { Check, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
+import { MembershipUpgradeDialog } from './MembershipUpgradeDialog';
 
 interface RedeemCodeInputProps {
   onSuccess?: (data: any) => void;
@@ -16,6 +17,10 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [showUpgradeConfirm, setShowUpgradeConfirm] = useState(false);
+  const [currentMembership, setCurrentMembership] = useState<any>(null);
+  const [upgradeInfo, setUpgradeInfo] = useState<{ from: string; to: string } | null>(null);
+  const [pendingRedeemData, setPendingRedeemData] = useState<{ code: string; phone: string } | null>(null);
 
   // Format phone number to US format: (xxx) xxx-xxxx
   const formatPhoneNumber = (value: string) => {
@@ -36,6 +41,62 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
     setPhone(formatted);
   };
 
+  // Tier hierarchy for comparison
+  const TIER_PRIORITY: Record<string, number> = {
+    'gold': 1,
+    'platinum': 2,
+    'diamond': 3
+  };
+
+  // Check if user has existing membership and validate tier hierarchy
+  const checkExistingMembership = async (phoneDigits: string): Promise<{ canProceed: boolean; needsConfirmation: boolean; message?: string }> => {
+    try {
+      console.log('🔍 [CHECK] Checking existing membership for:', phoneDigits);
+      
+      // Check existing membership
+      const membershipResponse = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/membership/active/${encodeURIComponent(phoneDigits)}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${publicAnonKey}`,
+          },
+        }
+      );
+
+      // If response is not OK or not JSON, skip check and let backend validate
+      if (!membershipResponse.ok) {
+        console.log('⚠️ [CHECK] Membership check failed, proceeding without check');
+        return { canProceed: true, needsConfirmation: false };
+      }
+
+      let membershipData;
+      try {
+        membershipData = await membershipResponse.json();
+      } catch (parseError) {
+        console.error('❌ [CHECK] Failed to parse membership response:', parseError);
+        return { canProceed: true, needsConfirmation: false };
+      }
+
+      console.log('📥 [CHECK] Membership response:', membershipData);
+
+      if (!membershipData.success || !membershipData.data || !membershipData.data.activeMembership) {
+        // No existing membership - can proceed without confirmation
+        return { canProceed: true, needsConfirmation: false };
+      }
+
+      // User has active membership - for now, just proceed and let backend handle tier validation
+      // TODO: In the future, we can add pre-validation here if we know the code's tier
+      console.log('ℹ️ [CHECK] User has active membership, backend will handle tier validation');
+      return { canProceed: true, needsConfirmation: false };
+
+    } catch (error: any) {
+      console.error('❌ [CHECK] Error checking membership:', error);
+      // If check fails, let backend validate
+      return { canProceed: true, needsConfirmation: false };
+    }
+  };
+
   const handleRedeem = async () => {
     // Validate inputs
     if (!code.trim()) {
@@ -54,6 +115,18 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
     setSuccess(false);
 
     try {
+      // Check existing membership and tier hierarchy
+      const checkResult = await checkExistingMembership(phoneDigits);
+      if (!checkResult.canProceed) {
+        throw new Error(checkResult.message || 'Không thể kích hoạt membership');
+      }
+
+      if (checkResult.needsConfirmation) {
+        setPendingRedeemData({ code: code.toUpperCase().trim(), phone: phoneDigits });
+        setShowUpgradeConfirm(true);
+        return;
+      }
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/membership/redeem`,
         {
@@ -99,6 +172,65 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
     if (e.key === 'Enter' && !loading) {
       handleRedeem();
     }
+  };
+
+  const performRedeem = async () => {
+    if (!pendingRedeemData) return;
+
+    setLoading(true);
+    setError('');
+    setSuccess(false);
+
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/membership/redeem`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${publicAnonKey}`,
+          },
+          body: JSON.stringify({
+            redeemCode: pendingRedeemData.code,
+            phone: pendingRedeemData.phone,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Không thể kích hoạt membership');
+      }
+
+      setSuccess(true);
+      setResult(data);
+      setCode('');
+      setPhone('');
+      setPendingRedeemData(null);
+      setShowUpgradeConfirm(false);
+      
+      if (onSuccess) {
+        onSuccess(data);
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || 'Đã xảy ra lỗi. Vui lòng thử lại.';
+      setError(errorMessage);
+      
+      if (onError) {
+        onError(errorMessage);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpgradeCancel = () => {
+    setShowUpgradeConfirm(false);
+    setPendingRedeemData(null);
+    setCurrentMembership(null);
+    setUpgradeInfo(null);
+    setLoading(false);
   };
 
   return (
@@ -219,6 +351,16 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
       <p className="text-xs text-gray-500 text-center mt-4">
         Mã redeem có hiệu lực trong 30 ngày kể từ khi thanh toán
       </p>
+
+      {/* Membership Upgrade Dialog */}
+      {showUpgradeConfirm && (
+        <MembershipUpgradeDialog
+          currentMembership={currentMembership}
+          upgradeInfo={upgradeInfo}
+          onConfirm={performRedeem}
+          onCancel={handleUpgradeCancel}
+        />
+      )}
     </div>
   );
 }

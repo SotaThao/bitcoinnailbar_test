@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { MembershipTier } from '../../hooks/useMembershipTiers';

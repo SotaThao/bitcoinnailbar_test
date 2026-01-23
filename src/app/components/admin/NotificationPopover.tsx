@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Bell, Calendar, CheckCircle2, Clock, User } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Bell, Check, X, CheckCheck, ArrowUpRight } from 'lucide-react';
 import { Button } from '../ui/button';
-import { ScrollArea } from '../ui/scroll-area';
-import { apiClient } from '../../lib/api-client';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Card } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { useNotifications } from '../../context/NotificationContext';
 import { format, isToday, parseISO, isValid } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 export function NotificationPopover() {
   const [open, setOpen] = useState(false);

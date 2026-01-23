@@ -77,6 +77,7 @@ const isMembershipValid = (membership: any, appointmentTime: string): boolean =>
  *   appointment_id: string (required)
  *   appointment_time: string (ISO) (required)
  *   appointment_amount: number (required)
+ *   appointment_status?: string (default: 'Pending')
  * }
  */
 app.post('/make-server-84f9c112/customers/book', async (c) => {
@@ -90,7 +91,8 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
       date_of_birth,
       appointment_id,
       appointment_time,
-      appointment_amount
+      appointment_amount,
+      appointment_status = 'Pending'  // ← Default to Pending
     } = body;
 
     // Validate required fields
@@ -134,8 +136,10 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
     if (existingCustomer && !existingCustomer.is_deleted) {
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // UPDATE EXISTING CUSTOMER
+      // Per BOOKING_CUSTOMER_LOGIC.md: Only count if Complete
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       console.log(`📝 [BOOKING] Updating existing customer: ${existingCustomer.id}`);
+      console.log(`   Appointment status: ${appointment_status}`);
 
       // Update fields (user can update email/address during booking)
       existingCustomer.full_name = full_name; // Allow name update
@@ -143,12 +147,19 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
       existingCustomer.address = address || existingCustomer.address;
       existingCustomer.date_of_birth = date_of_birth || existingCustomer.date_of_birth;
       
-      // Update statistics
-      existingCustomer.total_visits += 1;
-      existingCustomer.total_spent += appointment_amount;
-      existingCustomer.last_visit = appointment_time;
+      // ✅ CRITICAL: Only accumulate if status = 'Complete'
+      // Per BOOKING_CUSTOMER_LOGIC.md Section 2
+      if (appointment_status === 'Complete') {
+        console.log(`   ✅ Status = Complete → Accumulating statistics`);
+        existingCustomer.total_visits += 1;
+        existingCustomer.total_spent += appointment_amount;
+        existingCustomer.last_visit = appointment_time;
+      } else {
+        console.log(`   ⏸️  Status = ${appointment_status} → NOT counting in statistics yet`);
+        // Don't update total_visits, total_spent, or last_visit
+      }
       
-      // Add appointment ID to array
+      // Always add appointment ID regardless of status
       if (!existingCustomer.appointment_ids) {
         existingCustomer.appointment_ids = [];
       }
@@ -161,6 +172,8 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
       await customerKV.set(existingCustomer.id, existingCustomer);
 
       console.log(`✅ [BOOKING] Customer updated successfully`);
+      console.log(`   Total visits: ${existingCustomer.total_visits}`);
+      console.log(`   Total spent: $${existingCustomer.total_spent}`);
 
       // Check membership validity for booking date
       let validMembership = null;
@@ -185,8 +198,10 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
     } else {
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // CREATE NEW CUSTOMER
+      // Per BOOKING_CUSTOMER_LOGIC.md: Only count if Complete
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       console.log(`✨ [BOOKING] Creating new customer with phone: ${normalizedPhone}`);
+      console.log(`   Appointment status: ${appointment_status}`);
 
       // Generate key
       const key = region === 'US' 
@@ -198,6 +213,10 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
         ? formatPhoneUS(normalizedPhone)
         : formatPhoneVN(normalizedPhone);
 
+      // ✅ CRITICAL: Check status before counting
+      const shouldCount = appointment_status === 'Complete';
+      console.log(`   ${shouldCount ? '✅' : '⏸️'} ${shouldCount ? 'Counting' : 'NOT counting'} in initial statistics`);
+
       // Create customer
       const newCustomer: Customer = {
         id: key,
@@ -208,9 +227,9 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
         email: email || undefined,
         address: address || undefined,
         date_of_birth: date_of_birth || undefined,
-        total_visits: 1,
-        total_spent: appointment_amount,
-        last_visit: appointment_time,
+        total_visits: shouldCount ? 1 : 0,  // ← Only count if Complete
+        total_spent: shouldCount ? appointment_amount : 0,  // ← Only count if Complete
+        last_visit: shouldCount ? appointment_time : undefined,  // ← Only set if Complete
         appointment_ids: [appointment_id],
         created_at: new Date().toISOString(),
         created_by: 'system_booking', // System created
@@ -221,6 +240,8 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
       await customerKV.set(key, newCustomer);
 
       console.log(`✅ [BOOKING] New customer created: ${key}`);
+      console.log(`   Total visits: ${newCustomer.total_visits}`);
+      console.log(`   Total spent: $${newCustomer.total_spent}`);
 
       return c.json({
         success: true,

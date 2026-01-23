@@ -1,6 +1,6 @@
-import { ShieldAlert } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { Button } from './ui/button';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 export function OwnerOnlyAccess() {
   const navigate = useNavigate();
@@ -10,7 +10,7 @@ export function OwnerOnlyAccess() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
         <div className="flex justify-center mb-4">
           <div className="rounded-full bg-red-100 p-3">
-            <ShieldAlert className="h-8 w-8 text-red-600" />
+            <Lock className="h-8 w-8 text-red-600" />
           </div>
         </div>
         <h2 className="text-2xl font-serif font-bold text-gray-900 mb-2">Access Denied</h2>

@@ -368,6 +368,12 @@ export default function RedeemCodesTab() {
                                         variant="ghost"
                                         className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50"
                                         onClick={() => setDeleteConfirm(code.code)}
+                                        disabled={code.status === 'pending' || code.status === 'used'}
+                                        title={
+                                          code.status === 'pending' ? 'Cannot delete pending orders' :
+                                          code.status === 'used' ? 'Cannot delete used codes' :
+                                          'Delete code'
+                                        }
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </Button>

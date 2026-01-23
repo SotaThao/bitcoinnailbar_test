@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import image_806e712a7137dc26b6a45d29177a47853f6cc4d2 from 'figma:asset/806e712a7137dc26b6a45d29177a47853f6cc4d2.png';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router';
 import bitcoinLogo from 'figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png';
 import image_2de9c9413dafd548ee75321859136c9ca435bffe from 'figma:asset/2de9c9413dafd548ee75321859136c9ca435bffe.png';
 import image_eb0bbc971a7468c60bd03f5a065452ed783bbdef from 'figma:asset/eb0bbc971a7468c60bd03f5a065452ed783bbdef.png';

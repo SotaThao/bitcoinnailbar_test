@@ -3,6 +3,7 @@ import { Crown, Calendar, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
+import { formatUserIdInput, getRawPhoneNumber } from '/utils/phoneFormatter';
 
 export function MembershipStatusChecker() {
   const [userId, setUserId] = useState('');
@@ -11,7 +12,10 @@ export function MembershipStatusChecker() {
   const [error, setError] = useState('');
 
   const handleCheck = async () => {
-    if (!userId.trim()) {
+    // Get raw value for API call (remove formatting)
+    const rawValue = getRawPhoneNumber(userId.trim());
+    
+    if (!rawValue && !userId.includes('@')) {
       setError('Vui lòng nhập số điện thoại hoặc email');
       return;
     }
@@ -21,8 +25,11 @@ export function MembershipStatusChecker() {
     setMembership(null);
 
     try {
+      // Use raw phone number or original email for API call
+      const queryValue = userId.includes('@') ? userId.trim() : rawValue;
+      
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/membership/active/${encodeURIComponent(userId.trim())}`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/customers/membership/${encodeURIComponent(queryValue)}`,
         {
           headers: {
             Authorization: `Bearer ${publicAnonKey}`,
@@ -31,17 +38,51 @@ export function MembershipStatusChecker() {
       );
 
       const result = await response.json();
+      
+      // 🔍 DEBUG: Log full response
+      console.log('🔍 [MEMBERSHIP CHECK] Full API Response:', JSON.stringify(result, null, 2));
+      console.log('🔍 [MEMBERSHIP CHECK] HTTP Status:', response.status);
+      console.log('🔍 [MEMBERSHIP CHECK] response.ok:', response.ok);
+      console.log('🔍 [MEMBERSHIP CHECK] result.success:', result.success);
+      console.log('🔍 [MEMBERSHIP CHECK] has_membership:', result.has_membership);
+      console.log('🔍 [MEMBERSHIP CHECK] data:', result.data);
+      console.log('🔍 [MEMBERSHIP CHECK] data.membership:', result.data?.membership);
 
-      if (!response.ok || !result.success) {
+      // Check result.success FIRST (prioritize API response)
+      if (!result.success) {
         throw new Error(result.error || 'Failed to fetch membership');
       }
 
-      setMembership(result.data);
+      // Transform data to match UI expectations
+      if (result.has_membership && result.data?.membership) {
+        console.log('✅ [MEMBERSHIP CHECK] Membership found, setting state');
+        setMembership({
+          activeMembership: result.data.membership,
+          allMemberships: [result.data.membership],
+          totalActive: result.is_active ? 1 : 0
+        });
+      } else {
+        // 🔍 DEBUG: Log when no membership found
+        console.log('⚠️ [MEMBERSHIP CHECK] No membership found in response');
+        setMembership({
+          activeMembership: null,
+          allMemberships: [],
+          totalActive: 0
+        });
+      }
     } catch (err: any) {
       setError(err.message || 'Không tìm thấy membership');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle input change with formatting
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Apply formatting (auto-detect phone vs email)
+    const formatted = formatUserIdInput(value);
+    setUserId(formatted);
   };
 
   const getTierColor = (tier: string) => {
@@ -64,7 +105,7 @@ export function MembershipStatusChecker() {
         <Input
           type="text"
           value={userId}
-          onChange={(e) => setUserId(e.target.value)}
+          onChange={handleInputChange}
           onKeyPress={(e) => e.key === 'Enter' && handleCheck()}
           placeholder="Nhập số điện thoại hoặc email"
           className="flex-1 h-11 bg-[#1f2937] border-gray-700 text-white placeholder:text-gray-500 focus:border-[#FF9800] focus:ring-[#FF9800]/20 rounded-xl"
@@ -104,7 +145,7 @@ export function MembershipStatusChecker() {
                   <Calendar className="w-4 h-4 text-[#FF9800]" />
                   <span>Có hiệu lực đến:</span>
                   <span className="font-semibold text-white">
-                    {new Date(membership.activeMembership.endDate).toLocaleDateString('vi-VN')}
+                    {new Date(membership.activeMembership.expires_at).toLocaleDateString('vi-VN')}
                   </span>
                 </div>
 
@@ -131,7 +172,7 @@ export function MembershipStatusChecker() {
                             {m.tier.toUpperCase()} {m.status === 'active' ? '(Active)' : '(Pending)'}
                           </span>
                           <span className="text-gray-500">
-                            {new Date(m.endDate).toLocaleDateString('vi-VN')}
+                            {new Date(m.expires_at).toLocaleDateString('vi-VN')}
                           </span>
                         </div>
                       ))}

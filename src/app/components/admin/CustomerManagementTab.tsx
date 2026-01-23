@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { getAuthToken } from '/utils/auth';
 import { Search, UserPlus, Edit, Trash2, RefreshCw, Phone, Mail, Calendar, Award, Globe } from 'lucide-react';
-import { SelectField } from "../ui/select-field";
 
 interface Customer {
   id: string;
@@ -20,7 +19,12 @@ interface Customer {
   membership?: {         // ← Changed from membership_id to full object
     id: string;
     tier: string;
+    amount: number;
+    activated_at: string;
+    expires_at: string;  // ← Backend uses expires_at, NOT end_date
     status: 'active' | 'expired';
+    benefits: string[];
+    redeem_code?: string;
   };
   created_at: string;
   updated_at?: string;
@@ -338,10 +342,22 @@ export default function CustomerManagementTab() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {customer.membership ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FF9800] bg-opacity-10 text-[#FF9800]">
-                            <Award className="w-3 h-3" />
-                            Active
-                          </span>
+                          <div className="flex flex-col items-start gap-1">
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-[#FF9800] text-white capitalize">
+                              <Award className="w-3 h-3" />
+                              {customer.membership.tier}
+                            </span>
+                            {customer.membership.expires_at && (
+                              <span className="text-xs text-gray-500 font-medium">
+                                {(() => {
+                                  const endDate = new Date(customer.membership.expires_at);
+                                  const today = new Date();
+                                  const daysRemaining = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                                  return daysRemaining > 0 ? `${daysRemaining} days left` : 'Expired';
+                                })()}
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-xs text-gray-400">—</span>
                         )}

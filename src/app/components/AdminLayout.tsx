@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router';
 import bitcoinLogo from 'figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png';
 import { LayoutDashboard, Calendar, DollarSign, BarChart3, LogOut, Scissors, Star, Bitcoin, User, Bell, Settings, Scan, CreditCard, Users2, Shield, Image, Wallet, Gift, Database } from 'lucide-react';
 import { Button } from './ui/button';

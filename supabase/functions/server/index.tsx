@@ -23,6 +23,7 @@ import { adminMigrationApp } from './admin-migration.tsx';
 import { debugSettingsApp } from './debug-settings.tsx';
 import { app as debugUsersApp } from './debug-users.tsx';
 import { app as debugCheckUserApp } from './debug-check-user.tsx';
+import { debugCustomersApp } from './debug-customers.tsx';
 
 // JWT Secret - in production this should be from environment variable
 const JWT_SECRET = new TextEncoder().encode(
@@ -131,6 +132,158 @@ app.route('/make-server-84f9c112', adminMigrationApp);
 app.route('/make-server-84f9c112', debugSettingsApp);
 app.route('/', debugUsersApp); // Debug: List all users
 app.route('/', debugCheckUserApp); // Debug: Check specific user
+app.route('/', debugCustomersApp); // Debug: Check customers
+
+// ========== DEBUG ENDPOINT - Test Customer KV Write ==========
+import { customerKV } from './kv_store_customers.tsx';
+
+app.get('/make-server-84f9c112/debug/test-customer-write', async (c) => {
+  try {
+    console.log('🧪 [DEBUG] Testing direct customerKV write...');
+    
+    const testPhone = '9998887777';
+    const testCustomerId = `customer_us:${testPhone}`;
+    
+    // Test customer object (EXACT same structure as booking)
+    const testCustomer = {
+      id: testCustomerId,
+      phone: testPhone,
+      phone_display: '(999) 888-7777',
+      full_name: 'Debug Test User',
+      region: 'US',
+      email: undefined,
+      address: undefined,
+      date_of_birth: undefined,
+      gender: undefined,
+      total_visits: 0,
+      total_spent: 0,
+      last_visit: undefined,
+      appointment_ids: [],
+      created_at: new Date().toISOString(),
+      created_by: 'debug_test',
+      is_deleted: false
+    };
+    
+    console.log('📝 [DEBUG] Writing test customer:', testCustomerId);
+    console.log('📝 [DEBUG] Customer data:', JSON.stringify(testCustomer, null, 2));
+    
+    // Write to DB
+    await customerKV.set(testCustomerId, testCustomer);
+    console.log('✅ [DEBUG] Write completed');
+    
+    // Read back
+    console.log('📖 [DEBUG] Reading back customer...');
+    const readBack = await customerKV.get(testCustomerId);
+    console.log('📖 [DEBUG] Read result:', readBack);
+    
+    // Verify
+    if (readBack && readBack.id === testCustomerId) {
+      return c.json({
+        success: true,
+        message: 'Customer write/read test PASSED ✅',
+        data: {
+          written: testCustomer,
+          readBack: readBack
+        }
+      });
+    } else {
+      return c.json({
+        success: false,
+        message: 'Customer write/read test FAILED ❌',
+        error: 'Read back data does not match',
+        data: {
+          written: testCustomer,
+          readBack: readBack
+        }
+      }, 500);
+    }
+    
+  } catch (error: any) {
+    console.error('❌ [DEBUG] Test failed with error:', error);
+    console.error('❌ [DEBUG] Stack:', error.stack);
+    return c.json({
+      success: false,
+      message: 'Customer write/read test FAILED ❌',
+      error: error.message,
+      stack: error.stack
+    }, 500);
+  }
+});
+
+// ========== DEBUG ENDPOINT - Test Customer WITH Membership ==========
+app.get('/make-server-84f9c112/debug/create-test-member', async (c) => {
+  try {
+    console.log('🧪 [DEBUG] Creating test customer with membership...');
+    
+    const testPhone = '5551234567';
+    const testCustomerId = `customer_us:${testPhone}`;
+    
+    // Calculate membership expiry (6 months from now)
+    const activatedAt = new Date();
+    const expiresAt = new Date(activatedAt);
+    expiresAt.setMonth(expiresAt.getMonth() + 6);
+    
+    // Test customer WITH MEMBERSHIP
+    const testCustomer = {
+      id: testCustomerId,
+      phone: testPhone,
+      phone_display: '(555) 123-4567',
+      full_name: 'Test Member Gold',
+      region: 'US',
+      email: 'test@example.com',
+      total_visits: 5,
+      total_spent: 350,
+      appointment_ids: [],
+      membership: {
+        id: 'test-gold-membership',
+        tier: 'Gold',
+        amount: 100,
+        activated_at: activatedAt.toISOString(),
+        expires_at: expiresAt.toISOString(),
+        status: 'active',
+        benefits: ['10% off all services', 'Priority booking', 'Free nail art'],
+        redeem_code: 'TEST-GOLD-123'
+      },
+      created_at: new Date().toISOString(),
+      created_by: 'debug_test',
+      is_deleted: false
+    };
+    
+    console.log('📝 [DEBUG] Writing test member:', testCustomerId);
+    console.log('📝 [DEBUG] Membership:', JSON.stringify(testCustomer.membership, null, 2));
+    
+    // Write to DB
+    await customerKV.set(testCustomerId, testCustomer);
+    console.log('✅ [DEBUG] Write completed');
+    
+    // Read back
+    console.log('📖 [DEBUG] Reading back customer...');
+    const readBack = await customerKV.get(testCustomerId);
+    console.log('📖 [DEBUG] Read result membership:', readBack?.membership);
+    
+    return c.json({
+      success: true,
+      message: 'Test member created ✅',
+      data: {
+        customer: testCustomer,
+        readBack: readBack
+      },
+      test_info: {
+        phone: testPhone,
+        email: 'test@example.com',
+        tier: 'Gold',
+        expires: expiresAt.toISOString()
+      }
+    });
+    
+  } catch (error: any) {
+    console.error('❌ [DEBUG] Test failed:', error);
+    return c.json({
+      success: false,
+      error: error.message
+    }, 500);
+  }
+});
 
 // ========== DEBUG ENDPOINT (inline for reliability) ==========
 app.get('/make-server-84f9c112/debug/vlinkpay-settings', async (c) => {
