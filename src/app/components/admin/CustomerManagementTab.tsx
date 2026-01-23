@@ -47,7 +47,7 @@ export default function CustomerManagementTab() {
       }
       
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/customers?page=${page}&limit=${customersPerPage}&region=US`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/customers?page=${page}&limit=${customersPerPage}`,
         {
           headers: {
             'Authorization': `Bearer ${publicAnonKey}`,
@@ -127,7 +127,6 @@ export default function CustomerManagementTab() {
           },
           body: JSON.stringify({
             query: searchQuery,
-            region: 'US', // Hardcoded to US
             limit: customersPerPage,
           }),
         }

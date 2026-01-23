@@ -1550,9 +1550,8 @@ app.get("/make-server-84f9c112/customers", async (c) => {
   try {
     const page = parseInt(c.req.query('page') || '1');
     const limit = parseInt(c.req.query('limit') || '20');
-    const region = (c.req.query('region') || 'US') as 'US' | 'VN';
     
-    console.log(`📋 [GET_CUSTOMERS] Fetching page ${page}, limit ${limit}, region ${region}`);
+    console.log(`📋 [GET_CUSTOMERS] Fetching page ${page}, limit ${limit} (US market only)`);
     
     // Import customer KV helper
     const { customerKV } = await import('./kv_store_customers.tsx');
@@ -1560,25 +1559,15 @@ app.get("/make-server-84f9c112/customers", async (c) => {
     // Calculate offset for pagination
     const offset = (page - 1) * limit;
     
-    // Try to fetch customers by region first
-    let customers = await customerKV.getByRegion(region, limit, offset);
-    let totalCount = await customerKV.countByRegion(region);
-    
-    // FALLBACK: If no customers found with region filter, fetch ALL customers
-    if (customers.length === 0) {
-      console.log(`⚠️ [GET_CUSTOMERS] No customers found with region=${region}, fetching ALL`);
-      customers = await customerKV.getAll(limit, offset);
-      // For getAll, we need to count all rows
-      const { count } = await import('./kv_store_customers.tsx').then(m => 
-        m.customerKV.supabase.from('kv_store_customers').select('*', { count: 'exact', head: true })
-      ).then(r => r);
-      totalCount = count || 0;
-    }
-    
+    // Fetch ALL customers (US market only - no region filter)
+    const customers = await customerKV.getAll(limit, offset);
+    const totalCount = await customerKV.countAll();
     const totalPages = Math.ceil(totalCount / limit);
     
     console.log(`✅ [GET_CUSTOMERS] Found ${customers.length} customers (total: ${totalCount})`);
-    console.log(`📊 [GET_CUSTOMERS] Sample customer data:`, customers[0]);
+    if (customers.length > 0) {
+      console.log(`📊 [GET_CUSTOMERS] Sample customer:`, customers[0]);
+    }
     
     return c.json({
       success: true,
@@ -1602,15 +1591,15 @@ app.get("/make-server-84f9c112/customers", async (c) => {
 app.post("/make-server-84f9c112/customers/search", async (c) => {
   try {
     const body = await c.req.json();
-    const { query, region, limit } = body;
+    const { query, limit } = body;
     
-    console.log(`🔍 [SEARCH_CUSTOMERS] Query: "${query}", region: ${region}`);
+    console.log(`🔍 [SEARCH_CUSTOMERS] Query: "${query}" (US market only)`);
     
     // Import customer KV helper
     const { customerKV } = await import('./kv_store_customers.tsx');
     
-    // Perform search
-    const customers = await customerKV.search(query, region, limit || 20);
+    // Perform search (no region filter - US market only)
+    const customers = await customerKV.search(query, undefined, limit || 20);
     
     console.log(`✅ [SEARCH_CUSTOMERS] Found ${customers.length} matching customers`);
     

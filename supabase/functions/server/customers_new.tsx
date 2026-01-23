@@ -152,23 +152,21 @@ const detectRegion = (phone: string): 'US' | 'VN' | null => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * GET /customers?region=US&page=1&limit=20
  * List customers with pagination
  */
 app.get('/make-server-84f9c112/customers', requireAuth, requirePermission('can_manage_appointments'), async (c) => {
   try {
-    const region = (c.req.query('region') || 'US') as 'US' | 'VN';
     const page = parseInt(c.req.query('page') || '1');
     const limit = parseInt(c.req.query('limit') || '20');
     
-    console.log(`📋 [GET CUSTOMERS] Region: ${region}, Page: ${page}, Limit: ${limit}`);
+    console.log(`📋 [GET CUSTOMERS] Page: ${page}, Limit: ${limit} (US market only)`);
     
     // Calculate offset
     const offset = (page - 1) * limit;
     
-    // Get customers
-    const customers = await customerKV.getByRegion(region, limit, offset);
-    const totalCount = await customerKV.countByRegion(region);
+    // Get customers (US market only - no region filter)
+    const customers = await customerKV.getAll(limit, offset);
+    const totalCount = await customerKV.countAll();
     const totalPages = Math.ceil(totalCount / limit);
     
     console.log(`✅ [GET CUSTOMERS] Retrieved ${customers.length}/${totalCount} customers`);

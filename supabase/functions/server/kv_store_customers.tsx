@@ -179,10 +179,10 @@ export const customerKV = {
   },
 
   /**
-   * Get ALL customers (fallback without region filter)
+   * Get ALL customers (no region filter - US market only)
    */
   async getAll(limit: number = 50, offset: number = 0) {
-    console.log(`[KV CUSTOMERS GET_ALL] Fetching all customers, limit=${limit}, offset=${offset}`);
+    console.log(`[KV CUSTOMERS GET_ALL] Fetching customers, limit=${limit}, offset=${offset}`);
     
     const { data, error } = await supabase
       .from(TABLE_NAME)
@@ -204,38 +204,12 @@ export const customerKV = {
   },
 
   /**
-   * Get customers by region (US or VN)
+   * Count all customers
    */
-  async getByRegion(region: 'US' | 'VN', limit: number = 50, offset: number = 0) {
-    console.log(`[KV CUSTOMERS GET_BY_REGION] Fetching region=${region}, limit=${limit}, offset=${offset}`);
-    
-    const { data, error } = await supabase
-      .from(TABLE_NAME)
-      .select('value')
-      .eq('value->>region', region)
-      .eq('value->>is_deleted', 'false')
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-    
-    if (error) {
-      console.error(`[KV CUSTOMERS GET_BY_REGION] Error:`, error);
-      throw error;
-    }
-    
-    console.log(`[KV CUSTOMERS GET_BY_REGION] Query returned ${data?.length || 0} rows`);
-    
-    return data.map(row => safeParse(row.value));
-  },
-
-  /**
-   * Count customers by region
-   */
-  async countByRegion(region: 'US' | 'VN') {
+  async countAll() {
     const { count, error } = await supabase
       .from(TABLE_NAME)
-      .select('*', { count: 'exact', head: true })
-      .eq('value->>region', region)
-      .eq('value->>is_deleted', 'false');
+      .select('*', { count: 'exact', head: true });
     
     if (error) {
       console.error(`[KV CUSTOMERS COUNT] Error:`, error);
