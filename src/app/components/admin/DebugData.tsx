@@ -1,10 +1,20 @@
-import { useState, useEffect } from 'react';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Loader2, AlertTriangle, Database, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '@utils/supabase/info';
-import AdminLayout from '@/app/components/AdminLayout';
+import { useState, useEffect } from "react";
+import { Button } from "../ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
+import {
+  Loader2,
+  AlertTriangle,
+  Database,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
+import { projectId, publicAnonKey } from "@utils/supabase/info";
+import AdminLayout from "@/app/components/AdminLayout";
 
 export default function DebugData() {
   const [loading, setLoading] = useState(true);
@@ -21,70 +31,84 @@ export default function DebugData() {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/debug/data-check`,
         {
-          headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-        }
+          headers: { Authorization: `Bearer ${publicAnonKey}` },
+        },
       );
 
       const result = await response.json();
-      
+
       if (result.success) {
         setData(result.data);
       } else {
-        toast.error('Failed to load debug data');
+        toast.error("Failed to load debug data");
       }
     } catch (error) {
-      console.error('Error loading debug data:', error);
-      toast.error('An error occurred');
+      console.error("Error loading debug data:", error);
+      toast.error("An error occurred");
     } finally {
       setLoading(false);
     }
   };
 
   const handleCleanupDuplicates = async () => {
-    if (!confirm(`⚠️ Bạn chc chắn muốn xóa ${data?.duplicates?.totalDuplicates} bản ghi duplicate?\n\nHành động này KHÔNG THỂ HOÀN TÁC!`)) {
+    if (
+      !confirm(
+        `⚠️ Bạn chc chắn muốn xóa ${data?.duplicates?.totalDuplicates} bản ghi duplicate?\n\nHành động này KHÔNG THỂ HOÀN TÁC!`,
+      )
+    ) {
       return;
     }
 
     setCleaning(true);
     try {
-      console.log('🧹 Starting cleanup via alternative method...');
-      
+      console.log(
+        "🧹 Starting cleanup via alternative method...",
+      );
+
       // Build a list of staff to keep (first ID of each duplicate group)
-      const staffToKeep = data.duplicates.staff.map((dup: any) => ({
-        name: dup.name,
-        keepId: dup.ids[0], // Keep the first (oldest) ID
-        deleteIds: dup.ids.slice(1) // Delete the rest
-      }));
-      
-      console.log('   Staff cleanup plan:', staffToKeep);
-      
+      const staffToKeep = data.duplicates.staff.map(
+        (dup: any) => ({
+          name: dup.name,
+          keepId: dup.ids[0], // Keep the first (oldest) ID
+          deleteIds: dup.ids.slice(1), // Delete the rest
+        }),
+      );
+
+      console.log("   Staff cleanup plan:", staffToKeep);
+
       // Use the cleanup endpoint with alternative payload
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/debug/cleanup-duplicates-v2`,
         {
-          method: 'POST',
-          headers: { 
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${publicAnonKey}`,
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify({ staffToKeep })
-        }
+          body: JSON.stringify({ staffToKeep }),
+        },
       );
-      
+
       const result = await response.json();
-      console.log('   Response:', result);
-      
+      console.log("   Response:", result);
+
       if (result.success) {
-        toast.success(`✅ ${result.data?.summary || 'Cleanup completed!'}`);
+        toast.success(
+          `✅ ${result.data?.summary || "Cleanup completed!"}`,
+        );
         await loadDebugData();
       } else {
         // Fallback: Show manual instructions
-        toast.error('Automatic cleanup failed. Please contact admin.');
-        console.error('Cleanup failed:', result);
+        toast.error(
+          "Automatic cleanup failed. Please contact admin.",
+        );
+        console.error("Cleanup failed:", result);
       }
     } catch (error: any) {
-      console.error('🚨 Error cleaning duplicates:', error);
-      toast.error(`An error occurred: ${error.message || 'Unknown error'}`);
+      console.error("🚨 Error cleaning duplicates:", error);
+      toast.error(
+        `An error occurred: ${error.message || "Unknown error"}`,
+      );
     } finally {
       setCleaning(false);
     }
@@ -98,8 +122,12 @@ export default function DebugData() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Database Debug</h1>
-            <p className="text-sm text-gray-500 mt-1">Check data quality and remove duplicates</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Database Debug
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Check data quality and remove duplicates
+            </p>
           </div>
           <Button onClick={loadDebugData} variant="outline">
             Refresh
@@ -114,7 +142,9 @@ export default function DebugData() {
                 <Database className="h-5 w-5 text-blue-500" />
                 <div>
                   <p className="text-xs text-gray-500">Staff</p>
-                  <p className="text-2xl font-bold">{data?.totals?.staff || 0}</p>
+                  <p className="text-2xl font-bold">
+                    {data?.totals?.staff || 0}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -125,8 +155,12 @@ export default function DebugData() {
               <div className="flex items-center gap-3">
                 <Database className="h-5 w-5 text-green-500" />
                 <div>
-                  <p className="text-xs text-gray-500">Appointments</p>
-                  <p className="text-2xl font-bold">{data?.totals?.appointments || 0}</p>
+                  <p className="text-xs text-gray-500">
+                    Appointments
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {data?.totals?.appointments || 0}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -137,8 +171,12 @@ export default function DebugData() {
               <div className="flex items-center gap-3">
                 <Database className="h-5 w-5 text-purple-500" />
                 <div>
-                  <p className="text-xs text-gray-500">Services</p>
-                  <p className="text-2xl font-bold">{data?.totals?.services || 0}</p>
+                  <p className="text-xs text-gray-500">
+                    Services
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {data?.totals?.services || 0}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -149,8 +187,12 @@ export default function DebugData() {
               <div className="flex items-center gap-3">
                 <Database className="h-5 w-5 text-orange-500" />
                 <div>
-                  <p className="text-xs text-gray-500">Branches</p>
-                  <p className="text-2xl font-bold">{data?.totals?.branches || 0}</p>
+                  <p className="text-xs text-gray-500">
+                    Branches
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {data?.totals?.branches || 0}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -168,35 +210,49 @@ export default function DebugData() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-orange-700 mb-4">
-                Found {data.duplicates.totalDuplicates} duplicate staff records. This is causing incorrect counts in the dashboard.
+                Found {data.duplicates.totalDuplicates}{" "}
+                duplicate staff records. This is causing
+                incorrect counts in the dashboard.
               </p>
-              
+
               <div className="space-y-3">
-                {data.duplicates.staff.map((dup: any, i: number) => (
-                  <div key={i} className="bg-white p-4 rounded-lg border border-orange-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-gray-900">{dup.name}</p>
-                        <p className="text-xs text-gray-500">{dup.count} records found</p>
+                {data.duplicates.staff.map(
+                  (dup: any, i: number) => (
+                    <div
+                      key={i}
+                      className="bg-white p-4 rounded-lg border border-orange-200"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {dup.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {dup.count} records found
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600 hover:bg-red-50"
+                          onClick={() => {
+                            toast.info(
+                              "Auto-cleanup feature coming soon",
+                            );
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Clean
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-red-600 hover:bg-red-50"
-                        onClick={() => {
-                          toast.info('Auto-cleanup feature coming soon');
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Clean
-                      </Button>
+                      <div className="mt-2 text-xs text-gray-400 font-mono">
+                        IDs: {dup.ids.slice(0, 3).join(", ")}
+                        {dup.ids.length > 3 &&
+                          ` +${dup.ids.length - 3} more`}
+                      </div>
                     </div>
-                    <div className="mt-2 text-xs text-gray-400 font-mono">
-                      IDs: {dup.ids.slice(0, 3).join(', ')}
-                      {dup.ids.length > 3 && ` +${dup.ids.length - 3} more`}
-                    </div>
-                  </div>
-                ))}
+                  ),
+                )}
               </div>
 
               <div className="mt-4">
@@ -213,7 +269,9 @@ export default function DebugData() {
                   ) : (
                     <>
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Xóa tất cả {data.duplicates.totalDuplicates} duplicates
+                      Xóa tất cả{" "}
+                      {data.duplicates.totalDuplicates}{" "}
+                      duplicates
                     </>
                   )}
                 </Button>
@@ -233,24 +291,35 @@ export default function DebugData() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-red-700 mb-4">
-                Found {data.duplicates.totalBranchDuplicates} duplicate branch records!
+                Found {data.duplicates.totalBranchDuplicates}{" "}
+                duplicate branch records!
               </p>
-              
+
               <div className="space-y-3">
-                {data.duplicates.branches?.map((dup: any, i: number) => (
-                  <div key={i} className="bg-white p-4 rounded-lg border border-red-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-gray-900">{dup.name}</p>
-                        <p className="text-xs text-gray-500">{dup.count} records found</p>
+                {data.duplicates.branches?.map(
+                  (dup: any, i: number) => (
+                    <div
+                      key={i}
+                      className="bg-white p-4 rounded-lg border border-red-200"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {dup.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {dup.count} records found
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-gray-400 font-mono">
+                        IDs: {dup.ids.slice(0, 3).join(", ")}
+                        {dup.ids.length > 3 &&
+                          ` +${dup.ids.length - 3} more`}
                       </div>
                     </div>
-                    <div className="mt-2 text-xs text-gray-400 font-mono">
-                      IDs: {dup.ids.slice(0, 3).join(', ')}
-                      {dup.ids.length > 3 && ` +${dup.ids.length - 3} more`}
-                    </div>
-                  </div>
-                ))}
+                  ),
+                )}
               </div>
             </CardContent>
           </Card>
@@ -263,36 +332,59 @@ export default function DebugData() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {data?.sampleStaff?.map((staff: any, i: number) => (
-                <div key={i} className="p-3 bg-gray-50 rounded-lg">
-                  <p className="font-semibold text-sm">{staff.name}</p>
-                  <p className="text-xs text-gray-500">{staff.role}</p>
-                  <p className="text-xs text-gray-400 font-mono mt-1">{staff.id}</p>
-                </div>
-              ))}
+              {data?.sampleStaff?.map(
+                (staff: any, i: number) => (
+                  <div
+                    key={i}
+                    className="p-3 bg-gray-50 rounded-lg"
+                  >
+                    <p className="font-semibold text-sm">
+                      {staff.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {staff.role}
+                    </p>
+                    <p className="text-xs text-gray-400 font-mono mt-1">
+                      {staff.id}
+                    </p>
+                  </div>
+                ),
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Sample Branches */}
-        {data?.sampleBranches && data.sampleBranches.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Sample Branches Data</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {data.sampleBranches.map((branch: any, i: number) => (
-                  <div key={i} className="p-3 bg-gray-50 rounded-lg">
-                    <p className="font-semibold text-sm">{branch.name}</p>
-                    <p className="text-xs text-gray-500">{branch.address}</p>
-                    <p className="text-xs text-gray-400 font-mono mt-1">{branch.id}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {data?.sampleBranches &&
+          data.sampleBranches.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Sample Branches Data</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {data.sampleBranches.map(
+                    (branch: any, i: number) => (
+                      <div
+                        key={i}
+                        className="p-3 bg-gray-50 rounded-lg"
+                      >
+                        <p className="font-semibold text-sm">
+                          {branch.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {branch.address}
+                        </p>
+                        <p className="text-xs text-gray-400 font-mono mt-1">
+                          {branch.id}
+                        </p>
+                      </div>
+                    ),
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
         {/* No Issues */}
         {data?.duplicates?.totalDuplicates === 0 && (
@@ -303,8 +395,12 @@ export default function DebugData() {
                   <Database className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="font-semibold text-green-900">Database is clean</p>
-                  <p className="text-sm text-green-700">No duplicate records found</p>
+                  <p className="font-semibold text-green-900">
+                    Database is clean
+                  </p>
+                  <p className="text-sm text-green-700">
+                    No duplicate records found
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -318,7 +414,8 @@ export default function DebugData() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-gray-500 mb-4">
-              If data is missing or corrupted, you can restore sample data using these buttons.
+              If data is missing or corrupted, you can restore
+              sample data using these buttons.
             </p>
             <div className="flex flex-wrap gap-3">
               <Button
@@ -329,17 +426,21 @@ export default function DebugData() {
                     const response = await fetch(
                       `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/staff/seed`,
                       {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-                      }
+                        method: "POST",
+                        headers: {
+                          Authorization: `Bearer ${publicAnonKey}`,
+                        },
+                      },
                     );
                     const data = await response.json();
                     if (data.success) {
-                      toast.success('✅ Staff data restored!');
+                      toast.success("✅ Staff data restored!");
                       loadDebugData();
                     }
                   } catch (error) {
-                    toast.error('❌ Failed to restore staff data');
+                    toast.error(
+                      "❌ Failed to restore staff data",
+                    );
                   }
                 }}
               >
@@ -359,7 +460,8 @@ export default function DebugData() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-red-700 mb-4">
-              ⚠️ <strong>Warning:</strong> These actions will permanently delete data. Use with caution!
+              ⚠️ <strong>Warning:</strong> These actions will
+              permanently delete data. Use with caution!
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {/* Clean All Branches */}
@@ -367,47 +469,80 @@ export default function DebugData() {
                 variant="outline"
                 className="border-red-300 text-red-600 hover:bg-red-50"
                 onClick={async () => {
-                  if (!confirm(`⚠️ Delete ALL ${data?.totals?.branches || 0} branches?\n\nThis action CANNOT be undone!`)) {
+                  if (
+                    !confirm(
+                      `⚠️ Delete ALL ${data?.totals?.branches || 0} branches?\n\nThis action CANNOT be undone!`,
+                    )
+                  ) {
                     return;
                   }
                   try {
                     const branches = await fetch(
                       `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/branches`,
-                      { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
-                    ).then(r => r.json());
+                      {
+                        headers: {
+                          Authorization: `Bearer ${publicAnonKey}`,
+                        },
+                      },
+                    ).then((r) => r.json());
 
-                    console.log('🔍 [DEBUG] Branches response:', branches);
-                    console.log('🔍 [DEBUG] Data length:', branches.data?.length);
-                    console.log('🔍 [DEBUG] First 3 branches:', branches.data?.slice(0, 3));
+                    console.log(
+                      "🔍 [DEBUG] Branches response:",
+                      branches,
+                    );
+                    console.log(
+                      "🔍 [DEBUG] Data length:",
+                      branches.data?.length,
+                    );
+                    console.log(
+                      "🔍 [DEBUG] First 3 branches:",
+                      branches.data?.slice(0, 3),
+                    );
 
-                    if (branches.success && branches.data.length > 0) {
+                    if (
+                      branches.success &&
+                      branches.data.length > 0
+                    ) {
                       let deleted = 0;
                       for (const branch of branches.data) {
-                        console.log('🗑️ [DEBUG] Deleting branch:', branch.id);
+                        console.log(
+                          "🗑️ [DEBUG] Deleting branch:",
+                          branch.id,
+                        );
                         const res = await fetch(
                           `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/branches/${branch.id}`,
                           {
-                            method: 'DELETE',
-                            headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-                          }
+                            method: "DELETE",
+                            headers: {
+                              Authorization: `Bearer ${publicAnonKey}`,
+                            },
+                          },
                         );
                         const result = await res.json();
-                        console.log('🔍 [DEBUG] Delete result:', result);
+                        console.log(
+                          "🔍 [DEBUG] Delete result:",
+                          result,
+                        );
                         if (result.success) deleted++;
                       }
-                      toast.success(`✅ Deleted ${deleted} branches`);
+                      toast.success(
+                        `✅ Deleted ${deleted} branches`,
+                      );
                       loadDebugData();
                     } else {
-                      console.warn('⚠️ [DEBUG] No branches or failed:', { 
-                        success: branches.success, 
-                        dataLength: branches.data?.length,
-                        error: branches.error 
-                      });
-                      toast.info('No branches to delete');
+                      console.warn(
+                        "⚠️ [DEBUG] No branches or failed:",
+                        {
+                          success: branches.success,
+                          dataLength: branches.data?.length,
+                          error: branches.error,
+                        },
+                      );
+                      toast.info("No branches to delete");
                     }
                   } catch (error) {
-                    console.error('❌ [DEBUG] Error:', error);
-                    toast.error('❌ Failed to delete branches');
+                    console.error("❌ [DEBUG] Error:", error);
+                    toast.error("❌ Failed to delete branches");
                   }
                 }}
               >
@@ -420,34 +555,50 @@ export default function DebugData() {
                 variant="outline"
                 className="border-red-300 text-red-600 hover:bg-red-50"
                 onClick={async () => {
-                  if (!confirm(`⚠️ Delete ALL ${data?.totals?.services || 0} services?\n\nThis action CANNOT be undone!`)) {
+                  if (
+                    !confirm(
+                      `⚠️ Delete ALL ${data?.totals?.services || 0} services?\n\nThis action CANNOT be undone!`,
+                    )
+                  ) {
                     return;
                   }
                   try {
                     const services = await fetch(
                       `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/services`,
-                      { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
-                    ).then(r => r.json());
+                      {
+                        headers: {
+                          Authorization: `Bearer ${publicAnonKey}`,
+                        },
+                      },
+                    ).then((r) => r.json());
 
-                    if (services.success && services.data.length > 0) {
+                    if (
+                      services.success &&
+                      services.data.length > 0
+                    ) {
                       let deleted = 0;
                       for (const service of services.data) {
                         const res = await fetch(
                           `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/services/${service.id}`,
                           {
-                            method: 'DELETE',
-                            headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-                          }
+                            method: "DELETE",
+                            headers: {
+                              Authorization: `Bearer ${publicAnonKey}`,
+                            },
+                          },
                         );
-                        if ((await res.json()).success) deleted++;
+                        if ((await res.json()).success)
+                          deleted++;
                       }
-                      toast.success(`✅ Deleted ${deleted} services`);
+                      toast.success(
+                        `✅ Deleted ${deleted} services`,
+                      );
                       loadDebugData();
                     } else {
-                      toast.info('No services to delete');
+                      toast.info("No services to delete");
                     }
                   } catch (error) {
-                    toast.error('❌ Failed to delete services');
+                    toast.error("❌ Failed to delete services");
                   }
                 }}
               >
@@ -460,47 +611,67 @@ export default function DebugData() {
                 variant="outline"
                 className="border-orange-300 text-orange-600 hover:bg-orange-50"
                 onClick={async () => {
-                  if (!confirm(`⚠️ Delete ALL ${data?.totals?.appointments || 0} appointments?\n\nThis action CANNOT be undone!`)) {
+                  if (
+                    !confirm(
+                      `⚠️ Delete ALL ${data?.totals?.appointments || 0} appointments?\n\nThis action CANNOT be undone!`,
+                    )
+                  ) {
                     return;
                   }
                   try {
                     const appointments = await fetch(
                       `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/appointments`,
-                      { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
-                    ).then(r => r.json());
+                      {
+                        headers: {
+                          Authorization: `Bearer ${publicAnonKey}`,
+                        },
+                      },
+                    ).then((r) => r.json());
 
-                    if (appointments.success && appointments.data.length > 0) {
+                    if (
+                      appointments.success &&
+                      appointments.data.length > 0
+                    ) {
                       // Use mdel for bulk delete if available, otherwise loop
                       const response = await fetch(
                         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/debug/clean-appointments`,
                         {
-                          method: 'POST',
-                          headers: { 
-                            'Authorization': `Bearer ${publicAnonKey}`,
-                            'Content-Type': 'application/json'
+                          method: "POST",
+                          headers: {
+                            Authorization: `Bearer ${publicAnonKey}`,
+                            "Content-Type": "application/json",
                           },
-                          body: JSON.stringify({ 
-                            ids: appointments.data.map((a: any) => a.id) 
-                          })
-                        }
+                          body: JSON.stringify({
+                            ids: appointments.data.map(
+                              (a: any) => a.id,
+                            ),
+                          }),
+                        },
                       );
                       const result = await response.json();
                       if (result.success) {
-                        toast.success(`✅ Deleted all appointments`);
+                        toast.success(
+                          `✅ Deleted all appointments`,
+                        );
                         loadDebugData();
                       } else {
-                        toast.error('❌ Failed to delete appointments');
+                        toast.error(
+                          "❌ Failed to delete appointments",
+                        );
                       }
                     } else {
-                      toast.info('No appointments to delete');
+                      toast.info("No appointments to delete");
                     }
                   } catch (error) {
-                    toast.error('❌ Failed to delete appointments');
+                    toast.error(
+                      "❌ Failed to delete appointments",
+                    );
                   }
                 }}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
-                Clean Appointments ({data?.totals?.appointments || 0})
+                Clean Appointments (
+                {data?.totals?.appointments || 0})
               </Button>
 
               {/* Clean All Staff (with confirmation) */}
@@ -508,44 +679,63 @@ export default function DebugData() {
                 variant="outline"
                 className="border-purple-300 text-purple-600 hover:bg-purple-50"
                 onClick={async () => {
-                  if (!confirm(`⚠️ Delete ALL ${data?.totals?.staff || 0} staff?\n\nThis will remove all payroll data!\n\nThis action CANNOT be undone!`)) {
+                  if (
+                    !confirm(
+                      `⚠️ Delete ALL ${data?.totals?.staff || 0} staff?\n\nThis will remove all payroll data!\n\nThis action CANNOT be undone!`,
+                    )
+                  ) {
                     return;
                   }
-                  if (!confirm(`⚠️⚠️ FINAL WARNING!\n\nAre you ABSOLUTELY SURE you want to delete all staff?\n\nClick OK to proceed.`)) {
+                  if (
+                    !confirm(
+                      `⚠️⚠️ FINAL WARNING!\n\nAre you ABSOLUTELY SURE you want to delete all staff?\n\nClick OK to proceed.`,
+                    )
+                  ) {
                     return;
                   }
                   try {
                     const staff = await fetch(
                       `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/staff`,
-                      { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
-                    ).then(r => r.json());
+                      {
+                        headers: {
+                          Authorization: `Bearer ${publicAnonKey}`,
+                        },
+                      },
+                    ).then((r) => r.json());
 
-                    if (staff.success && staff.data.length > 0) {
+                    if (
+                      staff.success &&
+                      staff.data.length > 0
+                    ) {
                       const response = await fetch(
                         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/debug/clean-staff`,
                         {
-                          method: 'POST',
-                          headers: { 
-                            'Authorization': `Bearer ${publicAnonKey}`,
-                            'Content-Type': 'application/json'
+                          method: "POST",
+                          headers: {
+                            Authorization: `Bearer ${publicAnonKey}`,
+                            "Content-Type": "application/json",
                           },
-                          body: JSON.stringify({ 
-                            ids: staff.data.map((s: any) => s.id) 
-                          })
-                        }
+                          body: JSON.stringify({
+                            ids: staff.data.map(
+                              (s: any) => s.id,
+                            ),
+                          }),
+                        },
                       );
                       const result = await response.json();
                       if (result.success) {
                         toast.success(`✅ Deleted all staff`);
                         loadDebugData();
                       } else {
-                        toast.error('❌ Failed to delete staff');
+                        toast.error(
+                          "❌ Failed to delete staff",
+                        );
                       }
                     } else {
-                      toast.info('No staff to delete');
+                      toast.info("No staff to delete");
                     }
                   } catch (error) {
-                    toast.error('❌ Failed to delete staff');
+                    toast.error("❌ Failed to delete staff");
                   }
                 }}
               >

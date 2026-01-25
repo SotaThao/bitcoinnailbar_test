@@ -1,14 +1,14 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/app/components/ui/dialog';
-import { Button } from '@/app/components/ui/button';
-import { Tag } from 'lucide-react';
-import { cn } from './utils';
+} from "@/app/components/ui/dialog";
+import { Button } from "@/app/components/ui/button";
+import { Tag } from "lucide-react";
+import { cn } from "./utils";
 
 interface ImageCategoryDialogProps {
   open: boolean;
@@ -33,14 +33,20 @@ export function ImageCategoryDialog({
   description = "Select a new category for this image",
   isMultiple = false,
 }: ImageCategoryDialogProps) {
-  const [selectedCategory, setSelectedCategory] = useState(currentCategory || 'General');
+  const [selectedCategory, setSelectedCategory] = useState(
+    currentCategory || "General",
+  );
 
   const handleConfirm = () => {
     onConfirm(selectedCategory);
     onOpenChange(false);
   };
 
-  const CategoryButton = ({ category }: { category: string }) => {
+  const CategoryButton = ({
+    category,
+  }: {
+    category: string;
+  }) => {
     const isSelected = selectedCategory === category;
     return (
       <button
@@ -49,7 +55,7 @@ export function ImageCategoryDialog({
           "px-4 py-3 rounded-lg text-sm font-medium transition-all text-left",
           isSelected
             ? "bg-primary text-primary-foreground shadow-md ring-2 ring-primary/20"
-            : "bg-card border border-border text-foreground hover:bg-accent hover:border-primary/50"
+            : "bg-card border border-border text-foreground hover:bg-accent hover:border-primary/50",
         )}
       >
         {category}
@@ -66,10 +72,9 @@ export function ImageCategoryDialog({
             {title}
           </DialogTitle>
           <DialogDescription>
-            {isMultiple 
-              ? `Select a category for the selected images` 
-              : description
-            }
+            {isMultiple
+              ? `Select a category for the selected images`
+              : description}
           </DialogDescription>
         </DialogHeader>
 
@@ -87,7 +92,10 @@ export function ImageCategoryDialog({
               </p>
               <div className="grid grid-cols-1 gap-2">
                 {serviceCategories.map((category) => (
-                  <CategoryButton key={category} category={category} />
+                  <CategoryButton
+                    key={category}
+                    category={category}
+                  />
                 ))}
               </div>
             </div>
@@ -101,7 +109,10 @@ export function ImageCategoryDialog({
               </p>
               <div className="grid grid-cols-1 gap-2">
                 {customCategories.map((category) => (
-                  <CategoryButton key={category} category={category} />
+                  <CategoryButton
+                    key={category}
+                    category={category}
+                  />
                 ))}
               </div>
             </div>
@@ -119,7 +130,7 @@ export function ImageCategoryDialog({
             onClick={handleConfirm}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            {isMultiple ? 'Update All' : 'Update Category'}
+            {isMultiple ? "Update All" : "Update Category"}
           </Button>
         </div>
       </DialogContent>

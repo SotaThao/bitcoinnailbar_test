@@ -1,6 +1,6 @@
-import { Lock } from 'lucide-react';
-import { Button } from './ui/button';
-import { useNavigate } from 'react-router';
+import { Lock } from "lucide-react";
+import { Button } from "./ui/button";
+import { useNavigate } from "react-router-dom";
 
 export function OwnerOnlyAccess() {
   const navigate = useNavigate();
@@ -13,12 +13,15 @@ export function OwnerOnlyAccess() {
             <Lock className="h-8 w-8 text-red-600" />
           </div>
         </div>
-        <h2 className="text-2xl font-serif font-bold text-gray-900 mb-2">Access Denied</h2>
+        <h2 className="text-2xl font-serif font-bold text-gray-900 mb-2">
+          Access Denied
+        </h2>
         <p className="text-gray-600 mb-6">
-          This page is restricted to owner accounts only. Please contact the system administrator if you need access.
+          This page is restricted to owner accounts only. Please
+          contact the system administrator if you need access.
         </p>
         <Button
-          onClick={() => navigate('/admin/dashboard')}
+          onClick={() => navigate("/admin/dashboard")}
           className="bg-[#F97316] hover:bg-[#EA580C] text-white"
         >
           Go to Dashboard

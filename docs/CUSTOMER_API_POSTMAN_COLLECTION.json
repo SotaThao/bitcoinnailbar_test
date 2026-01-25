@@ -1,0 +1,663 @@
+{
+  "info": {
+    "name": "Bitcoin Nail Bar - Customer API (Postgres)",
+    "description": "Complete API collection for testing Customer Postgres Migration\n\n**Setup Instructions:**\n1. Import this file into Postman\n2. Set environment variables:\n   - projectId: Your Supabase project ID\n   - publicAnonKey: Your Supabase anon key\n   - adminToken: JWT token from login\n3. Run requests in order for testing\n\n**Date:** 2026-01-23\n**Version:** 1.0 (Postgres Implementation)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Admin CRUD Operations",
+      "item": [
+        {
+          "name": "1.1 List Customers (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Token",
+                "value": "{{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers?page=1&limit=20",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Create Customer (Manual)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Token",
+                "value": "{{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"5551234567\",\n  \"full_name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"date_of_birth\": \"1990-01-15\",\n  \"gender\": \"male\",\n  \"address\": \"123 Main St, Los Angeles, CA 90001\",\n  \"notes\": \"VIP customer, prefers morning appointments\"\n}"
+            },
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 Get Customer by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Token",
+                "value": "{{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers/{{customerId}}",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers",
+                "{{customerId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 Update Customer",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Token",
+                "value": "{{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"John Updated Doe\",\n  \"email\": \"john.updated@example.com\",\n  \"address\": \"456 New Street, Los Angeles, CA 90002\",\n  \"notes\": \"Customer requested evening appointments\"\n}"
+            },
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers/{{customerId}}",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers",
+                "{{customerId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.5 Delete Customer (Soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Token",
+                "value": "{{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers/{{customerId}}",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers",
+                "{{customerId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.6 Search Customers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Token",
+                "value": "{{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"555\",\n  \"limit\": 20\n}"
+            },
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers/search",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers",
+                "search"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Booking Integration",
+      "item": [
+        {
+          "name": "2.1 Create Customer via Booking (Pending)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"5559876543\",\n  \"full_name\": \"Jane Smith\",\n  \"email\": \"jane.smith@example.com\",\n  \"address\": \"789 Oak Ave, LA, CA 90003\",\n  \"appointment_id\": \"appt_001\",\n  \"appointment_time\": \"2026-01-25T14:00:00Z\",\n  \"appointment_amount\": 75.00,\n  \"appointment_status\": \"Pending\"\n}"
+            },
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers/book",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers",
+                "book"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Create Customer via Booking (Complete)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"5558765432\",\n  \"full_name\": \"Mike Johnson\",\n  \"email\": \"mike.j@example.com\",\n  \"appointment_id\": \"appt_002\",\n  \"appointment_time\": \"2026-01-25T10:00:00Z\",\n  \"appointment_amount\": 50.00,\n  \"appointment_status\": \"Complete\"\n}"
+            },
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers/book",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers",
+                "book"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 Update Existing Customer (Pending)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"5558765432\",\n  \"full_name\": \"Mike Johnson\",\n  \"appointment_id\": \"appt_003\",\n  \"appointment_time\": \"2026-01-26T15:00:00Z\",\n  \"appointment_amount\": 60.00,\n  \"appointment_status\": \"Pending\"\n}"
+            },
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers/book",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers",
+                "book"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.4 Update Existing Customer (Complete)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"5558765432\",\n  \"full_name\": \"Mike Johnson\",\n  \"appointment_id\": \"appt_004\",\n  \"appointment_time\": \"2026-01-27T11:00:00Z\",\n  \"appointment_amount\": 80.00,\n  \"appointment_status\": \"Complete\"\n}"
+            },
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers/book",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers",
+                "book"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.5 Lookup Customer by Phone",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers/lookup/5558765432?appointment_time=2026-01-28T14:00:00Z",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers",
+                "lookup",
+                "5558765432"
+              ],
+              "query": [
+                {
+                  "key": "appointment_time",
+                  "value": "2026-01-28T14:00:00Z"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Membership Integration",
+      "item": [
+        {
+          "name": "3.1 Activate Membership (New Customer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"5557654321\",\n  \"customer_name\": \"Sarah Williams\",\n  \"membership\": {\n    \"id\": \"gold-1yr\",\n    \"tier\": \"Gold\",\n    \"amount\": 1200,\n    \"duration\": 12,\n    \"benefits\": [\"15% discount\", \"Priority booking\"],\n    \"redeem_code\": \"GOLD2026\"\n  }\n}"
+            },
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers/activate-membership",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers",
+                "activate-membership"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 Stack Same Tier Membership",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"5557654321\",\n  \"membership\": {\n    \"id\": \"gold-6mo\",\n    \"tier\": \"Gold\",\n    \"amount\": 600,\n    \"duration\": 6,\n    \"benefits\": [\"15% discount\", \"Priority booking\"],\n    \"redeem_code\": \"GOLD6MO\"\n  }\n}"
+            },
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers/activate-membership",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers",
+                "activate-membership"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 Upgrade to Higher Tier",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"5557654321\",\n  \"membership\": {\n    \"id\": \"platinum-1yr\",\n    \"tier\": \"Platinum\",\n    \"amount\": 2400,\n    \"duration\": 12,\n    \"benefits\": [\"20% discount\", \"Priority booking\", \"Free upgrades\"],\n    \"redeem_code\": \"PLATINUM2026\"\n  }\n}"
+            },
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers/activate-membership",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers",
+                "activate-membership"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.4 Check Membership by Phone",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers/membership/5557654321",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers",
+                "membership",
+                "5557654321"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.5 Check Membership by Email",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{publicAnonKey}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "https://{{projectId}}.supabase.co/functions/v1/make-server-84f9c112/customers/membership/sarah.w@example.com",
+              "protocol": "https",
+              "host": [
+                "{{projectId}}",
+                "supabase",
+                "co"
+              ],
+              "path": [
+                "functions",
+                "v1",
+                "make-server-84f9c112",
+                "customers",
+                "membership",
+                "sarah.w@example.com"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "projectId",
+      "value": "your-project-id",
+      "type": "string"
+    },
+    {
+      "key": "publicAnonKey",
+      "value": "your-anon-key",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "your-jwt-token",
+      "type": "string"
+    },
+    {
+      "key": "customerId",
+      "value": "uuid-from-create-response",
+      "type": "string"
+    }
+  ]
+}

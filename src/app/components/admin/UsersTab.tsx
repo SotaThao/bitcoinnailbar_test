@@ -1,10 +1,22 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/app/components/ui/button';
-import { SearchInput } from '@/app/components/ui/search-input';
-import { CustomSelect } from '@/app/components/ui/custom-select';
-import { Plus, Pencil, Trash2, UserCheck, UserX, Mail, Phone, Shield, Eye, EyeOff, Search } from 'lucide-react';
-import { getAuthToken } from '/utils/auth';
-import { projectId, publicAnonKey } from '/utils/supabase/info';
+import { useState, useEffect } from "react";
+import { Button } from "@/app/components/ui/button";
+import { SearchInput } from "@/app/components/ui/search-input";
+import { CustomSelect } from "@/app/components/ui/custom-select";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  UserCheck,
+  UserX,
+  Mail,
+  Phone,
+  Shield,
+  Eye,
+  EyeOff,
+  Search,
+} from "lucide-react";
+import { getAuthToken } from "/utils/auth";
+import { projectId, publicAnonKey } from "/utils/supabase/info";
 
 interface User {
   id: string;
@@ -36,8 +48,8 @@ interface CreateUserForm {
 
 // Helper function to format phone number as (XXX) XXX-XXXX
 const formatPhoneNumber = (value: string): string => {
-  const phoneNumber = value.replace(/\D/g, '');
-  
+  const phoneNumber = value.replace(/\D/g, "");
+
   if (phoneNumber.length <= 3) {
     return phoneNumber;
   } else if (phoneNumber.length <= 6) {
@@ -55,18 +67,20 @@ export default function UsersTab() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(
+    null,
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<CreateUserForm>({
-    email: '',
-    password: '',
-    full_name: '',
-    phone: '',
-    role: 'staff',
+    email: "",
+    password: "",
+    full_name: "",
+    phone: "",
+    role: "staff",
   });
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchUsers();
@@ -84,27 +98,27 @@ export default function UsersTab() {
     try {
       if (!silent) setLoading(true);
       const token = getAuthToken();
-      
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/users`,
         {
           headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'X-Session-Token': token || '',
+            Authorization: `Bearer ${publicAnonKey}`,
+            "X-Session-Token": token || "",
           },
-        }
+        },
       );
 
       const data = await response.json();
-      
+
       if (data.success) {
         setUsers(data.data);
       } else {
-        setError(data.error || 'Failed to fetch users');
+        setError(data.error || "Failed to fetch users");
       }
     } catch (err: any) {
-      console.error('Error fetching users:', err);
-      setError('Failed to fetch users');
+      console.error("Error fetching users:", err);
+      setError("Failed to fetch users");
     } finally {
       if (!silent) setLoading(false);
     }
@@ -113,27 +127,27 @@ export default function UsersTab() {
   const fetchRoles = async () => {
     try {
       const token = getAuthToken();
-      
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/roles`,
         {
           headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'X-Session-Token': token || '',
+            Authorization: `Bearer ${publicAnonKey}`,
+            "X-Session-Token": token || "",
           },
-        }
+        },
       );
 
       const data = await response.json();
-      
+
       if (data.success) {
         setRoles(data.data);
       } else {
-        setError(data.error || 'Failed to fetch roles');
+        setError(data.error || "Failed to fetch roles");
       }
     } catch (err: any) {
-      console.error('Error fetching roles:', err);
-      setError('Failed to fetch roles');
+      console.error("Error fetching roles:", err);
+      setError("Failed to fetch roles");
     }
   };
 
@@ -144,38 +158,38 @@ export default function UsersTab() {
 
     try {
       const token = getAuthToken();
-      
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/users`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'X-Session-Token': token || '',
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${publicAnonKey}`,
+            "X-Session-Token": token || "",
           },
           body: JSON.stringify(formData),
-        }
+        },
       );
 
       const data = await response.json();
-      
+
       if (data.success) {
         setShowCreateModal(false);
         setFormData({
-          email: '',
-          password: '',
-          full_name: '',
-          phone: '',
-          role: 'staff',
+          email: "",
+          password: "",
+          full_name: "",
+          phone: "",
+          role: "staff",
         });
         fetchUsers();
       } else {
-        setError(data.error || 'Failed to create user');
+        setError(data.error || "Failed to create user");
       }
     } catch (err: any) {
-      console.error('Error creating user:', err);
-      setError('Failed to create user');
+      console.error("Error creating user:", err);
+      setError("Failed to create user");
     } finally {
       setFormLoading(false);
     }
@@ -190,7 +204,7 @@ export default function UsersTab() {
 
     try {
       const token = getAuthToken();
-      
+
       const updateData: any = {
         full_name: formData.full_name,
         email: formData.email,
@@ -201,40 +215,40 @@ export default function UsersTab() {
       if (formData.password) {
         updateData.password = formData.password;
       }
-      
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/users/${selectedUser.id}`,
         {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'X-Session-Token': token || '',
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${publicAnonKey}`,
+            "X-Session-Token": token || "",
           },
           body: JSON.stringify(updateData),
-        }
+        },
       );
 
       const data = await response.json();
-      
+
       if (data.success) {
         setShowEditModal(false);
         setSelectedUser(null);
         setFormData({
-          email: '',
-          password: '',
-          full_name: '',
-          phone: '',
-          role: 'staff',
+          email: "",
+          password: "",
+          full_name: "",
+          phone: "",
+          role: "staff",
         });
         setShowPassword(false);
         fetchUsers();
       } else {
-        setError(data.error || 'Failed to update user');
+        setError(data.error || "Failed to update user");
       }
     } catch (err: any) {
-      console.error('Error updating user:', err);
-      setError('Failed to update user');
+      console.error("Error updating user:", err);
+      setError("Failed to update user");
     } finally {
       setFormLoading(false);
     }
@@ -244,9 +258,9 @@ export default function UsersTab() {
     setSelectedUser(user);
     setFormData({
       email: user.email,
-      password: '',
+      password: "",
       full_name: user.full_name,
-      phone: user.phone || '',
+      phone: user.phone || "",
       role: user.role,
     });
     setShowPassword(false);
@@ -254,53 +268,63 @@ export default function UsersTab() {
     setShowEditModal(true);
   };
 
-  const handleToggleStatus = async (userId: string, isActive: boolean) => {
+  const handleToggleStatus = async (
+    userId: string,
+    isActive: boolean,
+  ) => {
     try {
       const token = getAuthToken();
-      const endpoint = isActive ? 'deactivate' : 'activate';
-      
+      const endpoint = isActive ? "deactivate" : "activate";
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/users/${userId}/${endpoint}`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'X-Session-Token': token || '',
+            Authorization: `Bearer ${publicAnonKey}`,
+            "X-Session-Token": token || "",
           },
-        }
+        },
       );
 
       const data = await response.json();
-      
+
       if (data.success) {
         fetchUsers();
       } else {
         setError(data.error || `Failed to ${endpoint} user`);
       }
     } catch (err: any) {
-      console.error('Error toggling user status:', err);
-      setError('Failed to update user status');
+      console.error("Error toggling user status:", err);
+      setError("Failed to update user status");
     }
   };
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'owner':
-        return 'bg-purple-100 text-purple-700';
-      case 'admin':
-        return 'bg-blue-100 text-blue-700';
-      case 'staff':
-        return 'bg-gray-100 text-gray-700';
+      case "owner":
+        return "bg-purple-100 text-purple-700";
+      case "admin":
+        return "bg-blue-100 text-blue-700";
+      case "staff":
+        return "bg-gray-100 text-gray-700";
       default:
-        return 'bg-gray-100 text-gray-700';
+        return "bg-gray-100 text-gray-700";
     }
   };
 
   const filteredUsers = searchQuery
-    ? users.filter(user => 
-        user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.phone?.toLowerCase().includes(searchQuery.toLowerCase())
+    ? users.filter(
+        (user) =>
+          user.full_name
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          user.email
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          user.phone
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()),
       )
     : users;
 
@@ -367,17 +391,28 @@ export default function UsersTab() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                <tr
+                  key={user.id}
+                  className="hover:bg-gray-50 transition-colors"
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-[#FFF7ED] flex items-center justify-center">
                         <span className="text-sm font-semibold text-[#F97316]">
-                          {user.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                          {user.full_name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{user.full_name}</p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
+                        <p className="font-medium text-gray-900">
+                          {user.full_name}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {user.email}
+                        </p>
                       </div>
                     </div>
                   </td>
@@ -396,15 +431,26 @@ export default function UsersTab() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${getRoleBadgeColor(user.role)}`}>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${getRoleBadgeColor(user.role)}`}
+                    >
                       <Shield className="h-3 w-3" />
-                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                      {user.role.charAt(0).toUpperCase() +
+                        user.role.slice(1)}
                     </span>
-                    {!['owner', 'admin', 'staff'].includes(user.role) && (
+                    {!["owner", "admin", "staff"].includes(
+                      user.role,
+                    ) && (
                       <div className="mt-1 text-xs text-gray-500">
                         {(() => {
-                          const roleObj = roles.find(r => r.name.toLowerCase() === user.role.toLowerCase());
-                          return roleObj ? `${roleObj.permissions.length} permissions` : '';
+                          const roleObj = roles.find(
+                            (r) =>
+                              r.name.toLowerCase() ===
+                              user.role.toLowerCase(),
+                          );
+                          return roleObj
+                            ? `${roleObj.permissions.length} permissions`
+                            : "";
                         })()}
                       </div>
                     )}
@@ -424,36 +470,51 @@ export default function UsersTab() {
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {user.last_login
-                      ? new Date(user.last_login).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
+                      ? new Date(
+                          user.last_login,
+                        ).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
                         })
-                      : 'Never'}
+                      : "Never"}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
-                      {user.role !== 'owner' && (
+                      {user.role !== "owner" && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleToggleStatus(user.id, user.is_active)}
-                          className={user.is_active ? 'text-red-600 hover:text-red-700 hover:bg-red-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50'}
+                          onClick={() =>
+                            handleToggleStatus(
+                              user.id,
+                              user.is_active,
+                            )
+                          }
+                          className={
+                            user.is_active
+                              ? "text-red-600 hover:text-red-700 hover:bg-red-50"
+                              : "text-green-600 hover:text-green-700 hover:bg-green-50"
+                          }
                         >
                           {user.is_active ? (
                             <>
                               <UserX className="h-4 w-4" />
-                              <span className="ml-1 hidden lg:inline">Deactivate</span>
+                              <span className="ml-1 hidden lg:inline">
+                                Deactivate
+                              </span>
                             </>
                           ) : (
                             <>
                               <UserCheck className="h-4 w-4" />
-                              <span className="ml-1 hidden lg:inline">Activate</span>
+                              <span className="ml-1 hidden lg:inline">
+                                Activate
+                              </span>
                             </>
                           )}
                         </Button>
                       )}
-                      {user.role !== 'owner' && (
+                      {user.role !== "owner" && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -461,7 +522,9 @@ export default function UsersTab() {
                           className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                         >
                           <Pencil className="h-4 w-4" />
-                          <span className="ml-1 hidden lg:inline">Edit</span>
+                          <span className="ml-1 hidden lg:inline">
+                            Edit
+                          </span>
                         </Button>
                       )}
                     </div>
@@ -478,11 +541,18 @@ export default function UsersTab() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-serif font-bold text-gray-900">Add New User</h2>
-              <p className="text-sm text-gray-500 mt-1">Create a new staff or admin account</p>
+              <h2 className="text-xl font-serif font-bold text-gray-900">
+                Add New User
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Create a new staff or admin account
+              </p>
             </div>
 
-            <form onSubmit={handleCreateUser} className="p-6 space-y-4">
+            <form
+              onSubmit={handleCreateUser}
+              className="p-6 space-y-4"
+            >
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Full Name
@@ -491,7 +561,12 @@ export default function UsersTab() {
                   type="text"
                   required
                   value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      full_name: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
                   placeholder="John Doe"
                 />
@@ -505,7 +580,12 @@ export default function UsersTab() {
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      email: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
                   placeholder="john@example.com"
                 />
@@ -518,7 +598,12 @@ export default function UsersTab() {
                 <input
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      phone: formatPhoneNumber(e.target.value),
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
                   placeholder="+1 (555) 123-4567"
                 />
@@ -530,17 +615,24 @@ export default function UsersTab() {
                 </label>
                 <div className="relative">
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     required
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        password: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
                     placeholder="••••••••"
                   />
                   <button
                     type="button"
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() =>
+                      setShowPassword(!showPassword)
+                    }
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -555,14 +647,22 @@ export default function UsersTab() {
                 <CustomSelect
                   label="Role"
                   value={formData.role}
-                  onChange={(value) => setFormData({ ...formData, role: value })}
+                  onChange={(value) =>
+                    setFormData({ ...formData, role: value })
+                  }
                   options={[
-                    { value: 'staff', label: '⭐ Staff (Built-in)' },
-                    { value: 'admin', label: '⭐ Admin (Built-in)' },
-                    ...roles.map(role => ({
+                    {
+                      value: "staff",
+                      label: "⭐ Staff (Built-in)",
+                    },
+                    {
+                      value: "admin",
+                      label: "⭐ Admin (Built-in)",
+                    },
+                    ...roles.map((role) => ({
                       value: role.name.toLowerCase(),
                       label: `${role.name} (${role.permissions.length} permissions)`,
-                    }))
+                    })),
                   ]}
                 />
               </div>
@@ -585,7 +685,7 @@ export default function UsersTab() {
                   className="flex-1 bg-[#F97316] hover:bg-[#EA580C] text-white"
                   disabled={formLoading}
                 >
-                  {formLoading ? 'Creating...' : 'Create User'}
+                  {formLoading ? "Creating..." : "Create User"}
                 </Button>
               </div>
             </form>
@@ -598,11 +698,18 @@ export default function UsersTab() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-serif font-bold text-gray-900">Edit User</h2>
-              <p className="text-sm text-gray-500 mt-1">Update user details</p>
+              <h2 className="text-xl font-serif font-bold text-gray-900">
+                Edit User
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Update user details
+              </p>
             </div>
 
-            <form onSubmit={handleUpdateUser} className="p-6 space-y-4">
+            <form
+              onSubmit={handleUpdateUser}
+              className="p-6 space-y-4"
+            >
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Full Name
@@ -611,7 +718,12 @@ export default function UsersTab() {
                   type="text"
                   required
                   value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      full_name: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
                   placeholder="John Doe"
                 />
@@ -625,7 +737,12 @@ export default function UsersTab() {
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      email: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
                   placeholder="john@example.com"
                 />
@@ -638,7 +755,12 @@ export default function UsersTab() {
                 <input
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      phone: formatPhoneNumber(e.target.value),
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
                   placeholder="+1 (555) 123-4567"
                 />
@@ -650,16 +772,23 @@ export default function UsersTab() {
                 </label>
                 <div className="relative">
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        password: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent"
                     placeholder="••••••••"
                   />
                   <button
                     type="button"
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() =>
+                      setShowPassword(!showPassword)
+                    }
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -674,14 +803,22 @@ export default function UsersTab() {
                 <CustomSelect
                   label="Role"
                   value={formData.role}
-                  onChange={(value) => setFormData({ ...formData, role: value })}
+                  onChange={(value) =>
+                    setFormData({ ...formData, role: value })
+                  }
                   options={[
-                    { value: 'staff', label: '⭐ Staff (Built-in)' },
-                    { value: 'admin', label: '⭐ Admin (Built-in)' },
-                    ...roles.map(role => ({
+                    {
+                      value: "staff",
+                      label: "⭐ Staff (Built-in)",
+                    },
+                    {
+                      value: "admin",
+                      label: "⭐ Admin (Built-in)",
+                    },
+                    ...roles.map((role) => ({
                       value: role.name.toLowerCase(),
                       label: `${role.name} (${role.permissions.length} permissions)`,
-                    }))
+                    })),
                   ]}
                 />
               </div>
@@ -704,7 +841,7 @@ export default function UsersTab() {
                   className="flex-1 bg-[#F97316] hover:bg-[#EA580C] text-white"
                   disabled={formLoading}
                 >
-                  {formLoading ? 'Updating...' : 'Update User'}
+                  {formLoading ? "Updating..." : "Update User"}
                 </Button>
               </div>
             </form>

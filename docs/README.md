@@ -412,5 +412,114 @@ CUSTOMER:  active ↔ inactive → deleted
 
 ---
 
-**Last Updated:** January 22, 2025  
-**System Version:** 1.0 (with Metadata Enhancement)
+## 🆕 Event Management System (NEW - Jan 23, 2026)
+
+Bitcoin Nail Bar now includes an Event Management System for creating and displaying special events.
+
+### ✅ Phase 1: Backend Complete
+
+**API Endpoints**:
+```
+GET    /make-server-84f9c112/events         # Get active events (public)
+GET    /make-server-84f9c112/events/all     # Get all events (admin)
+POST   /make-server-84f9c112/events         # Create event (admin)
+PUT    /make-server-84f9c112/events/:id     # Update event (admin)
+DELETE /make-server-84f9c112/events/:id     # Delete event (admin)
+```
+
+**Event Schema**:
+```typescript
+interface Event {
+  id: string;              // evt_1737673200_abc123
+  title: string;
+  description: string;
+  date: string;           // ISO: "2026-02-14"
+  time: string;           // "7:00 PM - 10:00 PM"
+  location: string;
+  imageUrl: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+**Storage**: `kv_store_84f9c112` with key pattern `event:{eventId}`
+
+### 📖 Event System Documentation
+
+| Document | Purpose | Location |
+|----------|---------|----------|
+| **Build Recap** | Complete session summary | [EVENT_SYSTEM_BUILD_RECAP.md](./04-changelogs/EVENT_SYSTEM_BUILD_RECAP.md) |
+| **Implementation Log** | Full roadmap (5 phases) | [EVENT_MANAGEMENT_SYSTEM.md](./04-changelogs/EVENT_MANAGEMENT_SYSTEM.md) |
+| **API Reference** | Complete API docs | [EVENT_MANAGEMENT_API.md](./02-api/EVENT_MANAGEMENT_API.md) |
+| **Frontend Guide** | Implementation steps | [EVENT_MANAGEMENT_FRONTEND.md](./03-guides/EVENT_MANAGEMENT_FRONTEND.md) |
+| **Quick Reference** | Status & links | [EVENT_QUICK_REFERENCE.md](./05-references/EVENT_QUICK_REFERENCE.md) |
+
+### 🔄 Next Steps (Frontend)
+
+Phase 2-5 are pending implementation:
+- **Phase 2**: EventModal component (homepage popup)
+- **Phase 3**: Admin management page
+- **Phase 4**: Homepage integration
+- **Phase 5**: Chatbot integration
+
+Start here: [EVENT_MANAGEMENT_FRONTEND.md](./03-guides/EVENT_MANAGEMENT_FRONTEND.md)
+
+---
+
+**Last Updated:** January 23, 2026  
+**System Version:** 1.1 (with Event Management System)
+
+---
+
+## 🚨 CUSTOMER SYSTEM MIGRATION (NEW - Jan 23, 2026)
+
+### ⚠️ CRITICAL: KV Store → Postgres Migration Planned
+
+**Current State**: Customer data stored in **KV Store** (`kv_store_customers`)  
+**Future State**: Migrate to **Postgres Table** (`customer_profiles`)
+
+### 📚 Migration Documentation
+
+| Document | Purpose | Location |
+|----------|---------|----------|
+| **Migration Plan** | Complete migration roadmap (5 phases) | [CUSTOMER_POSTGRES_MIGRATION.md](./04-changelogs/CUSTOMER_POSTGRES_MIGRATION.md) |
+| **Endpoint Map** | All customer API endpoints reference | [CUSTOMER_ENDPOINTS_MAP.md](./02-api/CUSTOMER_ENDPOINTS_MAP.md) |
+| **Quick Start** | Developer implementation guide | [CUSTOMER_MIGRATION_QUICKSTART.md](./03-guides/CUSTOMER_MIGRATION_QUICKSTART.md) |
+
+### 🎯 Why Migrate?
+
+✅ **Data Integrity** - Foreign keys, constraints, triggers  
+✅ **Performance** - Indexed queries, native SQL JOINs  
+✅ **Scalability** - Relational structure, better analytics  
+✅ **Postgres Table Already Exists** - Fully designed schema with indexes
+
+### 📊 Current Customer Endpoints (KV Store)
+
+**Files Using KV Store:**
+- `customers_new.tsx` - Main CRUD
+- `customers_booking.tsx` - Booking integration
+- `customers_membership.tsx` - Membership activation
+- `redeem.tsx` - Update on redeem
+
+**Frontend:**
+- `CustomerManagementTab.tsx` - Admin UI (READ ONLY)
+- `BookingPage.tsx` - Calls booking integration
+
+### ⏳ Migration Status
+
+- ✅ **Phase 1**: Planning & Analysis (Complete)
+- ✅ **Phase 2**: Backend implementation (Complete - 3 files created!)
+- ⏸️ **Phase 3**: Frontend updates (Next)
+- ⏸️ **Phase 4**: Data migration (Optional)
+- ⏸️ **Phase 5**: Deprecation (Pending)
+
+**📄 [View Detailed Status](./MIGRATION_STATUS.md)**
+
+### 🚀 Next Steps for Developers
+
+1. **Read**: [CUSTOMER_POSTGRES_MIGRATION.md](./04-changelogs/CUSTOMER_POSTGRES_MIGRATION.md)
+2. **Decide**: Missing fields strategy (date_of_birth, gender, address, notes)
+3. **Implement**: [CUSTOMER_MIGRATION_QUICKSTART.md](./03-guides/CUSTOMER_MIGRATION_QUICKSTART.md)
+
+---

@@ -4,6 +4,7 @@
  */
 
 import { projectId, publicAnonKey } from '@utils/supabase/info';
+import { getAuthToken } from '@utils/auth';
 import type { ApiResponse } from './admin-types';
 
 const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112`;
@@ -28,12 +29,20 @@ async function apiRequest<T>(
     url += `?${queryString}`;
   }
 
-  // Default headers
-  const headers = {
+  // Get auth token from localStorage
+  const authToken = getAuthToken();
+
+  // Default headers with auth token
+  const headers: Record<string, string> = {
     'Authorization': `Bearer ${publicAnonKey}`,
     'Content-Type': 'application/json',
-    ...fetchOptions.headers,
+    ...(fetchOptions.headers as Record<string, string>),
   };
+
+  // Add session token if available
+  if (authToken) {
+    headers['X-Session-Token'] = authToken;
+  }
 
   try {
     const response = await fetch(url, {

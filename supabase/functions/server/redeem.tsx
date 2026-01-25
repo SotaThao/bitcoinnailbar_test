@@ -1,7 +1,6 @@
 import { Hono } from 'npm:hono@4.6.14';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { decryptApiKey } from './vlinkpay-settings.tsx';
-import { customerKV } from './kv_store_customers.tsx';
 
 const app = new Hono();
 
@@ -17,7 +16,76 @@ const supabase = createClient(
   }
 );
 
-const KV_TABLE = "kv_store_89edbd69"; // ← REVERT: Use admin data table
+const KV_TABLE = "kv_store_89edbd69"; // ← Admin data table for redeem codes
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CUSTOMER HELPERS - Direct Postgres Queries
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const customerHelpers = {
+  async searchByPhone(phone: string) {
+    const { data, error } = await supabase
+      .from('customer_profiles')
+      .select('*')
+      .eq('phone', phone)
+      .neq('status', 'suspended')
+      .maybeSingle();
+    
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found (not an error)
+      log.error('❌ [CUSTOMER] Search by phone error:', error);
+      throw error;
+    }
+    
+    return data;
+  },
+
+  async searchByEmail(email: string) {
+    const { data, error } = await supabase
+      .from('customer_profiles')
+      .select('*')
+      .eq('email', email)
+      .neq('status', 'suspended')
+      .maybeSingle();
+    
+    if (error && error.code !== 'PGRST116') {
+      log.error('❌ [CUSTOMER] Search by email error:', error);
+      throw error;
+    }
+    
+    return data;
+  },
+
+  async upsert(customer: any) {
+    // Map KV format to Postgres format
+    const pgCustomer = {
+      id: customer.id,
+      phone: customer.phone || null,
+      email: customer.email || null,
+      full_name: customer.full_name || null,
+      total_visits: customer.total_visits || 0,
+      lifetime_spend: customer.total_spent || 0, // ← KV: total_spent → PG: lifetime_spend
+      tier: customer.membership?.tier || 'guest',
+      membership_amount: customer.membership?.amount || null,
+      notes: customer.notes || null,
+      status: customer.is_deleted ? 'suspended' : 'active',
+      marketing_opt_in: customer.marketing_opt_in !== false, // Default true
+      preferred_language: customer.preferred_language || 'en',
+      created_at: customer.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      created_by: customer.created_by || 'system_redeem'
+    };
+
+    const { error } = await supabase
+      .from('customer_profiles')
+      .upsert(pgCustomer, { onConflict: 'id' });
+
+    if (error) {
+      log.error('❌ [CUSTOMER] Upsert error:', error);
+      throw error;
+    }
+
+    log.info('✅ [CUSTOMER] Upserted successfully:', customer.id);
+  }
+};
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // LOGGING HELPER - Environment-based
@@ -261,7 +329,7 @@ app.post('/make-server-84f9c112/redeem/validate', async (c) => {
           'Api-key': decryptedSecretKey ? `${decryptedSecretKey.substring(0, 4)}...${decryptedSecretKey.substring(decryptedSecretKey.length - 4)}` : 'MISSING'
         });
         log.info('   Body:', JSON.stringify(requestBody, null, 2));
-        log.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        log.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━���━━━━━━━━━━━━━');
         
         let lastError = null;
         
@@ -569,7 +637,7 @@ app.post('/make-server-84f9c112/redeem/validate', async (c) => {
     });
     log.info('✅ [REDEEM] Marked code as used');
     
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━���━━━━━━━━━━━━
     // 13. CUSTOMER INTEGRATION - Create/Update Customer Record
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     log.info('👤 [REDEEM] Creating/updating customer record...');
@@ -592,12 +660,12 @@ app.post('/make-server-84f9c112/redeem/validate', async (c) => {
         // Search by phone
         const normalizedPhone = normalizedUserId.replace(/\D/g, '');
         log.info(`🔍 [REDEEM] Searching by normalized phone: ${normalizedPhone}`);
-        existingCustomer = await customerKV.searchByPhone(normalizedPhone);
+        existingCustomer = await customerHelpers.searchByPhone(normalizedPhone);
         log.info(`🔍 [REDEEM] Searched by phone: ${normalizedPhone}, found:`, !!existingCustomer);
       } else if (isEmail) {
         // Search by email
         log.info(`🔍 [REDEEM] Searching by email: ${normalizedUserId}`);
-        existingCustomer = await customerKV.searchByEmail(normalizedUserId);
+        existingCustomer = await customerHelpers.searchByEmail(normalizedUserId);
         log.info(`🔍 [REDEEM] Searched by email: ${normalizedUserId}, found:`, !!existingCustomer);
       }
       
@@ -608,17 +676,22 @@ app.post('/make-server-84f9c112/redeem/validate', async (c) => {
         // Add membership info to notes
         const membershipNote = `Redeemed ${redemption.membershipTier} membership (${redemption.duration} months, $${redemption.amount}) on ${new Date().toLocaleDateString()}`;
         existingCustomer.notes = existingCustomer.notes 
-          ? `${existingCustomer.notes}\n${membershipNote}`
+          ? `${existingCustomer.notes}\\n${membershipNote}`
           : membershipNote;
         
+        // ✅ FIX: Accumulate total_spent (cộng dồn)
+        existingCustomer.total_spent = (existingCustomer.total_spent || 0) + redemption.amount;
+        log.info(`💰 [REDEEM] Updated total_spent: ${existingCustomer.total_spent} (added $${redemption.amount})`);
+        
         // Update membership object (COMPLETE structure for customers_new.tsx)
+        // ✅ FIX: Use newMembership.endDate (correct variable for new tier)
         existingCustomer.membership = {
           id: newMembership.id,
           tier: redemption.membershipTier,
           status: 'active',
           amount: redemption.amount,
           activated_at: new Date().toISOString(),
-          expires_at: newMembership.endDate,
+          expires_at: newMembership.endDate, // ← Use newMembership.endDate
           benefits: [],
           redeem_code: normalizedCode
         };
@@ -626,7 +699,7 @@ app.post('/make-server-84f9c112/redeem/validate', async (c) => {
         // Update timestamp
         existingCustomer.updated_at = new Date().toISOString();
         
-        await customerKV.set(existingCustomer.id, existingCustomer);
+        await customerHelpers.upsert(existingCustomer);
         log.info('✅ [REDEEM] Customer updated successfully');
         
       } else if (isPhone) {
@@ -684,7 +757,7 @@ app.post('/make-server-84f9c112/redeem/validate', async (c) => {
           has_appointment_ids: Array.isArray(newCustomer.appointment_ids)
         });
         
-        await customerKV.set(customerId, newCustomer);
+        await customerHelpers.upsert(newCustomer);
         log.info('✅ [REDEEM] New customer created:', customerId);
         
       } else if (isEmail) {
@@ -731,7 +804,7 @@ app.post('/make-server-84f9c112/redeem/validate', async (c) => {
           has_membership: !!newCustomer.membership
         });
         
-        await customerKV.set(customerId, newCustomer);
+        await customerHelpers.upsert(newCustomer);
         log.info('✅ [REDEEM] New customer created:', customerId);
       } else {
         log.warn('⚠️  [REDEEM] UserId is neither phone nor email, skipping customer creation');
@@ -753,7 +826,7 @@ app.post('/make-server-84f9c112/redeem/validate', async (c) => {
         activeMembership: activeMembership,
         totalMemberships: userMemberships.memberships.length
       },
-      message: 'Kích hoạt thành công! Membership đã được áp dụng.'
+      message: 'Kích hoạt thành công! Membership ��ã được áp dụng.'
     });
   } catch (error) {
     log.error('❌ [REDEEM] Error validating code:', error);
@@ -879,12 +952,12 @@ app.get('/make-server-84f9c112/redeem/debug/test-customer-kv', async (c) => {
     };
     
     log.info('💾 [DEBUG] Writing test customer:', testCustomer.id);
-    await customerKV.set(testCustomer.id, testCustomer);
+    await customerHelpers.upsert(testCustomer);
     log.info('✅ [DEBUG] Test customer written');
     
     // Test read
     log.info('📖 [DEBUG] Reading back test customer...');
-    const readBack = await customerKV.get(testCustomer.id);
+    const readBack = await customerHelpers.searchByPhone(testCustomer.phone);
     log.info('📖 [DEBUG] Test customer read back:', readBack);
     
     return c.json({ success: true, data: readBack, message: 'customerKV test successful' });
@@ -923,12 +996,12 @@ async function updateCustomerMembership(userId: string, membership: any, redeemC
     // Search by phone
     const normalizedPhone = normalizedUserId.replace(/\D/g, '');
     log.info(`🔍 [REDEEM] Searching by normalized phone: ${normalizedPhone}`);
-    existingCustomer = await customerKV.searchByPhone(normalizedPhone);
+    existingCustomer = await customerHelpers.searchByPhone(normalizedPhone);
     log.info(`🔍 [REDEEM] Searched by phone: ${normalizedPhone}, found:`, !!existingCustomer);
   } else if (isEmail) {
     // Search by email
     log.info(`🔍 [REDEEM] Searching by email: ${normalizedUserId}`);
-    existingCustomer = await customerKV.searchByEmail(normalizedUserId);
+    existingCustomer = await customerHelpers.searchByEmail(normalizedUserId);
     log.info(`🔍 [REDEEM] Searched by email: ${normalizedUserId}, found:`, !!existingCustomer);
   }
   
@@ -939,17 +1012,22 @@ async function updateCustomerMembership(userId: string, membership: any, redeemC
     // Add membership info to notes
     const membershipNote = `Redeemed ${redemption.membershipTier} membership (${redemption.duration} months, $${redemption.amount}) on ${new Date().toLocaleDateString()}`;
     existingCustomer.notes = existingCustomer.notes 
-      ? `${existingCustomer.notes}\n${membershipNote}`
+      ? `${existingCustomer.notes}\\n${membershipNote}`
       : membershipNote;
     
+    // ✅ FIX: Accumulate total_spent (cộng dồn)
+    existingCustomer.total_spent = (existingCustomer.total_spent || 0) + redemption.amount;
+    log.info(`💰 [REDEEM] Updated total_spent: ${existingCustomer.total_spent} (added $${redemption.amount})`);
+    
     // Update membership object (COMPLETE structure for customers_new.tsx)
+    // ✅ FIX: Use membership parameter (already extended in main logic)
     existingCustomer.membership = {
-      id: newMembership.id,
+      id: membership.id,
       tier: redemption.membershipTier,
       status: 'active',
       amount: redemption.amount,
       activated_at: new Date().toISOString(),
-      expires_at: newMembership.endDate,
+      expires_at: membership.endDate, // ← Use extended endDate from parameter
       benefits: [],
       redeem_code: redeemCode
     };
@@ -957,7 +1035,7 @@ async function updateCustomerMembership(userId: string, membership: any, redeemC
     // Update timestamp
     existingCustomer.updated_at = new Date().toISOString();
     
-    await customerKV.set(existingCustomer.id, existingCustomer);
+    await customerHelpers.upsert(existingCustomer);
     log.info('✅ [REDEEM] Customer updated successfully');
     
   } else {

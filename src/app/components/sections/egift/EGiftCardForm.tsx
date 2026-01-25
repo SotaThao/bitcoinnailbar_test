@@ -1,15 +1,22 @@
-import { motion } from 'motion/react';
-import { Lock, Zap, Edit3, Sparkles, Loader2, Check } from 'lucide-react';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Textarea } from '../../ui/textarea';
-import { toast } from 'sonner';
+import { motion } from "motion/react";
+import {
+  Lock,
+  Zap,
+  Edit3,
+  Sparkles,
+  Loader2,
+  Check,
+} from "lucide-react";
+import { Button } from "../../ui/button";
+import { Input } from "../../ui/input";
+import { Textarea } from "../../ui/textarea";
+import { toast } from "sonner";
 
 export const amounts = [
-  { value: 50, label: '$50' },
-  { value: 100, label: '$100' },
-  { value: 200, label: '$200' },
-  { value: 500, label: '$500' },
+  { value: 50, label: "$50" },
+  { value: 100, label: "$100" },
+  { value: 200, label: "$200" },
+  { value: 500, label: "$500" },
 ];
 
 interface EGiftCardFormProps {
@@ -17,7 +24,9 @@ interface EGiftCardFormProps {
   setRecipientName: (name: string) => void;
   giftMessage: string;
   setGiftMessage: (msg: string) => void;
-  handleMessageChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  handleMessageChange: (
+    e: React.ChangeEvent<HTMLTextAreaElement>,
+  ) => void;
   selectedAmount: number;
   setSelectedAmount: (amount: number) => void;
   customAmount: string;
@@ -83,7 +92,7 @@ export function EGiftCardForm({
             rows={4}
             className="bg-[#111827] border-gray-700 text-white placeholder:text-gray-500 focus:border-[#FF9800] focus:ring-[#FF9800]/20 resize-none pr-12 pb-10"
           />
-          
+
           {/* AI Write Button */}
           <button
             onClick={handleAIGenerate}
@@ -96,7 +105,7 @@ export function EGiftCardForm({
               <Sparkles className="w-3.5 h-3.5 text-[#FF9800] group-hover:scale-110 transition-transform" />
             )}
             <span className="text-xs font-bold text-[#FF9800] tracking-wide">
-              {isGeneratingAI ? 'WRITING...' : 'AI WRITE'}
+              {isGeneratingAI ? "WRITING..." : "AI WRITE"}
             </span>
           </button>
         </div>
@@ -107,19 +116,19 @@ export function EGiftCardForm({
         <label className="text-xs font-bold tracking-widest text-gray-400 uppercase">
           Select Amount
         </label>
-        
+
         <div className="grid grid-cols-4 gap-3">
           {amounts.map((amount) => (
             <button
               key={amount.value}
               onClick={() => {
                 setSelectedAmount(amount.value);
-                setCustomAmount('');
+                setCustomAmount("");
               }}
               className={`h-12 rounded-lg font-bold transition-all ${
                 selectedAmount === amount.value && !customAmount
-                  ? 'bg-[#FF9800] text-[#0B0F19] shadow-[0_0_20px_rgba(255,152,0,0.4)]'
-                  : 'bg-[#111827] text-gray-300 border border-gray-700 hover:border-[#FF9800]/50'
+                  ? "bg-[#FF9800] text-[#0B0F19] shadow-[0_0_20px_rgba(255,152,0,0.4)]"
+                  : "bg-[#111827] text-gray-300 border border-gray-700 hover:border-[#FF9800]/50"
               }`}
             >
               {amount.label}
@@ -139,7 +148,9 @@ export function EGiftCardForm({
             }}
             className="bg-[#111827] border-gray-700 text-white placeholder:text-gray-500 focus:border-[#FF9800] focus:ring-[#FF9800]/20 h-12 pl-8"
           />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+            $
+          </span>
         </div>
       </div>
 
@@ -147,14 +158,19 @@ export function EGiftCardForm({
       <Button
         size="lg"
         onClick={() => {
-          toast.custom((t) => (
-            <div className="bg-black border border-[#FF9800] rounded-xl px-8 py-4 shadow-[0_0_50px_rgba(255,152,0,0.5)] flex items-center gap-4 min-w-[320px] justify-center">
-              <div className="w-6 h-6 rounded-full bg-[#FF9800] flex items-center justify-center shrink-0">
-                <Check className="w-4 h-4 text-black stroke-[3]" />
+          toast.custom(
+            (t) => (
+              <div className="bg-black border border-[#FF9800] rounded-xl px-8 py-4 shadow-[0_0_50px_rgba(255,152,0,0.5)] flex items-center gap-4 min-w-[320px] justify-center">
+                <div className="w-6 h-6 rounded-full bg-[#FF9800] flex items-center justify-center shrink-0">
+                  <Check className="w-4 h-4 text-black stroke-[3]" />
+                </div>
+                <span className="text-white font-medium text-lg tracking-wide">
+                  Proceeding to Checkout...
+                </span>
               </div>
-              <span className="text-white font-medium text-lg tracking-wide">Proceeding to Checkout...</span>
-            </div>
-          ), { duration: 3000 });
+            ),
+            { duration: 3000 },
+          );
         }}
         className="w-full h-14 bg-[#FF9800] hover:bg-[#F7931A] text-white font-bold text-lg tracking-wide shadow-[0_0_30px_rgba(255,152,0,0.3)] hover:shadow-[0_0_50px_rgba(255,152,0,0.5)] transition-all rounded-full"
       >

@@ -59,26 +59,16 @@ export function saveSession(token: string, user: any, expiresAt: string): void {
  */
 export function getSession(): SessionData | null {
   try {
-    console.log('🔍 [getSession] Called');
-    
     const sessionStr = localStorage.getItem(SESSION_KEY);
     const expiryStr = localStorage.getItem(SESSION_EXPIRY_KEY);
 
-    console.log('🔍 [getSession] sessionStr exists:', sessionStr ? 'YES' : 'NO');
-    console.log('🔍 [getSession] expiryStr exists:', expiryStr ? 'YES' : 'NO');
-
     if (!sessionStr || !expiryStr) {
-      console.log('❌ [getSession] No session or expiry in localStorage');
       return null;
     }
 
     // Check if expired
     const now = new Date();
     const expiresAt = new Date(expiryStr);
-
-    console.log('🔍 [getSession] Now:', now.toISOString());
-    console.log('🔍 [getSession] Expires at:', expiresAt.toISOString());
-    console.log('🔍 [getSession] Is expired:', now > expiresAt);
 
     if (now > expiresAt) {
       console.log('⏰ Session expired, clearing...');
@@ -87,7 +77,6 @@ export function getSession(): SessionData | null {
     }
 
     const session: SessionData = JSON.parse(sessionStr);
-    console.log('✅ [getSession] Valid session found for user:', session.user.email);
     return session;
   } catch (error) {
     console.error('❌ Failed to get session:', error);

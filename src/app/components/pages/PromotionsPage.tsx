@@ -1,5 +1,5 @@
-import PublicLayout from '../PublicLayout';
-import { PromotionsSection } from '../organisms/PromotionsSection';
+import PublicLayout from "../PublicLayout";
+import { PromotionsSection } from "../organisms/PromotionsSection";
 
 export default function PromotionsPage() {
   return (

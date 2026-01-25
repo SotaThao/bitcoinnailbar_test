@@ -1,5 +1,5 @@
-import PublicLayout from '../PublicLayout';
-import { EGiftCardSection } from '../sections/EGiftCardSection';
+import PublicLayout from "../PublicLayout";
+import { EGiftCardSection } from "../sections/EGiftCardSection";
 
 export default function EGiftPage() {
   return (

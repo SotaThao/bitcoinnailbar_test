@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router-dom';
 import { CheckCircle, Loader2, XCircle, Gift, Phone, Sparkles } from 'lucide-react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { MembershipUpgradeDialog } from '@/app/components/membership/MembershipUpgradeDialog';
@@ -15,10 +15,43 @@ export default function RedeemMembershipStandalonePage() {
   const [showUpgradeConfirm, setShowUpgradeConfirm] = useState(false);
   const [currentMembership, setCurrentMembership] = useState<any>(null);
   const [upgradeInfo, setUpgradeInfo] = useState<{ from: string; to: string } | null>(null);
+  const [countdown, setCountdown] = useState(15);
 
   useEffect(() => {
     handlePaymentCallback();
   }, []);
+
+  // Auto-close countdown timer
+  useEffect(() => {
+    if (status === 'success') {
+      // Reset countdown when entering success state
+      setCountdown(15);
+      
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            // Auto close when countdown reaches 0
+            handleCloseModal();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [status]);
+
+  const handleCloseModal = () => {
+    // Send message to parent window to close the modal
+    if (window.parent !== window) {
+      console.log('📤 [IFRAME] Sending close message to parent window');
+      window.parent.postMessage({ type: 'close-modal' }, '*');
+    } else {
+      // If not in iframe, redirect to homepage
+      window.location.href = '/';
+    }
+  };
 
   // Format phone number to US format: (xxx) xxx-xxxx
   const formatPhoneNumber = (value: string) => {
@@ -504,23 +537,24 @@ export default function RedeemMembershipStandalonePage() {
 
               {/* Close Button */}
               <button
-                onClick={() => {
-                  // Send message to parent window to close the modal
-                  if (window.parent !== window) {
-                    console.log('📤 [IFRAME] Sending close message to parent window');
-                    window.parent.postMessage({ type: 'close-modal' }, '*');
-                  } else {
-                    // If not in iframe, redirect to homepage
-                    window.location.href = '/';
-                  }
-                }}
+                onClick={handleCloseModal}
                 className="w-full relative group overflow-hidden rounded-xl p-1 transition-all"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-[#FF9800] via-amber-500 to-[#FF9800] animate-gradient-x" />
-                <div className="relative bg-gradient-to-r from-[#FF9800] to-amber-500 hover:from-[#F57C00] hover:to-amber-600 py-4 px-8 rounded-lg font-bold text-white text-lg shadow-xl transition-all transform group-hover:scale-[1.02] active:scale-[0.98] text-center">
-                  ✓ CLOSE
+                <div className="relative bg-gradient-to-r from-[#FF9800] to-amber-500 hover:from-[#F57C00] hover:to-amber-600 py-4 px-8 rounded-lg font-bold text-white text-lg shadow-xl transition-all transform group-hover:scale-[1.02] active:scale-[0.98] text-center flex items-center justify-center gap-3">
+                  <span>✓ CLOSE</span>
+                  {countdown > 0 && (
+                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/20 text-sm font-bold">
+                      {countdown}
+                    </span>
+                  )}
                 </div>
               </button>
+              
+              {/* Auto-close notice */}
+              <p className="text-xs text-gray-500 text-center mt-3">
+                {countdown > 0 ? `This window will close automatically in ${countdown} seconds` : 'Closing...'}
+              </p>
             </div>
           )}
 

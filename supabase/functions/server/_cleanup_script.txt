@@ -1,0 +1,14 @@
+# CLEANUP INSTRUCTIONS FOR INDEX.TSX
+
+## BLOCK 1: LEGACY DEBUG ROUTES
+**Start:** Line 155 - `/* LEGACY - Disabled debug routes below`
+**End:** Line 1918 - `*/ // END LEGACY debug routes`
+**Action:** DELETE lines 155-1918 (1764 lines)
+
+## BLOCK 2: LEGACY UTILITY ROUTES  
+**Start:** Line 2056 - `/* LEGACY - Disabled utility routes below`
+**End:** Line 3173 - `*/ // END LEGACY utility routes`
+**Action:** DELETE lines 2056-3173 (1118 lines)
+
+## TOTAL TO REMOVE: 2,882 lines
+Expected result: 3,397 - 2,882 = 515 lines (clean index.tsx)

@@ -1,7 +1,12 @@
-import { motion } from 'motion/react';
-import { Bitcoin, Martini, ShieldCheck, Gem } from 'lucide-react';
-import clsx from 'clsx';
-import { useLanguage } from '../../context/LanguageContext';
+import { motion } from "motion/react";
+import {
+  Bitcoin,
+  Martini,
+  ShieldCheck,
+  Gem,
+} from "lucide-react";
+import clsx from "clsx";
+import { useLanguage } from "../../context/LanguageContext";
 
 interface FeatureItemProps {
   icon: React.ElementType;
@@ -12,22 +17,29 @@ interface FeatureItemProps {
   delay?: number;
 }
 
-function FeatureItem({ icon: Icon, title, subtitle, description, hasBorder, delay = 0 }: FeatureItemProps) {
+function FeatureItem({
+  icon: Icon,
+  title,
+  subtitle,
+  description,
+  hasBorder,
+  delay = 0,
+}: FeatureItemProps) {
   return (
     <div className="relative flex-1 flex flex-col items-center text-center px-4 py-8 md:py-0">
       {/* Vertical Border (Desktop only) */}
       {hasBorder && (
-        <div 
-          aria-hidden="true" 
+        <div
+          aria-hidden="true"
           className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 h-24 w-px bg-gray-800"
         />
       )}
-      
+
       {/* Horizontal Border (Mobile only) */}
       {hasBorder && (
-        <div 
-          aria-hidden="true" 
-          className="md:hidden absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-px bg-gray-800" 
+        <div
+          aria-hidden="true"
+          className="md:hidden absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-px bg-gray-800"
         />
       )}
 
@@ -39,13 +51,16 @@ function FeatureItem({ icon: Icon, title, subtitle, description, hasBorder, dela
         className="flex flex-col items-center h-full"
       >
         <div className="mb-6">
-          <Icon className="w-12 h-12 text-[#f7931a]" strokeWidth={1.5} />
+          <Icon
+            className="w-12 h-12 text-[#f7931a]"
+            strokeWidth={1.5}
+          />
         </div>
-        
+
         <h3 className="text-xl md:text-2xl font-serif font-bold text-white mb-2">
           {title}
         </h3>
-        
+
         <div className="space-y-1 text-sm text-gray-400">
           <p>{subtitle}</p>
           <p>{description}</p>
@@ -61,27 +76,53 @@ export function FeaturesSection() {
   const features = [
     {
       icon: Bitcoin,
-      title: t('home.features_section.crypto_payments.title') || 'Crypto Payments',
-      subtitle: t('home.features_section.crypto_payments.subtitle') || 'Accepting Bitcoin, USDT, VLINKPAY.',
-      description: t('home.features_section.crypto_payments.description') || 'Fast & Absolutely Secure.',
+      title:
+        t("home.features_section.crypto_payments.title") ||
+        "Crypto Payments",
+      subtitle:
+        t("home.features_section.crypto_payments.subtitle") ||
+        "Accepting Bitcoin, USDT, VLINKPAY.",
+      description:
+        t(
+          "home.features_section.crypto_payments.description",
+        ) || "Fast & Absolutely Secure.",
     },
     {
       icon: Martini,
-      title: t('home.features_section.bar_cocktails.title') || 'Bar & Cocktails',
-      subtitle: t('home.features_section.bar_cocktails.subtitle') || 'Enjoy free drinks at our luxury Bar',
-      description: t('home.features_section.bar_cocktails.description') || 'while relaxing.',
+      title:
+        t("home.features_section.bar_cocktails.title") ||
+        "Bar & Cocktails",
+      subtitle:
+        t("home.features_section.bar_cocktails.subtitle") ||
+        "Enjoy free drinks at our luxury Bar",
+      description:
+        t("home.features_section.bar_cocktails.description") ||
+        "while relaxing.",
     },
     {
       icon: ShieldCheck,
-      title: t('home.features_section.medical_hygiene.title') || 'Medical Hygiene',
-      subtitle: t('home.features_section.medical_hygiene.subtitle') || 'Hospital-grade Autoclave sterilization',
-      description: t('home.features_section.medical_hygiene.description') || 'process. Safety first.',
+      title:
+        t("home.features_section.medical_hygiene.title") ||
+        "Medical Hygiene",
+      subtitle:
+        t("home.features_section.medical_hygiene.subtitle") ||
+        "Hospital-grade Autoclave sterilization",
+      description:
+        t(
+          "home.features_section.medical_hygiene.description",
+        ) || "process. Safety first.",
     },
     {
       icon: Gem,
-      title: t('home.features_section.large_space.title') || '10,000+ SQF',
-      subtitle: t('home.features_section.large_space.subtitle') || 'The largest space in Houston,',
-      description: t('home.features_section.large_space.description') || 'designed for privacy and class.',
+      title:
+        t("home.features_section.large_space.title") ||
+        "10,000+ SQF",
+      subtitle:
+        t("home.features_section.large_space.subtitle") ||
+        "The largest space in Houston,",
+      description:
+        t("home.features_section.large_space.description") ||
+        "designed for privacy and class.",
     },
   ];
 

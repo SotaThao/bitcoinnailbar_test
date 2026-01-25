@@ -1,32 +1,43 @@
-import { useState } from 'react';
-import { Check, AlertCircle } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { projectId, publicAnonKey } from '/utils/supabase/info';
-import { MembershipUpgradeDialog } from './MembershipUpgradeDialog';
+import { useState } from "react";
+import { Check, AlertCircle } from "lucide-react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { projectId, publicAnonKey } from "/utils/supabase/info";
+import { MembershipUpgradeDialog } from "./MembershipUpgradeDialog";
 
 interface RedeemCodeInputProps {
   onSuccess?: (data: any) => void;
   onError?: (error: string) => void;
 }
 
-export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
-  const [code, setCode] = useState('');
-  const [phone, setPhone] = useState('');
+export function RedeemCodeInput({
+  onSuccess,
+  onError,
+}: RedeemCodeInputProps) {
+  const [code, setCode] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [result, setResult] = useState<any>(null);
-  const [showUpgradeConfirm, setShowUpgradeConfirm] = useState(false);
-  const [currentMembership, setCurrentMembership] = useState<any>(null);
-  const [upgradeInfo, setUpgradeInfo] = useState<{ from: string; to: string } | null>(null);
-  const [pendingRedeemData, setPendingRedeemData] = useState<{ code: string; phone: string } | null>(null);
+  const [showUpgradeConfirm, setShowUpgradeConfirm] =
+    useState(false);
+  const [currentMembership, setCurrentMembership] =
+    useState<any>(null);
+  const [upgradeInfo, setUpgradeInfo] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
+  const [pendingRedeemData, setPendingRedeemData] = useState<{
+    code: string;
+    phone: string;
+  } | null>(null);
 
   // Format phone number to US format: (xxx) xxx-xxxx
   const formatPhoneNumber = (value: string) => {
-    const phoneNumber = value.replace(/\D/g, '');
+    const phoneNumber = value.replace(/\D/g, "");
     const limitedPhone = phoneNumber.slice(0, 10);
-    
+
     if (limitedPhone.length <= 3) {
       return limitedPhone;
     } else if (limitedPhone.length <= 6) {
@@ -36,37 +47,50 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
     }
   };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhoneChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const formatted = formatPhoneNumber(e.target.value);
     setPhone(formatted);
   };
 
   // Tier hierarchy for comparison
   const TIER_PRIORITY: Record<string, number> = {
-    'gold': 1,
-    'platinum': 2,
-    'diamond': 3
+    gold: 1,
+    platinum: 2,
+    diamond: 3,
   };
 
   // Check if user has existing membership and validate tier hierarchy
-  const checkExistingMembership = async (phoneDigits: string): Promise<{ canProceed: boolean; needsConfirmation: boolean; message?: string }> => {
+  const checkExistingMembership = async (
+    phoneDigits: string,
+  ): Promise<{
+    canProceed: boolean;
+    needsConfirmation: boolean;
+    message?: string;
+  }> => {
     try {
-      console.log('🔍 [CHECK] Checking existing membership for:', phoneDigits);
-      
+      console.log(
+        "🔍 [CHECK] Checking existing membership for:",
+        phoneDigits,
+      );
+
       // Check existing membership
       const membershipResponse = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/membership/active/${encodeURIComponent(phoneDigits)}`,
         {
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             Authorization: `Bearer ${publicAnonKey}`,
           },
-        }
+        },
       );
 
       // If response is not OK or not JSON, skip check and let backend validate
       if (!membershipResponse.ok) {
-        console.log('⚠️ [CHECK] Membership check failed, proceeding without check');
+        console.log(
+          "⚠️ [CHECK] Membership check failed, proceeding without check",
+        );
         return { canProceed: true, needsConfirmation: false };
       }
 
@@ -74,24 +98,38 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
       try {
         membershipData = await membershipResponse.json();
       } catch (parseError) {
-        console.error('❌ [CHECK] Failed to parse membership response:', parseError);
+        console.error(
+          "❌ [CHECK] Failed to parse membership response:",
+          parseError,
+        );
         return { canProceed: true, needsConfirmation: false };
       }
 
-      console.log('📥 [CHECK] Membership response:', membershipData);
+      console.log(
+        "📥 [CHECK] Membership response:",
+        membershipData,
+      );
 
-      if (!membershipData.success || !membershipData.data || !membershipData.data.activeMembership) {
+      if (
+        !membershipData.success ||
+        !membershipData.data ||
+        !membershipData.data.activeMembership
+      ) {
         // No existing membership - can proceed without confirmation
         return { canProceed: true, needsConfirmation: false };
       }
 
       // User has active membership - for now, just proceed and let backend handle tier validation
       // TODO: In the future, we can add pre-validation here if we know the code's tier
-      console.log('ℹ️ [CHECK] User has active membership, backend will handle tier validation');
+      console.log(
+        "ℹ️ [CHECK] User has active membership, backend will handle tier validation",
+      );
       return { canProceed: true, needsConfirmation: false };
-
     } catch (error: any) {
-      console.error('❌ [CHECK] Error checking membership:', error);
+      console.error(
+        "❌ [CHECK] Error checking membership:",
+        error,
+      );
       // If check fails, let backend validate
       return { canProceed: true, needsConfirmation: false };
     }
@@ -100,29 +138,36 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
   const handleRedeem = async () => {
     // Validate inputs
     if (!code.trim()) {
-      setError('Vui lòng nhập mã redeem');
+      setError("Vui lòng nhập mã redeem");
       return;
     }
-    
-    const phoneDigits = phone.replace(/\D/g, '');
+
+    const phoneDigits = phone.replace(/\D/g, "");
     if (phoneDigits.length !== 10) {
-      setError('Vui lòng nhập đúng số điện thoại (10 số)');
+      setError("Vui lòng nhập đúng số điện thoại (10 số)");
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
     setSuccess(false);
 
     try {
       // Check existing membership and tier hierarchy
-      const checkResult = await checkExistingMembership(phoneDigits);
+      const checkResult =
+        await checkExistingMembership(phoneDigits);
       if (!checkResult.canProceed) {
-        throw new Error(checkResult.message || 'Không thể kích hoạt membership');
+        throw new Error(
+          checkResult.message ||
+            "Không thể kích hoạt membership",
+        );
       }
 
       if (checkResult.needsConfirmation) {
-        setPendingRedeemData({ code: code.toUpperCase().trim(), phone: phoneDigits });
+        setPendingRedeemData({
+          code: code.toUpperCase().trim(),
+          phone: phoneDigits,
+        });
         setShowUpgradeConfirm(true);
         return;
       }
@@ -130,36 +175,39 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/membership/redeem`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             Authorization: `Bearer ${publicAnonKey}`,
           },
           body: JSON.stringify({
             redeemCode: code.toUpperCase().trim(),
             phone: phoneDigits,
           }),
-        }
+        },
       );
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Không thể kích hoạt membership');
+        throw new Error(
+          data.message || "Không thể kích hoạt membership",
+        );
       }
 
       setSuccess(true);
       setResult(data);
-      setCode('');
-      setPhone('');
-      
+      setCode("");
+      setPhone("");
+
       if (onSuccess) {
         onSuccess(data);
       }
     } catch (err: any) {
-      const errorMessage = err.message || 'Đã xảy ra lỗi. Vui lòng thử lại.';
+      const errorMessage =
+        err.message || "Đã xảy ra lỗi. Vui lòng thử lại.";
       setError(errorMessage);
-      
+
       if (onError) {
         onError(errorMessage);
       }
@@ -169,7 +217,7 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !loading) {
+    if (e.key === "Enter" && !loading) {
       handleRedeem();
     }
   };
@@ -178,45 +226,48 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
     if (!pendingRedeemData) return;
 
     setLoading(true);
-    setError('');
+    setError("");
     setSuccess(false);
 
     try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/membership/redeem`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             Authorization: `Bearer ${publicAnonKey}`,
           },
           body: JSON.stringify({
             redeemCode: pendingRedeemData.code,
             phone: pendingRedeemData.phone,
           }),
-        }
+        },
       );
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Không thể kích hoạt membership');
+        throw new Error(
+          data.message || "Không thể kích hoạt membership",
+        );
       }
 
       setSuccess(true);
       setResult(data);
-      setCode('');
-      setPhone('');
+      setCode("");
+      setPhone("");
       setPendingRedeemData(null);
       setShowUpgradeConfirm(false);
-      
+
       if (onSuccess) {
         onSuccess(data);
       }
     } catch (err: any) {
-      const errorMessage = err.message || 'Đã xảy ra lỗi. Vui lòng thử lại.';
+      const errorMessage =
+        err.message || "Đã xảy ra lỗi. Vui lòng thử lại.";
       setError(errorMessage);
-      
+
       if (onError) {
         onError(errorMessage);
       }
@@ -244,17 +295,19 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
             </div>
             <div className="flex-1">
               <h4 className="text-green-400 font-semibold mb-1">
-                Kích hoạt thành công!
+                {result.message || "Kích hoạt thành công!"}
               </h4>
-              {result.membership && (
-                <>
-                  <p className="text-sm text-gray-300 mb-2">
-                    {result.membership.tier.toUpperCase()} Membership đã được kích hoạt
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    Hết hạn: {new Date(result.membership.expiresAt).toLocaleDateString('vi-VN')}
-                  </p>
-                </>
+              {result.data?.membership && (
+                <p className="text-xs text-gray-400 mt-2">
+                  Hết hạn:{" "}
+                  {new Date(
+                    result.data.membership.endDate,
+                  ).toLocaleDateString("vi-VN", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
               )}
             </div>
           </div>
@@ -269,7 +322,9 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
               <AlertCircle className="w-5 h-5 text-red-500" />
             </div>
             <div className="flex-1">
-              <h4 className="text-red-400 font-semibold mb-1">Lỗi</h4>
+              <h4 className="text-red-400 font-semibold mb-1">
+                Lỗi
+              </h4>
               <p className="text-sm text-gray-300">{error}</p>
             </div>
           </div>
@@ -286,7 +341,9 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
           <Input
             type="text"
             value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            onChange={(e) =>
+              setCode(e.target.value.toUpperCase())
+            }
             onKeyPress={handleKeyPress}
             placeholder="XXXXXXXXXXXXXX"
             className="w-full h-12 bg-[#1f2937] border-gray-700 text-white placeholder:text-gray-500 focus:border-[#FF9800] focus:ring-[#FF9800]/20 rounded-xl font-mono tracking-wider"
@@ -318,12 +375,19 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
 
         <Button
           onClick={handleRedeem}
-          disabled={loading || !code.trim() || phone.replace(/\D/g, '').length !== 10}
+          disabled={
+            loading ||
+            !code.trim() ||
+            phone.replace(/\D/g, "").length !== 10
+          }
           className="w-full h-12 bg-gradient-to-r from-[#FF9800] to-[#F57C00] hover:from-[#F57C00] hover:to-[#FF9800] text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
             <span className="flex items-center gap-2">
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+              <svg
+                className="animate-spin h-5 w-5"
+                viewBox="0 0 24 24"
+              >
                 <circle
                   className="opacity-25"
                   cx="12"
@@ -342,7 +406,7 @@ export function RedeemCodeInput({ onSuccess, onError }: RedeemCodeInputProps) {
               Đang kích hoạt...
             </span>
           ) : (
-            'Kích hoạt Membership'
+            "Kích hoạt Membership"
           )}
         </Button>
       </div>

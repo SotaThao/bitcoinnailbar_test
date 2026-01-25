@@ -1,13 +1,38 @@
-import { Button } from '@/app/components/ui/button';
-import { Card } from '@/app/components/ui/card';
-import { toast } from 'sonner';
-import { projectId, publicAnonKey } from '@utils/supabase/info';
-import { useState, useEffect } from 'react';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, TouchSensor } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2, Upload, ExternalLink, ImageIcon, Loader2, Edit2, X, Check, Image } from 'lucide-react';
-import { Input } from '@/app/components/ui/input';
+import { Button } from "@/app/components/ui/button";
+import { Card } from "@/app/components/ui/card";
+import { toast } from "sonner";
+import { projectId, publicAnonKey } from "@utils/supabase/info";
+import { useState, useEffect } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  TouchSensor,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  GripVertical,
+  Trash2,
+  Upload,
+  ExternalLink,
+  ImageIcon,
+  Loader2,
+  Edit2,
+  X,
+  Check,
+  Image,
+} from "lucide-react";
+import { Input } from "@/app/components/ui/input";
 
 // MenuImage interface with name field
 interface MenuImage {
@@ -21,28 +46,38 @@ interface MenuImage {
   uploadedAt: string;
 }
 
-function SortableItem({ 
-  image, 
-  onDelete, 
-  onUpdate 
-}: { 
-  image: MenuImage; 
+function SortableItem({
+  image,
+  onDelete,
+  onUpdate,
+}: {
+  image: MenuImage;
   onDelete: (id: string) => void;
-  onUpdate: (id: string, name: string, file?: File) => Promise<void>;
+  onUpdate: (
+    id: string,
+    name: string,
+    file?: File,
+  ) => Promise<void>;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(image.name);
   const [newFile, setNewFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Update editName when image.name changes (after successful save)
   useEffect(() => {
     setEditName(image.name);
   }, [image.name]);
-  
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ 
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({
     id: image.id,
-    disabled: isEditing // Disable dragging when editing
+    disabled: isEditing, // Disable dragging when editing
   });
 
   const style = {
@@ -50,19 +85,21 @@ function SortableItem({
     transition,
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
       return;
     }
 
     // Validate file size (10MB max)
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('Image size must be less than 10MB');
+      toast.error("Image size must be less than 10MB");
       return;
     }
 
@@ -71,13 +108,17 @@ function SortableItem({
 
   const handleSave = async () => {
     if (!editName.trim()) {
-      toast.error('Menu name is required');
+      toast.error("Menu name is required");
       return;
     }
 
     setIsSaving(true);
     try {
-      await onUpdate(image.id, editName.trim(), newFile || undefined);
+      await onUpdate(
+        image.id,
+        editName.trim(),
+        newFile || undefined,
+      );
       setIsEditing(false);
       setNewFile(null);
     } catch (error) {
@@ -94,24 +135,34 @@ function SortableItem({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      <div 
-        {...attributes} 
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-white rounded-lg border border-gray-200 overflow-hidden"
+    >
+      <div
+        {...attributes}
         {...listeners}
         className={`flex items-center gap-3 p-3 ${
-          isEditing 
-            ? 'cursor-default' 
-            : 'cursor-grab active:cursor-grabbing hover:bg-gray-50'
+          isEditing
+            ? "cursor-default"
+            : "cursor-grab active:cursor-grabbing hover:bg-gray-50"
         } transition-colors`}
       >
-        <div className={`text-gray-400 ${isEditing ? 'opacity-30' : ''}`}>
+        <div
+          className={`text-gray-400 ${isEditing ? "opacity-30" : ""}`}
+        >
           <GripVertical className="w-5 h-5" />
         </div>
-        
+
         {/* Image Preview */}
         <div className="relative">
           <img
-            src={newFile ? URL.createObjectURL(newFile) : image.cloudinary_url}
+            src={
+              newFile
+                ? URL.createObjectURL(newFile)
+                : image.cloudinary_url
+            }
             alt={`Menu page ${image.order + 1}`}
             className="w-20 h-28 object-cover rounded border border-gray-200"
           />
@@ -128,7 +179,7 @@ function SortableItem({
             </label>
           )}
         </div>
-        
+
         {/* Content */}
         <div className="flex-1 min-w-0">
           {isEditing ? (
@@ -142,18 +193,26 @@ function SortableItem({
                 disabled={isSaving}
               />
               {newFile && (
-                <p className="text-xs text-gray-500">New image: {newFile.name}</p>
+                <p className="text-xs text-gray-500">
+                  New image: {newFile.name}
+                </p>
               )}
             </div>
           ) : (
             <>
-              <p className="text-sm font-medium text-gray-900">{image.name}</p>
-              <p className="text-xs text-gray-500 truncate">{image.public_id}</p>
-              <p className="text-xs text-gray-400">{image.width} × {image.height}</p>
+              <p className="text-sm font-medium text-gray-900">
+                {image.name}
+              </p>
+              <p className="text-xs text-gray-500 truncate">
+                {image.public_id}
+              </p>
+              <p className="text-xs text-gray-400">
+                {image.width} × {image.height}
+              </p>
             </>
           )}
         </div>
-        
+
         {/* Actions */}
         {isEditing ? (
           <div className="flex items-center gap-2">
@@ -209,8 +268,10 @@ export default function MenuUploadContent() {
   const [images, setImages] = useState<MenuImage[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [menuName, setMenuName] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [menuName, setMenuName] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(
+    null,
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -226,7 +287,7 @@ export default function MenuUploadContent() {
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   useEffect(() => {
@@ -239,101 +300,108 @@ export default function MenuUploadContent() {
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/menu/images`,
         {
           headers: { Authorization: `Bearer ${publicAnonKey}` },
-        }
+        },
       );
       const data = await response.json();
       if (data.success) {
         setImages(data.data);
       }
     } catch (error) {
-      console.error('Error fetching images:', error);
-      toast.error('Failed to load menu images');
+      console.error("Error fetching images:", error);
+      toast.error("Failed to load menu images");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
       return;
     }
 
     // Validate file size (10MB max)
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('Image size must be less than 10MB');
+      toast.error("Image size must be less than 10MB");
       return;
     }
 
     setSelectedFile(file);
-    setMenuName('');
+    setMenuName("");
   };
 
   const handleUpload = async () => {
     if (!selectedFile || !menuName.trim()) {
-      toast.error('Please provide a menu name');
+      toast.error("Please provide a menu name");
       return;
     }
 
     setUploading(true);
     const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('name', menuName.trim());
-    formData.append('order', images.length.toString());
+    formData.append("file", selectedFile);
+    formData.append("name", menuName.trim());
+    formData.append("order", images.length.toString());
 
     try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/menu/upload`,
         {
-          method: 'POST',
+          method: "POST",
           headers: { Authorization: `Bearer ${publicAnonKey}` },
           body: formData,
-        }
+        },
       );
 
       const data = await response.json();
       if (data.success) {
         setImages([...images, data.data]);
-        toast.success('Menu image uploaded successfully');
+        toast.success("Menu image uploaded successfully");
         setSelectedFile(null);
-        setMenuName('');
+        setMenuName("");
       } else {
-        toast.error(data.error || 'Upload failed');
+        toast.error(data.error || "Upload failed");
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload image');
+      console.error("Upload error:", error);
+      toast.error("Failed to upload image");
     } finally {
       setUploading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this menu page?')) return;
+    if (
+      !confirm(
+        "Are you sure you want to delete this menu page?",
+      )
+    )
+      return;
 
     try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/menu/${id}`,
         {
-          method: 'DELETE',
+          method: "DELETE",
           headers: { Authorization: `Bearer ${publicAnonKey}` },
-        }
+        },
       );
 
       const data = await response.json();
       if (data.success) {
-        setImages(images.filter(img => img.id !== id));
-        toast.success('Image deleted');
+        setImages(images.filter((img) => img.id !== id));
+        toast.success("Image deleted");
       } else {
-        toast.error(data.error || 'Delete failed');
+        toast.error(data.error || "Delete failed");
       }
     } catch (error) {
-      console.error('Delete error:', error);
-      toast.error('Failed to delete image');
+      console.error("Delete error:", error);
+      toast.error("Failed to delete image");
     }
   };
 
@@ -341,8 +409,12 @@ export default function MenuUploadContent() {
     const { active, over } = event;
 
     if (active.id !== over.id) {
-      const oldIndex = images.findIndex(img => img.id === active.id);
-      const newIndex = images.findIndex(img => img.id === over.id);
+      const oldIndex = images.findIndex(
+        (img) => img.id === active.id,
+      );
+      const newIndex = images.findIndex(
+        (img) => img.id === over.id,
+      );
 
       const newImages = arrayMove(images, oldIndex, newIndex);
       setImages(newImages);
@@ -352,56 +424,64 @@ export default function MenuUploadContent() {
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/menu/reorder`,
           {
-            method: 'PUT',
+            method: "PUT",
             headers: {
               Authorization: `Bearer ${publicAnonKey}`,
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({ images: newImages }),
-          }
+          },
         );
 
         const data = await response.json();
         if (!data.success) {
-          toast.error('Failed to save order');
+          toast.error("Failed to save order");
           fetchImages(); // Revert to server state
         }
       } catch (error) {
-        console.error('Reorder error:', error);
-        toast.error('Failed to save order');
+        console.error("Reorder error:", error);
+        toast.error("Failed to save order");
         fetchImages();
       }
     }
   };
 
-  const handleUpdate = async (id: string, name: string, file?: File) => {
+  const handleUpdate = async (
+    id: string,
+    name: string,
+    file?: File,
+  ) => {
     const formData = new FormData();
-    formData.append('name', name);
+    formData.append("name", name);
     if (file) {
-      formData.append('file', file);
+      formData.append("file", file);
     }
 
     try {
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/menu/${id}/update`,
         {
-          method: 'PUT',
+          method: "PUT",
           headers: { Authorization: `Bearer ${publicAnonKey}` },
           body: formData,
-        }
+        },
       );
 
       const data = await response.json();
       if (data.success) {
-        setImages(images.map(img => (img.id === id ? data.data : img)));
-        toast.success('Menu image updated successfully');
+        setImages(
+          images.map((img) =>
+            img.id === id ? data.data : img,
+          ),
+        );
+        toast.success("Menu image updated successfully");
       } else {
-        toast.error(data.error || 'Update failed');
+        toast.error(data.error || "Update failed");
         throw new Error(data.error);
       }
     } catch (error) {
-      console.error('Update error:', error);
-      toast.error('Failed to update image');
+      console.error("Update error:", error);
+      toast.error("Failed to update image");
       throw error;
     }
   };
@@ -432,7 +512,11 @@ export default function MenuUploadContent() {
               className="w-full bg-[#FF9F1C] hover:bg-[#E68F0F] text-white"
               onClick={(e) => {
                 e.preventDefault();
-                (e.target as HTMLButtonElement).previousElementSibling?.dispatchEvent(new MouseEvent('click'));
+                (
+                  e.target as HTMLButtonElement
+                ).previousElementSibling?.dispatchEvent(
+                  new MouseEvent("click"),
+                );
               }}
             >
               <Upload className="w-4 h-4 mr-2" />
@@ -443,22 +527,26 @@ export default function MenuUploadContent() {
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
               <ImageIcon className="w-5 h-5 text-gray-400" />
-              <span className="text-sm text-gray-700 flex-1">{selectedFile.name}</span>
+              <span className="text-sm text-gray-700 flex-1">
+                {selectedFile.name}
+              </span>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
                   setSelectedFile(null);
-                  setMenuName('');
+                  setMenuName("");
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
                 Change
               </Button>
             </div>
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Menu Name *</label>
+              <label className="text-sm font-medium text-gray-700">
+                Menu Name *
+              </label>
               <Input
                 type="text"
                 value={menuName}
@@ -467,9 +555,12 @@ export default function MenuUploadContent() {
                 className="w-full"
                 disabled={uploading}
               />
-              <p className="text-xs text-gray-500">This name will appear in the homepage services dropdown</p>
+              <p className="text-xs text-gray-500">
+                This name will appear in the homepage services
+                dropdown
+              </p>
             </div>
-            
+
             <div className="flex gap-2">
               <Button
                 onClick={handleUpload}
@@ -492,7 +583,7 @@ export default function MenuUploadContent() {
                 variant="outline"
                 onClick={() => {
                   setSelectedFile(null);
-                  setMenuName('');
+                  setMenuName("");
                 }}
                 disabled={uploading}
                 className="border-gray-200"
@@ -502,11 +593,12 @@ export default function MenuUploadContent() {
             </div>
           </div>
         )}
-        
+
         {!selectedFile && (
           <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
             <p className="text-sm text-gray-500">
-              Images will be displayed in the order shown below. Drag to reorder.
+              Images will be displayed in the order shown below.
+              Drag to reorder.
             </p>
           </div>
         )}
@@ -517,19 +609,36 @@ export default function MenuUploadContent() {
         <Card className="p-12">
           <div className="text-center text-gray-400">
             <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium">No menu images uploaded yet</p>
-            <p className="text-sm mt-2">Upload your first menu page to get started</p>
+            <p className="text-lg font-medium">
+              No menu images uploaded yet
+            </p>
+            <p className="text-sm mt-2">
+              Upload your first menu page to get started
+            </p>
           </div>
         </Card>
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-gray-600 mb-3">
-            {images.length} page{images.length !== 1 ? 's' : ''} • Drag to reorder
+            {images.length} page{images.length !== 1 ? "s" : ""}{" "}
+            • Drag to reorder
           </p>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={images.map(img => img.id)} strategy={verticalListSortingStrategy}>
-              {images.map(image => (
-                <SortableItem key={image.id} image={image} onDelete={handleDelete} onUpdate={handleUpdate} />
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={images.map((img) => img.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {images.map((image) => (
+                <SortableItem
+                  key={image.id}
+                  image={image}
+                  onDelete={handleDelete}
+                  onUpdate={handleUpdate}
+                />
               ))}
             </SortableContext>
           </DndContext>

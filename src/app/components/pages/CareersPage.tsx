@@ -1,5 +1,5 @@
-import PublicLayout from '../PublicLayout';
-import { CareerSection } from '../organisms/CareerSection';
+import PublicLayout from "../PublicLayout";
+import { CareerSection } from "../organisms/CareerSection";
 
 export default function CareersPage() {
   return (

@@ -1,11 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
-import PublicLayout from '../PublicLayout';
-import { motion, AnimatePresence } from 'motion/react';
-import { X, ZoomIn, ChevronLeft, ChevronRight, Instagram, Loader2, Facebook } from 'lucide-react';
-import { useLanguage } from '../../context/LanguageContext';
-import { Button } from '../ui/button';
-import { projectId, publicAnonKey } from '@utils/supabase/info';
-import { optimizeCloudinaryUrl, optimizeCloudinaryThumbnail } from '@/utils/cloudinary';
+import { useState, useEffect, useCallback } from "react";
+import PublicLayout from "../PublicLayout";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  X,
+  ZoomIn,
+  ChevronLeft,
+  ChevronRight,
+  Instagram,
+  Loader2,
+  Facebook,
+} from "lucide-react";
+import { useLanguage } from "../../context/LanguageContext";
+import { Button } from "../ui/button";
+import { projectId, publicAnonKey } from "@utils/supabase/info";
+import {
+  optimizeCloudinaryUrl,
+  optimizeCloudinaryThumbnail,
+} from "@/utils/cloudinary";
 
 interface GalleryImage {
   id: string;
@@ -17,7 +28,7 @@ interface GalleryImage {
 // Helper function to ensure URLs have https:// prefix
 const ensureHttps = (url: string): string => {
   if (!url) return url;
-  if (url.startsWith('http://') || url.startsWith('https://')) {
+  if (url.startsWith("http://") || url.startsWith("https://")) {
     return url;
   }
   return `https://${url}`;
@@ -25,16 +36,19 @@ const ensureHttps = (url: string): string => {
 
 export default function GalleryPage() {
   const { t } = useLanguage();
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<
+    number | null
+  >(null);
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] =
+    useState<string>("all");
   const [socialMedia, setSocialMedia] = useState({
-    facebook: '',
-    instagram: '',
+    facebook: "",
+    instagram: "",
   });
-  
+
   // Fetch images from backend
   useEffect(() => {
     const fetchImages = async () => {
@@ -42,21 +56,27 @@ export default function GalleryPage() {
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/gallery/images`,
           {
-            headers: { Authorization: `Bearer ${publicAnonKey}` },
-          }
+            headers: {
+              Authorization: `Bearer ${publicAnonKey}`,
+            },
+          },
         );
         const data = await response.json();
         if (data.success) {
           setImages(data.data);
-          
+
           // Extract unique categories
           const uniqueCategories = Array.from(
-            new Set(data.data.map((img: GalleryImage) => img.category))
+            new Set(
+              data.data.map(
+                (img: GalleryImage) => img.category,
+              ),
+            ),
           ).filter(Boolean) as string[];
           setCategories(uniqueCategories);
         }
       } catch (error) {
-        console.error('Error fetching gallery images:', error);
+        console.error("Error fetching gallery images:", error);
       } finally {
         setLoading(false);
       }
@@ -72,19 +92,24 @@ export default function GalleryPage() {
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/settings/social-media`,
           {
-            headers: { Authorization: `Bearer ${publicAnonKey}` },
-          }
+            headers: {
+              Authorization: `Bearer ${publicAnonKey}`,
+            },
+          },
         );
         const result = await response.json();
-        
+
         if (result.success && result.data) {
           setSocialMedia({
-            facebook: result.data.facebook || '',
-            instagram: result.data.instagram || '',
+            facebook: result.data.facebook || "",
+            instagram: result.data.instagram || "",
           });
         }
       } catch (error) {
-        console.error('Failed to fetch social media links:', error);
+        console.error(
+          "Failed to fetch social media links:",
+          error,
+        );
       }
     };
 
@@ -92,50 +117,73 @@ export default function GalleryPage() {
   }, []);
 
   // Filter images by category
-  const filteredImages = selectedCategory === 'all' 
-    ? images 
-    : images.filter(img => img.category === selectedCategory);
-  
-  const showNext = useCallback((e?: any) => {
-    e?.stopPropagation();
-    setSelectedIndex((prev) => (prev === null ? null : (prev + 1) % filteredImages.length));
-  }, [filteredImages.length]);
+  const filteredImages =
+    selectedCategory === "all"
+      ? images
+      : images.filter(
+          (img) => img.category === selectedCategory,
+        );
 
-  const showPrev = useCallback((e?: any) => {
-    e?.stopPropagation();
-    setSelectedIndex((prev) => (prev === null ? null : (prev - 1 + filteredImages.length) % filteredImages.length));
-  }, [filteredImages.length]);
+  const showNext = useCallback(
+    (e?: any) => {
+      e?.stopPropagation();
+      setSelectedIndex((prev) =>
+        prev === null
+          ? null
+          : (prev + 1) % filteredImages.length,
+      );
+    },
+    [filteredImages.length],
+  );
 
-  const closeLightbox = useCallback(() => setSelectedIndex(null), []);
+  const showPrev = useCallback(
+    (e?: any) => {
+      e?.stopPropagation();
+      setSelectedIndex((prev) =>
+        prev === null
+          ? null
+          : (prev - 1 + filteredImages.length) %
+            filteredImages.length,
+      );
+    },
+    [filteredImages.length],
+  );
+
+  const closeLightbox = useCallback(
+    () => setSelectedIndex(null),
+    [],
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (selectedIndex === null) return;
-      if (e.key === 'Escape') closeLightbox();
-      if (e.key === 'ArrowRight') showNext();
-      if (e.key === 'ArrowLeft') showPrev();
+      if (e.key === "Escape") closeLightbox();
+      if (e.key === "ArrowRight") showNext();
+      if (e.key === "ArrowLeft") showPrev();
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () =>
+      window.removeEventListener("keydown", handleKeyDown);
   }, [selectedIndex, showNext, showPrev, closeLightbox]);
 
   return (
     <PublicLayout>
       <div className="min-h-screen bg-[#0B0F19] py-10">
         <div className="container mx-auto px-4">
-          
           {/* Header Section */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="text-center mb-16 space-y-4"
           >
             <h1 className="text-4xl md:text-6xl font-serif font-bold text-white mb-4">
-              {t('nav.gallery') || 'Our Gallery'}
+              {t("nav.gallery") || "Our Gallery"}
             </h1>
             <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-              Experience the luxury and artistry of Bitcoin Nail Bar. From our premium interiors to our exquisite nail art designs.
+              Experience the luxury and artistry of Bitcoin Nail
+              Bar. From our premium interiors to our exquisite
+              nail art designs.
             </p>
           </motion.div>
 
@@ -143,11 +191,11 @@ export default function GalleryPage() {
           {categories.length > 0 && (
             <div className="flex flex-wrap justify-center gap-3 mb-12">
               <button
-                onClick={() => setSelectedCategory('all')}
+                onClick={() => setSelectedCategory("all")}
                 className={`px-6 py-2 rounded-full font-medium transition-all ${
-                  selectedCategory === 'all'
-                    ? 'bg-[#FF9800] text-black shadow-lg shadow-[#FF9800]/30'
-                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                  selectedCategory === "all"
+                    ? "bg-[#FF9800] text-black shadow-lg shadow-[#FF9800]/30"
+                    : "bg-white/10 text-gray-300 hover:bg-white/20"
                 }`}
               >
                 All
@@ -158,8 +206,8 @@ export default function GalleryPage() {
                   onClick={() => setSelectedCategory(category)}
                   className={`px-6 py-2 rounded-full font-medium transition-all capitalize ${
                     selectedCategory === category
-                      ? 'bg-[#FF9800] text-black shadow-lg shadow-[#FF9800]/30'
-                      : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                      ? "bg-[#FF9800] text-black shadow-lg shadow-[#FF9800]/30"
+                      : "bg-white/10 text-gray-300 hover:bg-white/20"
                   }`}
                 >
                   {category}
@@ -167,7 +215,7 @@ export default function GalleryPage() {
               ))}
             </div>
           )}
-          
+
           {/* Masonry-style Grid */}
           {loading ? (
             <div className="flex items-center justify-center py-20">
@@ -176,14 +224,14 @@ export default function GalleryPage() {
           ) : filteredImages.length === 0 ? (
             <div className="text-center py-20">
               <p className="text-gray-400 text-xl">
-                {selectedCategory === 'all' 
-                  ? 'No images available yet.' 
+                {selectedCategory === "all"
+                  ? "No images available yet."
                   : `No images in "${selectedCategory}" category.`}
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              <AnimatePresence mode='popLayout'>
+              <AnimatePresence mode="popLayout">
                 {filteredImages.map((img, index) => (
                   <motion.div
                     key={img.id}
@@ -195,12 +243,15 @@ export default function GalleryPage() {
                     className="group relative aspect-[4/5] rounded-xl overflow-hidden cursor-pointer bg-white/5"
                     onClick={() => setSelectedIndex(index)}
                   >
-                    <img 
-                      src={optimizeCloudinaryThumbnail(img.cloudinary_url, 600)} 
+                    <img
+                      src={optimizeCloudinaryThumbnail(
+                        img.cloudinary_url,
+                        600,
+                      )}
                       alt={`Gallery Image ${index + 1}`}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
-                    
+
                     {/* Overlay */}
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                       <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
@@ -216,16 +267,30 @@ export default function GalleryPage() {
           )}
 
           {/* Instagram CTA */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             className="mt-20 text-center"
           >
-            <a 
-              href={socialMedia.instagram ? ensureHttps(socialMedia.instagram) : (socialMedia.facebook ? ensureHttps(socialMedia.facebook) : '#')} 
-              target={socialMedia.instagram || socialMedia.facebook ? '_blank' : '_self'}
-              rel={socialMedia.instagram || socialMedia.facebook ? 'noopener noreferrer' : undefined}
+            <a
+              href={
+                socialMedia.instagram
+                  ? ensureHttps(socialMedia.instagram)
+                  : socialMedia.facebook
+                    ? ensureHttps(socialMedia.facebook)
+                    : "#"
+              }
+              target={
+                socialMedia.instagram || socialMedia.facebook
+                  ? "_blank"
+                  : "_self"
+              }
+              rel={
+                socialMedia.instagram || socialMedia.facebook
+                  ? "noopener noreferrer"
+                  : undefined
+              }
               className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full text-white font-bold tracking-wider uppercase hover:shadow-lg hover:shadow-purple-500/30 transition-all transform hover:-translate-y-1"
             >
               {socialMedia.instagram ? (
@@ -251,22 +316,25 @@ export default function GalleryPage() {
         {/* Lightbox */}
         <AnimatePresence>
           {selectedIndex !== null && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-md p-4"
               onClick={closeLightbox}
             >
-              <button 
+              <button
                 onClick={closeLightbox}
                 className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors z-50 p-2"
               >
                 <X className="w-8 h-8" />
               </button>
 
-              <div className="relative w-full max-w-6xl aspect-[16/9] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                <button 
+              <div
+                className="relative w-full max-w-6xl aspect-[16/9] flex items-center justify-center"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
                   onClick={showPrev}
                   className="absolute left-2 lg:-left-12 top-1/2 -translate-y-1/2 p-4 text-white/50 hover:text-[#FF9800] transition-colors z-50"
                 >
@@ -281,14 +349,18 @@ export default function GalleryPage() {
                   transition={{ duration: 0.3 }}
                   className="relative w-full h-full flex items-center justify-center"
                 >
-                  <img 
-                    src={optimizeCloudinaryUrl(filteredImages[selectedIndex].cloudinary_url, { width: 1920 })} 
-                    alt="Gallery View" 
+                  <img
+                    src={optimizeCloudinaryUrl(
+                      filteredImages[selectedIndex]
+                        .cloudinary_url,
+                      { width: 1920 },
+                    )}
+                    alt="Gallery View"
                     className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
                   />
                 </motion.div>
 
-                <button 
+                <button
                   onClick={showNext}
                   className="absolute right-2 lg:-right-12 top-1/2 -translate-y-1/2 p-4 text-white/50 hover:text-[#FF9800] transition-colors z-50"
                 >
@@ -306,14 +378,19 @@ export default function GalleryPage() {
                       setSelectedIndex(idx);
                     }}
                     className={`relative w-12 h-12 flex-shrink-0 rounded-md overflow-hidden transition-all ${
-                      idx === selectedIndex ? 'ring-2 ring-[#FF9800] opacity-100 scale-110' : 'opacity-40 hover:opacity-100'
+                      idx === selectedIndex
+                        ? "ring-2 ring-[#FF9800] opacity-100 scale-110"
+                        : "opacity-40 hover:opacity-100"
                     }`}
                   >
-                     <img 
-                        src={optimizeCloudinaryThumbnail(img.cloudinary_url, 200)} 
-                        alt="thumbnail" 
-                        className="w-full h-full object-cover"
-                     />
+                    <img
+                      src={optimizeCloudinaryThumbnail(
+                        img.cloudinary_url,
+                        200,
+                      )}
+                      alt="thumbnail"
+                      className="w-full h-full object-cover"
+                    />
                   </button>
                 ))}
               </div>

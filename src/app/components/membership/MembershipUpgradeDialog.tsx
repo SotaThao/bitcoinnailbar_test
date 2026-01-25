@@ -7,8 +7,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/app/components/ui/alert-dialog';
-import { AlertTriangle } from 'lucide-react';
+} from "@/app/components/ui/alert-dialog";
+import { AlertTriangle } from "lucide-react";
 
 interface MembershipUpgradeDialogProps {
   currentMembership: any;
@@ -28,9 +28,11 @@ export function MembershipUpgradeDialog({
   // Format tier names for display
   const formatTierName = (tier: string) => {
     return tier
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+      .split("-")
+      .map(
+        (word) => word.charAt(0).toUpperCase() + word.slice(1),
+      )
+      .join(" ");
   };
 
   const currentTierDisplay = formatTierName(upgradeInfo.from);
@@ -50,13 +52,22 @@ export function MembershipUpgradeDialog({
           </div>
           <AlertDialogDescription className="text-gray-300 text-base space-y-3 pt-2">
             <p>
-              You are about to upgrade from <span className="font-bold text-white">{currentTierDisplay}</span> to{' '}
-              <span className="font-bold text-white">{newTierDisplay}</span> membership.
+              You are about to upgrade from{" "}
+              <span className="font-bold text-white">
+                {currentTierDisplay}
+              </span>{" "}
+              to{" "}
+              <span className="font-bold text-white">
+                {newTierDisplay}
+              </span>{" "}
+              membership.
             </p>
             <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
               <p className="text-sm text-orange-200">
-                <strong>⚠️ Important:</strong> Upgrading will replace your current {currentTierDisplay} membership.
-                Your new {newTierDisplay} benefits will start immediately.
+                <strong>⚠️ Important:</strong> Upgrading will
+                replace your current {currentTierDisplay}{" "}
+                membership. Your new {newTierDisplay} benefits
+                will start immediately.
               </p>
             </div>
             <p className="text-sm text-gray-400">
@@ -65,7 +76,10 @@ export function MembershipUpgradeDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2 sm:gap-2">
-          <AlertDialogCancel onClick={onCancel} className="bg-gray-800 text-white hover:bg-gray-700 border-gray-700">
+          <AlertDialogCancel
+            onClick={onCancel}
+            className="bg-gray-800 text-white hover:bg-gray-700 border-gray-700"
+          >
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction

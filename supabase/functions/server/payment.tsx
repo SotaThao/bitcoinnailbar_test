@@ -158,6 +158,8 @@ const buildVLinkPayURL = (params: {
   merchantRefCode: string;
   orderRedirectUrl: string;
   secretKey: string;
+  membershipTier?: string; // NEW: Pass membership tier
+  duration?: number; // NEW: Pass duration
 }): string => {
   const url = new URL(`${params.sandboxEndpoint}/embedded/payment-init`);
   
@@ -217,6 +219,10 @@ const buildVLinkPayURL = (params: {
   url.searchParams.append('checksum', checksum);
   url.searchParams.append('timestamp', timestamp.toString());
   url.searchParams.append('orderRedirectUrl', params.orderRedirectUrl);
+  
+  // ❌ REMOVED: Don't pass metadata to VLinkPay (they don't support custom params)
+  // The tier info is already saved in orderData, will be used during redeem
+  console.log('📝 [PAYMENT] Order data saved with tier:', params.membershipTier);
   
   return url.toString();
 };
@@ -291,7 +297,9 @@ app.post('/make-server-84f9c112/payment/create-link', async (c) => {
       customerEmail: '{email}', // Placeholder, frontend will replace
       merchantRefCode: settings.merchantRefCode,
       orderRedirectUrl: settings.redirectUrl,
-      secretKey: decryptedSecretKey
+      secretKey: decryptedSecretKey,
+      membershipTier: tierName.toLowerCase(),
+      duration
     });
     
     // Replace placeholder with actual template for frontend
@@ -441,8 +449,12 @@ app.post('/make-server-84f9c112/payment/complete-order', async (c) => {
       redeemedBy: null
     };
     
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('💾 [PAYMENT] Saving redeem code to database...');
-    console.log('📝 [PAYMENT] Redemption data:', JSON.stringify(redemptionData, null, 2));
+    console.log('🎯 [PAYMENT] Membership Tier:', orderData.membershipTier);
+    console.log('📦 [PAYMENT] Order Data:', JSON.stringify(orderData, null, 2));
+    console.log('📝 [PAYMENT] Redemption Data:', JSON.stringify(redemptionData, null, 2));
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     await kv.set(`redeem_code:${redeemCode}`, redemptionData);
     console.log('✅ [PAYMENT] Saved VLinkPay redeem code to database');

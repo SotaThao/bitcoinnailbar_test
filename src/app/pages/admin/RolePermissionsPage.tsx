@@ -6,6 +6,8 @@ import { OwnerOnlyAccess } from '@/app/components/OwnerOnlyAccess';
 import AdminLayout from '@/app/components/AdminLayout';
 import UsersTab from '@/app/components/admin/UsersTab';
 import PermissionsPageContent from './PermissionsPageContent';
+import { AuthenticatedPage } from '@/app/components/AuthenticatedPage';
+import { AdminPageSkeleton } from '@/app/components/admin/AdminPageSkeleton';
 
 type TabType = 'roles' | 'permissions';
 
@@ -50,38 +52,48 @@ export default function RolePermissionsPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-1 inline-flex gap-1">
-          <button
-            onClick={() => setActiveTab('roles')}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-sm transition-all duration-200 ${
-              activeTab === 'roles'
-                ? 'bg-[#F97316] text-white shadow-sm'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-            }`}
-          >
-            <Users className="h-4 w-4" />
-            Roles
-          </button>
-          <button
-            onClick={() => setActiveTab('permissions')}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-sm transition-all duration-200 ${
-              activeTab === 'permissions'
-                ? 'bg-[#F97316] text-white shadow-sm'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-            }`}
-          >
-            <Shield className="h-4 w-4" />
-            Permissions
-          </button>
-        </div>
+      <AuthenticatedPage
+        skeleton={
+          <AdminPageSkeleton 
+            title="Role & Permissions" 
+            showActions={true}
+            rowCount={3}
+          />
+        }
+      >
+        <div className="space-y-6">
+          {/* Tabs */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-1 inline-flex gap-1">
+            <button
+              onClick={() => setActiveTab('roles')}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-sm transition-all duration-200 ${
+                activeTab === 'roles'
+                  ? 'bg-[#F97316] text-white shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              Roles
+            </button>
+            <button
+              onClick={() => setActiveTab('permissions')}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-sm transition-all duration-200 ${
+                activeTab === 'permissions'
+                  ? 'bg-[#F97316] text-white shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Shield className="h-4 w-4" />
+              Permissions
+            </button>
+          </div>
 
-        {/* Tab Content */}
-        <div className="transition-all duration-200">
-          {activeTab === 'roles' ? <UsersTab /> : <PermissionsPageContent />}
+          {/* Tab Content */}
+          <div className="transition-all duration-200">
+            {activeTab === 'roles' ? <UsersTab /> : <PermissionsPageContent />}
+          </div>
         </div>
-      </div>
+      </AuthenticatedPage>
     </AdminLayout>
   );
 }

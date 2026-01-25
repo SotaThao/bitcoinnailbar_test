@@ -133,6 +133,23 @@ export const verifyPassword = async (password: string, hash: string): Promise<bo
   return passwordHash === hash;
 };
 
+// ========== JWT TOKEN CACHE ==========
+// In-memory cache for verified JWT tokens to avoid repeated verification
+const jwtCache = new Map<string, { payload: any; expiresAt: number }>();
+
+// Cache TTL: 5 minutes (balance between performance and security)
+const JWT_CACHE_TTL = 5 * 60 * 1000;
+
+// Cleanup expired cache entries every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, data] of jwtCache.entries()) {
+    if (data.expiresAt < now) {
+      jwtCache.delete(token);
+    }
+  }
+}, 10 * 60 * 1000);
+
 // ========== JWT HELPERS ==========
 export const generateJWT = async (user: User): Promise<string> => {
   const payload = {
@@ -161,9 +178,22 @@ export const generateJWT = async (user: User): Promise<string> => {
 };
 
 export const verifyJWT = async (token: string): Promise<any> => {
+  // Check cache first
+  const cached = jwtCache.get(token);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.payload;
+  }
+
   try {
     // 1. Try custom JWT verification first (Custom Auth)
     const { payload } = await jose.jwtVerify(token, JWT_SECRET);
+    
+    // Cache the verified token
+    jwtCache.set(token, {
+      payload,
+      expiresAt: Date.now() + JWT_CACHE_TTL,
+    });
+    
     return payload;
   } catch (customError: any) {
     // 2. If custom verification fails, try Supabase Auth verification
@@ -193,7 +223,7 @@ export const verifyJWT = async (token: string): Promise<any> => {
       }
       
       // Map Supabase User to our internal User/Payload format
-      return {
+      const payload = {
         sub: user.id,
         email: user.email,
         role: user.user_metadata?.role || 'staff',
@@ -201,6 +231,14 @@ export const verifyJWT = async (token: string): Promise<any> => {
         permissions: user.user_metadata?.permissions || {},
         is_supabase_user: true
       };
+      
+      // Cache Supabase user too
+      jwtCache.set(token, {
+        payload,
+        expiresAt: Date.now() + JWT_CACHE_TTL,
+      });
+      
+      return payload;
     } catch (error: any) {
       // Don't log Supabase verification errors - they're expected for custom JWT tokens
       return null;

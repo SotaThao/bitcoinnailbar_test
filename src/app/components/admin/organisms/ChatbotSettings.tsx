@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Upload, X, Loader2 } from 'lucide-react';
-import { Button } from '../../ui/button';
-import { projectId, publicAnonKey } from '/utils/supabase/info';
+import { useState } from "react";
+import { Upload, X, Loader2 } from "lucide-react";
+import { Button } from "../../ui/button";
+import { projectId, publicAnonKey } from "/utils/supabase/info";
 
 interface ChatbotSettingsProps {
   avatarUrl?: string;
@@ -9,11 +9,17 @@ interface ChatbotSettingsProps {
   onAvatarUpdate?: (url: string, path: string) => void;
 }
 
-export function ChatbotSettings({ avatarUrl, avatarPath, onAvatarUpdate }: ChatbotSettingsProps) {
+export function ChatbotSettings({
+  avatarUrl,
+  avatarPath,
+  onAvatarUpdate,
+}: ChatbotSettingsProps) {
   const [uploading, setUploading] = useState(false);
   const [currentAvatar, setCurrentAvatar] = useState(avatarUrl);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -21,38 +27,40 @@ export function ChatbotSettings({ avatarUrl, avatarPath, onAvatarUpdate }: Chatb
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('language', 'en'); // Use 'en' as default
-      formData.append('promotionId', 'chatbot'); // Use 'chatbot' as folder
-      formData.append('imageType', 'avatar');
+      formData.append("file", file);
+      formData.append("language", "en"); // Use 'en' as default
+      formData.append("promotionId", "chatbot"); // Use 'chatbot' as folder
+      formData.append("imageType", "avatar");
 
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/promotions/upload-image`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
+            Authorization: `Bearer ${publicAnonKey}`,
           },
           body: formData,
-        }
+        },
       );
 
       const result = await response.json();
 
       if (!result.success) {
-        throw new Error(result.error || 'Upload failed');
+        throw new Error(result.error || "Upload failed");
       }
 
       // Update local state
       setCurrentAvatar(result.data.signedUrl);
-      
+
       // Notify parent
       onAvatarUpdate?.(result.data.signedUrl, result.data.path);
 
-      console.log('✅ Chatbot avatar uploaded:', result.data.filename);
-
+      console.log(
+        "✅ Chatbot avatar uploaded:",
+        result.data.filename,
+      );
     } catch (error: any) {
-      console.error('❌ Upload error:', error);
+      console.error("❌ Upload error:", error);
       alert(`Upload failed: ${error.message}`);
     } finally {
       setUploading(false);
@@ -65,12 +73,11 @@ export function ChatbotSettings({ avatarUrl, avatarPath, onAvatarUpdate }: Chatb
     try {
       // Clear from state (backend will be called by parent's save)
       setCurrentAvatar(undefined);
-      onAvatarUpdate?.('', '');
-      
-      console.log('✅ Chatbot avatar removed');
+      onAvatarUpdate?.("", "");
 
+      console.log("✅ Chatbot avatar removed");
     } catch (error: any) {
-      console.error('❌ Remove error:', error);
+      console.error("❌ Remove error:", error);
       alert(`Remove failed: ${error.message}`);
     }
   };
@@ -80,10 +87,10 @@ export function ChatbotSettings({ avatarUrl, avatarPath, onAvatarUpdate }: Chatb
       <div className="relative border-2 border-dashed border-gray-200 rounded-lg overflow-hidden bg-gray-50 hover:border-gray-300 transition-colors">
         {currentAvatar ? (
           <div className="relative group">
-            <img 
-              src={currentAvatar} 
-              alt="Chatbot Avatar Preview" 
-              className="w-full h-48 object-contain bg-gray-100" 
+            <img
+              src={currentAvatar}
+              alt="Chatbot Avatar Preview"
+              className="w-full h-48 object-contain bg-gray-100"
             />
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <Button
@@ -104,9 +111,15 @@ export function ChatbotSettings({ avatarUrl, avatarPath, onAvatarUpdate }: Chatb
             ) : (
               <>
                 <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                <span className="text-sm text-gray-500">Upload Chatbot Avatar</span>
-                <span className="text-xs text-gray-400 mt-1">PNG, JPG, WebP (max 5MB)</span>
-                <span className="text-xs text-gray-400 mt-1">Recommended: Square image (1:1 ratio)</span>
+                <span className="text-sm text-gray-500">
+                  Upload Chatbot Avatar
+                </span>
+                <span className="text-xs text-gray-400 mt-1">
+                  PNG, JPG, WebP (max 5MB)
+                </span>
+                <span className="text-xs text-gray-400 mt-1">
+                  Recommended: Square image (1:1 ratio)
+                </span>
               </>
             )}
             <input
@@ -122,7 +135,8 @@ export function ChatbotSettings({ avatarUrl, avatarPath, onAvatarUpdate }: Chatb
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
         <p className="text-sm text-blue-800">
-          💡 This avatar appears in the chatbot widget on the homepage and other pages.
+          💡 This avatar appears in the chatbot widget on the
+          homepage and other pages.
         </p>
       </div>
     </div>

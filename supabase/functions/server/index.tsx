@@ -1,19 +1,51 @@
 import { Hono } from 'npm:hono@4.6.14';
 import { cors } from 'npm:hono/cors';
 import { logger } from 'npm:hono/logger';
-import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { Resend } from 'npm:resend@3.5.0';
 import QRCode from 'npm:qrcode@1.5.4';
 import { initialServices } from './initial_services.ts';
 import * as jose from 'npm:jose@5.2.0';
+import { generateBookingConfirmationEmail } from './email-templates.tsx';
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SHARED UTILITIES (NEW - Phase 1 Refactor)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { JWT_SECRET } from './_shared_constants.tsx';
+import { getSupabaseClient } from './_shared_supabase_client.tsx';
+import { retry } from './_shared_retry.tsx';
+import { kvAdmin as kv } from './_shared_kv.tsx';
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// DOMAIN MODULES (Phase 2 Refactor)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { setupApp } from './setup.tsx'; // Phase 2.1 - Setup & Health
+import { branchesApp } from './branches.tsx'; // Phase 2.2 - Branches
+import { servicesApp } from './services.tsx'; // Phase 2.3 - Services
+import { reviewsApp } from './reviews.tsx'; // Phase 2.4 - Reviews (Wave 1 Complete!)
+import { staffApp } from './staff.tsx'; // Phase 2.5 - Staff (Wave 2 Start!)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 import { membershipRoutes } from './membership.tsx';
 import { app as authApp } from './auth.tsx';
-import { customersApp } from './customers_new.tsx'; // Updated to new implementation
-import { customersBookingApp } from './customers_booking.tsx'; // Booking integration
-import { customersMembershipApp } from './customers_membership.tsx'; // Membership integration
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CUSTOMER SYSTEM - Postgres Implementation (NEW)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import { customersApp } from './customers_postgres.tsx'; // NEW: Postgres-based CRUD
+import { customersBookingApp } from './customers_booking_postgres.tsx'; // NEW: Booking integration
+import { customersMembershipApp } from './customers_membership_postgres.tsx'; // NEW: Membership integration
+
+// OLD KV Store Implementation (DEPRECATED - Keep for 1 week as fallback)
+// import { customersApp } from './customers_new.tsx';
+// import { customersBookingApp } from './customers_booking.tsx';
+// import { customersMembershipApp } from './customers_membership.tsx';
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 import rolesApp from './roles.tsx';
 import { promotionsApp } from './promotions.tsx';
 import galleryApp from './gallery.tsx';
+import { settingsApp } from './settings.tsx'; // Settings Module (14 routes)
 import { vlinkpaySettingsApp } from './vlinkpay-settings.tsx';
 import { paymentApp } from './payment.tsx';
 import { redeemApp } from './redeem.tsx';
@@ -24,29 +56,28 @@ import { debugSettingsApp } from './debug-settings.tsx';
 import { app as debugUsersApp } from './debug-users.tsx';
 import { app as debugCheckUserApp } from './debug-check-user.tsx';
 import { debugCustomersApp } from './debug-customers.tsx';
+import { debugPostgresCustomersApp } from './debug-postgres-customers.tsx'; // NEW: Debug Postgres
+import { debugConsolidatedApp } from './debug-consolidated.tsx'; // Wave 4.2 - Consolidated debug routes (13 routes)
+import { utilitiesApp } from './utilities.tsx'; // Wave 4.3 - Utilities (8 routes: upload, chat, menu images, vlink proxy)
+import { eventsApp } from './events.tsx'; // Event Management System
+import { appointmentsApp } from './appointments.tsx'; // Wave 5 - Appointments (6 routes: CRUD, check-in, availability)
+import { payrollApp } from './payroll.tsx'; // Wave 6 - Payroll/Analytics (4 routes: payroll calc, revenue analytics, dashboard stats)
+import { chatbotApp } from './chatbot.tsx'; // Wave 7 - Chatbot (1 route: POST /chat with DeepSeek AI + Function Calling)
+import { customerKV } from './kv_store_customers.tsx'; // Customer KV Store
 
-// JWT Secret - in production this should be from environment variable
-const JWT_SECRET = new TextEncoder().encode(
+// Legacy compatibility: Get Supabase client instance for existing code
+const supabase = getSupabaseClient();
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// DEPRECATED: Old inline implementations (replaced by shared utilities)
+// Keeping for 24h as fallback, will be removed in Phase 5
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/*
+const JWT_SECRET_OLD = new TextEncoder().encode(
   Deno.env.get('JWT_SECRET') || 'bitcoin-nail-bar-secret-key-change-in-production'
 );
 
-// Use a single shared Supabase client to prevent connection reset issues
-const supabase = createClient(
-  Deno.env.get("SUPABASE_URL") ?? "",
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    }
-  }
-);
-
-const KV_TABLE = "kv_store_89edbd69"; // ← REVERT: Use admin data table
-
-// Helper to retry failed requests
-const retry = async <T>(fn: () => Promise<T>, retries = 3, delay = 200): Promise<T> => {
+const retry_OLD = async <T>(fn: () => Promise<T>, retries = 3, delay = 200): Promise<T> => {
   try {
     return await fn();
   } catch (error: any) {
@@ -74,36 +105,8 @@ const retry = async <T>(fn: () => Promise<T>, retries = 3, delay = 200): Promise
     throw error;
   }
 };
-
-// Local KV implementation to bypass potential issues in the protected file
-const kv = {
-  async get(key: string) {
-    return retry(async () => {
-      const { data, error } = await supabase.from(KV_TABLE).select("value").eq("key", key).maybeSingle();
-      if (error) throw new Error(`[KV GET] ${error.message || JSON.stringify(error)}`);
-      return data?.value;
-    });
-  },
-  async set(key: string, value: any) {
-    return retry(async () => {
-      const { error } = await supabase.from(KV_TABLE).upsert({ key, value });
-      if (error) throw new Error(`[KV SET] ${error.message || JSON.stringify(error)}`);
-    });
-  },
-  async getByPrefix(prefix: string) {
-    return retry(async () => {
-      const { data, error } = await supabase.from(KV_TABLE).select("value").like("key", prefix + "%");
-      if (error) throw new Error(`[KV GETBYPREFIX] ${error.message || JSON.stringify(error)}`);
-      return data?.map((d: any) => d.value) ?? [];
-    });
-  },
-  async mdel(keys: string[]) {
-    return retry(async () => {
-      const { error } = await supabase.from(KV_TABLE).delete().in("key", keys);
-      if (error) throw new Error(`[KV MDEL] ${error.message || JSON.stringify(error)}`);
-    });
-  }
-};
+*/
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const app = new Hono();
 
@@ -115,6 +118,14 @@ app.use('*', cors({
 }));
 
 // ========== MOUNT MODULES ==========
+// Phase 2 - Domain Modules
+app.route('/', setupApp); // Phase 2.1 - Setup & Health
+app.route('/', branchesApp); // Phase 2.2 - Branches
+app.route('/', servicesApp); // Phase 2.3 - Services
+app.route('/', reviewsApp); // Phase 2.4 - Reviews (Wave 1 Complete!)
+app.route('/', staffApp); // Phase 2.5 - Staff (Wave 2 Start!)
+
+// Existing Modules
 app.route('/', authApp);
 app.route('/', membershipRoutes);
 app.route('/', customersApp);
@@ -123,6 +134,8 @@ app.route('/', customersMembershipApp); // NEW: Membership integration
 app.route('/make-server-84f9c112/roles', rolesApp);
 app.route('/', promotionsApp);
 app.route('/', galleryApp);
+app.route('/', settingsApp); // Settings Module (16 routes: social, service-menu, categories, homepage, chatbot, promotions)
+app.route('/', eventsApp); // Event Management System
 app.route('/', vlinkpaySettingsApp);
 app.route('/', paymentApp);
 app.route('/', redeemApp);
@@ -132,10 +145,22 @@ app.route('/make-server-84f9c112', adminMigrationApp);
 app.route('/make-server-84f9c112', debugSettingsApp);
 app.route('/', debugUsersApp); // Debug: List all users
 app.route('/', debugCheckUserApp); // Debug: Check specific user
-app.route('/', debugCustomersApp); // Debug: Check customers
+app.route('/', debugCustomersApp); // Debug: Check customers (KV Store)
+app.route('/', debugPostgresCustomersApp); // Debug: Check customers (Postgres)
+app.route('/', debugConsolidatedApp); // Wave 4.2 - Consolidated debug routes (13 routes)
+app.route('/', utilitiesApp); // Wave 4.3 - Utilities (8 routes: upload, chat, menu images, vlink proxy)
+app.route('/', appointmentsApp); // Wave 5 - Appointments (6 routes: CRUD, check-in, availability)
+app.route('/', payrollApp); // Wave 6 - Payroll/Analytics (4 routes: payroll calc, revenue analytics, dashboard stats)
+app.route('/', chatbotApp); // Wave 7 - Chatbot (1 route: POST /chat with DeepSeek AI + Function Calling)
 
+/* ========== DEBUG ENDPOINTS - MOVED TO debug-consolidated.tsx (Wave 4.2) ==========
+13 routes moved: test-customer-write, create-test-member, vlinkpay-settings, users, 
+sessions, get-hash, test-email, test-resend-direct, data-check, clean-appointments,
+clean-staff, cleanup-duplicates, cleanup-duplicates-v2
+========== */
+
+/* LEGACY - Disabled debug routes below
 // ========== DEBUG ENDPOINT - Test Customer KV Write ==========
-import { customerKV } from './kv_store_customers.tsx';
 
 app.get('/make-server-84f9c112/debug/test-customer-write', async (c) => {
   try {
@@ -537,9 +562,10 @@ const sendTestEmail = async (recipientEmail: string) => {
   );
 };
 
+// ========== APPOINTMENT HELPER - MOVED TO appointments.tsx (Wave 5) ==========
 // ========== APPOINTMENT HELPER ==========
-async function createAppointment(data: any) {
-  const { customerName, customerPhone, customerEmail, branchId, staffId, serviceIds, serviceNames, appointmentTime, notes } = data;
+// async function createAppointment(data: any) {
+  // const { customerName, customerPhone, customerEmail, branchId, staffId, serviceIds, serviceNames, appointmentTime, notes } = data;
   
   console.log("🚀 [CREATE_APPT] Starting creation for:", customerName);
 
@@ -643,80 +669,86 @@ async function createAppointment(data: any) {
   console.log("✅ [CREATE_APPT] Saved to KV:", appointmentId);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 4. NEW: Create/Update Customer Record
+  // 4. NEW: Create/Update Customer Record (POSTGRES)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  console.log("📝 [CREATE_APPT] Creating/updating customer record...");
+  console.log("📝 [CREATE_APPT] Creating/updating customer record in Postgres...");
   try {
-    // Import customer KV helper
-    const { customerKV } = await import('./kv_store_customers.tsx');
-    
     // Normalize phone
     const normalizedPhone = customerPhone.replace(/\D/g, '');
-    const detectRegion = (phone: string): 'US' | 'VN' | null => {
-      if (/^\d{10}$/.test(phone) && !phone.startsWith('0')) return 'US';
-      if (/^0\d{9}$/.test(phone)) return 'VN';
-      return null;
-    };
-    const region = detectRegion(normalizedPhone);
     
-    if (!region) {
-      console.warn('⚠️ [CREATE_APPT] Invalid phone format for customer record');
-    } else {
-      // Check if customer exists
-      const existingCustomer = await customerKV.searchByPhone(normalizedPhone);
-      
-      if (existingCustomer && !existingCustomer.is_deleted) {
-        // Update existing
-        existingCustomer.full_name = customerName;
-        existingCustomer.email = customerEmail || existingCustomer.email;
-        existingCustomer.total_visits += 1;
-        existingCustomer.total_spent += totalAmount;
-        existingCustomer.last_visit = appointmentTime;
-        if (!existingCustomer.appointment_ids) existingCustomer.appointment_ids = [];
-        existingCustomer.appointment_ids.push(appointmentId);
-        existingCustomer.updated_at = new Date().toISOString();
-        
-        await customerKV.set(existingCustomer.id, existingCustomer);
-        console.log('✅ [CREATE_APPT] Customer updated:', existingCustomer.id);
-      } else {
-        // Create new
-        const formatPhoneUS = (phone: string) => {
-          if (phone.length !== 10) return phone;
-          return `(${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6)}`;
-        };
-        const formatPhoneVN = (phone: string) => {
-          if (phone.length !== 10) return phone;
-          return `${phone.slice(0, 4)}.${phone.slice(4, 7)}.${phone.slice(7)}`;
-        };
-        
-        const key = region === 'US' 
-          ? `customer_us:${normalizedPhone}`
-          : `customer_vn:${crypto.randomUUID()}`;
-        const phoneDisplay = region === 'US' ? formatPhoneUS(normalizedPhone) : formatPhoneVN(normalizedPhone);
-        
-        const newCustomer: any = {
-          id: key,
-          phone: normalizedPhone,
-          phone_display: phoneDisplay,
-          full_name: customerName,
-          region,
-          email: customerEmail || undefined,
-          total_visits: 1,
-          total_spent: totalAmount,
-          last_visit: appointmentTime,
-          appointment_ids: [appointmentId],
-          created_at: new Date().toISOString(),
-          created_by: 'system_chatbot',
-          is_deleted: false
-        };
-        
-        await customerKV.set(key, newCustomer);
-        console.log('✅ [CREATE_APPT] New customer created:', key);
-      }
+    // Search for existing customer in Postgres
+    const { data: existingCustomer, error: searchError } = await supabase
+      .from('customer_profiles')
+      .select('*')
+      .eq('phone', normalizedPhone)
+      .neq('status', 'suspended')
+      .maybeSingle();
+    
+    if (searchError && searchError.code !== 'PGRST116') {
+      console.error('❌ [CREATE_APPT] Postgres search error:', searchError);
+      throw searchError;
     }
+    
+    if (existingCustomer) {
+      // ✅ UPDATE EXISTING CUSTOMER
+      console.log('📝 [CREATE_APPT] Updating existing customer:', existingCustomer.id);
+      
+      const { error: updateError } = await supabase
+        .from('customer_profiles')
+        .update({
+          full_name: customerName,
+          email: customerEmail || existingCustomer.email,
+          total_visits: (existingCustomer.total_visits || 0) + 1,
+          lifetime_spend: (existingCustomer.lifetime_spend || 0) + totalAmount,
+          last_visit_date: appointmentTime,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingCustomer.id);
+      
+      if (updateError) {
+        console.error('❌ [CREATE_APPT] Postgres update error:', updateError);
+        throw updateError;
+      }
+      
+      console.log('✅ [CREATE_APPT] Customer updated in Postgres:', existingCustomer.id);
+      
+    } else {
+      // ✅ CREATE NEW CUSTOMER
+      console.log('🆕 [CREATE_APPT] Creating new customer in Postgres...');
+      
+      // Postgres will auto-generate UUID via DEFAULT gen_random_uuid()
+      const { data: newCustomer, error: insertError } = await supabase
+        .from('customer_profiles')
+        .insert({
+          phone: normalizedPhone,
+          email: customerEmail,
+          full_name: customerName,
+          total_visits: 1,
+          lifetime_spend: totalAmount,
+          last_visit_date: appointmentTime,
+          tier: 'guest',
+          status: 'active',
+          loyalty_points: 0,
+          marketing_opt_in: true,
+          sms_opt_in: false,
+          preferred_language: 'en',
+          created_by: 'system_booking'
+        })
+        .select()
+        .single();
+      
+      if (insertError) {
+        console.error('❌ [CREATE_APPT] Postgres insert error:', insertError);
+        throw insertError;
+      }
+      
+      console.log('✅ [CREATE_APPT] New customer created in Postgres:', newCustomer?.id);
+    }
+    
   } catch (customerIntegrationError) {
     console.error('❌ [CREATE_APPT] Customer integration error:', customerIntegrationError);
-    // Don't fail the whole booking process
+    // Don't fail the whole booking process if customer creation fails
+    console.warn('⚠️ [CREATE_APPT] Continuing despite customer integration error');
   }
 
   // 3. Generate QR & Send Email
@@ -801,364 +833,16 @@ async function createAppointment(data: any) {
         console.warn("⚠️ [CREATE_APPT] CLOUDINARY_URL not configured, QR will fallback to client-side generation");
       }
 
-      // Email Template
-      const emailHtml = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <meta name="color-scheme" content="light only">
-          <meta name="supported-color-schemes" content="light">
-          <title>Booking Confirmed - Bitcoin Nail Bar</title>
-          <style>
-            /* Force light mode - prevent dark mode auto-conversion */
-            :root {
-              color-scheme: light only;
-              supported-color-schemes: light;
-            }
-            body {
-              background-color: #f8fafc !important;
-            }
-            .email-container {
-              background-color: #ffffff !important;
-            }
-            /* Dark mode override */
-            @media (prefers-color-scheme: dark) {
-              body {
-                background-color: #f8fafc !important;
-              }
-              .email-container {
-                background-color: #ffffff !important;
-              }
-              [data-ogsc] .email-container {
-                background-color: #ffffff !important;
-              }
-            }
-          </style>
-        </head>
-        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f8fafc !important;">
-          <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f8fafc !important;">
-            <tr>
-              <td style="padding: 40px 20px;">
-                <table role="presentation" class="email-container" style="max-width: 600px; margin: 0 auto; background-color: #ffffff !important; border-radius: 0; overflow: hidden;">
-                  
-                  <!-- Content Container -->
-                  <tr>
-                    <td style="padding: 40px 32px 0 32px; background-color: #ffffff !important;">
-                      
-                      <!-- Greeting -->
-                      <table role="presentation" style="width: 100%; margin-bottom: 32px;">
-                        <tr>
-                          <td>
-                            <p style="font-size: 16px; line-height: 24px; color: #45556c !important; margin: 0 0 8px 0;">
-                              Hello <strong style="color: #0f172b !important;">${customerName}</strong>,
-                            </p>
-                            <p style="font-size: 16px; line-height: 24px; color: #45556c !important; margin: 0;">
-                              Thank you for booking! We're excited to see you at Bitcoin Nail Bar.
-                            </p>
-                          </td>
-                        </tr>
-                      </table>
-
-                      <!-- Appointment Details Section -->
-                      <table role="presentation" style="width: 100%; margin-bottom: 32px; background: #f8fafc !important; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden;">
-                        <tr>
-                          <td style="padding: 25px; background-color: #f8fafc !important;">
-                            <!-- Heading -->
-                            <table role="presentation" style="width: 100%; margin-bottom: 16px;">
-                              <tr>
-                                <td>
-                                  <table role="presentation">
-                                    <tr>
-                                      <td style="padding-right: 8px; vertical-align: middle;">
-                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                          <path d="M15.8333 3.33334H4.16667C3.24619 3.33334 2.5 4.07954 2.5 5.00001V16.6667C2.5 17.5872 3.24619 18.3333 4.16667 18.3333H15.8333C16.7538 18.3333 17.5 17.5872 17.5 16.6667V5.00001C17.5 4.07954 16.7538 3.33334 15.8333 3.33334Z" stroke="#FF9800" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
-                                          <path d="M13.3333 1.66666V5" stroke="#FF9800" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
-                                          <path d="M6.66666 1.66666V5" stroke="#FF9800" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
-                                          <path d="M2.5 8.33334H17.5" stroke="#FF9800" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
-                                        </svg>
-                                      </td>
-                                      <td style="vertical-align: middle;">
-                                        <p style="font-size: 20px; font-weight: bold; line-height: 30px; color: #0f172b !important; margin: 0;">
-                                          Appointment Details
-                                        </p>
-                                      </td>
-                                    </tr>
-                                  </table>
-                                </td>
-                              </tr>
-                            </table>
-
-                            <!-- Service Info -->
-                            <table role="presentation" style="width: 100%; margin-bottom: 12px;">
-                              <tr>
-                                <td style="vertical-align: top; padding-right: 12px; width: 40px;">
-                                  <div style="width: 40px; height: 40px; background-color: #ffedd4 !important; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                      <path d="M10 17.5C14.1421 17.5 17.5 14.1421 17.5 10C17.5 5.85786 14.1421 2.5 10 2.5C5.85786 2.5 2.5 5.85786 2.5 10C2.5 14.1421 5.85786 17.5 10 17.5Z" stroke="#FF9800" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
-                                      <path d="M10 6.66666V10L12.5 11.6667" stroke="#FF9800" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                  </div>
-                                </td>
-                                <td style="vertical-align: top;">
-                                  <p style="font-size: 16px; font-weight: bold; line-height: 24px; color: #0f172b !important; margin: 0 0 2px 0;">
-                                    ${displayServices}
-                                  </p>
-                                  <p style="font-size: 14px; line-height: 20px; color: #64748b !important; margin: 0;">
-                                    Bitcoin Nail Bar - Houston, TX
-                                  </p>
-                                </td>
-                              </tr>
-                            </table>
-
-                            <!-- Date & Time Info -->
-                            <table role="presentation" style="width: 100%;">
-                              <tr>
-                                <td style="vertical-align: top; padding-right: 12px; width: 40px;">
-                                  <div style="width: 40px; height: 40px; background-color: #dbeafe !important; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                      <path d="M10 17.5C14.1421 17.5 17.5 14.1421 17.5 10C17.5 5.85786 14.1421 2.5 10 2.5C5.85786 2.5 2.5 5.85786 2.5 10C2.5 14.1421 5.85786 17.5 10 17.5Z" stroke="#155DFC" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
-                                      <path d="M10 5V10L13.3333 11.6667" stroke="#155DFC" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                  </div>
-                                </td>
-                                <td style="vertical-align: top;">
-                                  <p style="font-size: 16px; line-height: 24px; color: #0f172b !important; margin: 0 0 2px 0;">
-                                    Date & Time
-                                  </p>
-                                  <p style="font-size: 14px; line-height: 20px; color: #64748b !important; margin: 0;">
-                                    ${formattedTime}
-                                  </p>
-                                </td>
-                              </tr>
-                            </table>
-
-                          </td>
-                        </tr>
-                      </table>
-
-                      <!-- Your Ticket Section -->
-                      <table role="presentation" style="width: 100%; margin-bottom: 32px;">
-                        <tr>
-                          <td>
-                            <!-- Heading -->
-                            <table role="presentation" style="width: 100%; margin-bottom: 16px;">
-                              <tr>
-                                <td>
-                                  <table role="presentation">
-                                    <tr>
-                                      <td style="padding-right: 8px; vertical-align: middle;">
-                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                          <path d="M15.8333 2.5H4.16667L2.5 7.5V15.8333C2.5 16.7538 3.24619 17.5 4.16667 17.5H15.8333C16.7538 17.5 17.5 16.7538 17.5 15.8333V7.5L15.8333 2.5Z" stroke="#FF9800" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
-                                          <path d="M2.5 7.5H17.5" stroke="#FF9800" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round"/>
-                                        </svg>
-                                      </td>
-                                      <td style="vertical-align: middle;">
-                                        <p style="font-size: 20px; font-weight: bold; line-height: 30px; color: #0f172b !important; margin: 0;">
-                                          Your Booking
-                                        </p>
-                                      </td>
-                                    </tr>
-                                  </table>
-                                </td>
-                              </tr>
-                            </table>
-
-                            <!-- Ticket Card -->
-                            <table role="presentation" style="width: 100%; background-color: #ffffff !important; border: 2px solid #e2e8f0; border-radius: 14px; overflow: hidden;">
-                              <tr>
-                                <!-- QR Code Section -->
-                                <td style="background: linear-gradient(135.223deg, #0B0F19 0%, #1d293d 100%) !important; padding: 32px; text-align: center; vertical-align: middle; width: 258px;">
-                                  ${qrCodeUrl ? `
-                                    <div style="background-color: #ffffff; border-radius: 10px; padding: 16px; display: inline-block; box-shadow: inset 0px 2px 4px 0px rgba(0,0,0,0.05);">
-                                      <img src="${qrCodeUrl}" width="160" height="160" alt="Check-in QR Code" style="display: block;" />
-                                    </div>
-                                  ` : '<div style="width: 192px; height: 192px; background-color: #f1f5f9; border-radius: 10px;"></div>'}
-                                </td>
-                                
-                                <!-- Booking Info Section -->
-                                <td style="padding: 24px; vertical-align: top; background-color: #ffffff !important;">
-                                  <!-- Booking ID & Status -->
-                                  <table role="presentation" style="width: 100%; margin-bottom: 16px;">
-                                    <tr>
-                                      <td style="vertical-align: top;">
-                                        <p style="font-size: 12px; line-height: 16px; color: #62748e !important; text-transform: uppercase; letter-spacing: 0.6px; margin: 0 0 4px 0;">
-                                          Booking ID
-                                        </p>
-                                        <div style="background-color: #f1f5f9 !important; border: 1px solid #cad5e2; border-radius: 10px; padding: 8px 13px;">
-                                          <p style="font-family: Consolas, monospace; font-size: 16px; line-height: 24px; color: #0f172b !important; letter-spacing: 0.8px; margin: 0;">
-                                            ${appointmentId.split(':')[1].substring(0, 8).toUpperCase()}
-                                          </p>
-                                        </div>
-                                      </td>
-                                      <td style="text-align: right; vertical-align: top;">
-                                        <div style="background-color: #dcfce7 !important; border-radius: 999px; padding: 4px 12px; display: inline-block;">
-                                          <p style="font-size: 12px; line-height: 16px; color: #016630 !important; margin: 0;">
-                                            Active
-                                          </p>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  </table>
-
-                                  <!-- Customer Info -->
-                                  <table role="presentation" style="width: 100%; border-top: 1px solid #e2e8f0; padding-top: 17px;">
-                                    <tr>
-                                      <td style="padding-bottom: 12px;">
-                                        <table role="presentation">
-                                          <tr>
-                                            <td style="padding-right: 8px; vertical-align: middle;">
-                                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M13.3333 14V12.6667C13.3333 11.9594 13.0524 11.2811 12.5523 10.781C12.0522 10.281 11.3739 10 10.6667 10H5.33333C4.62609 10 3.94781 10.281 3.44772 10.781C2.94762 11.2811 2.66667 11.9594 2.66667 12.6667V14" stroke="#90A1B9" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
-                                                <path d="M8 7.33333C9.47276 7.33333 10.6667 6.13943 10.6667 4.66667C10.6667 3.19391 9.47276 2 8 2C6.52724 2 5.33333 3.19391 5.33333 4.66667C5.33333 6.13943 6.52724 7.33333 8 7.33333Z" stroke="#90A1B9" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
-                                              </svg>
-                                            </td>
-                                            <td style="vertical-align: middle;">
-                                              <p style="font-size: 14px; line-height: 20px; color: #64748b !important; margin: 0;">
-                                                <span style="color: #90A1B9; margin-right: 4px;">Name:</span> ${customerName}
-                                              </p>
-                                            </td>
-                                          </tr>
-                                        </table>
-                                      </td>
-                                    </tr>
-                                    <tr>
-                                      <td style="padding-bottom: 12px;">
-                                        <table role="presentation">
-                                          <tr>
-                                            <td style="padding-right: 8px; vertical-align: middle;">
-                                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M14.6666 11.2733V13.2733C14.6673 13.4607 14.6295 13.6461 14.5558 13.8172C14.4822 13.9883 14.3743 14.1412 14.2393 14.2657C14.1044 14.3903 13.9455 14.4836 13.7731 14.5394C13.6008 14.5952 13.4189 14.6121 13.2399 14.5893C11.2533 14.3733 9.35634 13.6951 7.66663 12.6C6.09559 11.5647 4.76856 10.2377 3.73329 8.66665C2.63385 6.96863 1.95604 5.06001 1.74663 3.06665C1.72379 2.88796 1.74059 2.70638 1.79592 2.53427C1.85124 2.36217 1.94382 2.20352 2.06746 2.06903C2.19111 1.93453 2.34293 1.82736 2.51268 1.75475C2.68244 1.68214 2.86616 1.6458 3.05129 1.648H5.05129C5.38575 1.64478 5.70954 1.7667 5.95596 1.98863C6.20239 2.21056 6.3537 2.51659 6.37863 2.84332C6.42514 3.47352 6.57917 4.09117 6.83329 4.66665C6.93427 4.89308 6.95604 5.14589 6.89552 5.38883C6.835 5.63177 6.69527 5.85226 6.49663 6.01865L5.64663 6.86665C6.59858 8.54019 7.99309 9.9347 9.66663 10.8867L10.5133 10.0333C10.6797 9.83468 10.9002 9.69495 11.1431 9.63443C11.3861 9.57391 11.6389 9.59568 11.8653 9.69665C12.4408 9.95078 13.0584 10.1048 13.6886 10.1513C14.0175 10.1764 14.3252 10.3291 14.5478 10.5776C14.7704 10.8261 14.8916 11.1523 14.8866 11.4867L14.6666 11.2733Z" stroke="#90A1B9" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
-                                              </svg>
-                                            </td>
-                                            <td style="vertical-align: middle;">
-                                              <p style="font-size: 14px; line-height: 20px; color: #64748b !important; margin: 0;">
-                                                <span style="color: #90A1B9; margin-right: 4px;">Phone:</span> ${customerPhone}
-                                              </p>
-                                            </td>
-                                          </tr>
-                                        </table>
-                                      </td>
-                                    </tr>
-                                    <tr>
-                                      <td>
-                                        <table role="presentation">
-                                          <tr>
-                                            <td style="padding-right: 8px; vertical-align: middle;">
-                                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M2.66667 2.66667H13.3333C14.0667 2.66667 14.6667 3.26667 14.6667 4V12C14.6667 12.7333 14.0667 13.3333 13.3333 13.3333H2.66667C1.93333 13.3333 1.33333 12.7333 1.33333 12V4C1.33333 3.26667 1.93333 2.66667 2.66667 2.66667Z" stroke="#90A1B9" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
-                                                <path d="M14.6667 4L8 8.66667L1.33333 4" stroke="#90A1B9" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/>
-                                              </svg>
-                                            </td>
-                                            <td style="vertical-align: middle;">
-                                              <p style="font-size: 14px; line-height: 20px; color: #64748b !important; margin: 0;">
-                                                <span style="color: #90A1B9; margin-right: 4px;">Email:</span> ${customerEmail}
-                                              </p>
-                                            </td>
-                                          </tr>
-                                        </table>
-                                      </td>
-                                    </tr>
-                                  </table>
-
-                                </td>
-                              </tr>
-                            </table>
-
-                          </td>
-                        </tr>
-                      </table>
-
-                      <!-- Important Check-in Information -->
-                      <table role="presentation" style="width: 100%; margin-bottom: 32px; background-color: #fffbeb !important; border-left: 4px solid #FF9800; border-radius: 0 10px 10px 0; overflow: hidden;">
-                        <tr>
-                          <td style="padding: 20px 20px 20px 24px; background-color: #fffbeb !important;">
-                            <table role="presentation" style="width: 100%;">
-                              <tr>
-                                <td style="vertical-align: top; padding-right: 12px; width: 24px;">
-                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="#E17100" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M12 8V12" stroke="#E17100" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M12 16H12.01" stroke="#E17100" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                  </svg>
-                                </td>
-                                <td style="vertical-align: top;">
-                                  <p style="font-size: 18px; font-weight: bold; line-height: 27px; color: #7b3306 !important; margin: 0 0 8px 0;">
-                                    Important Check-in Information
-                                  </p>
-                                  <ul style="margin: 0; padding: 0; list-style: none;">
-                                    <li style="font-size: 14px; line-height: 20px; color: #973c00 !important; margin-bottom: 4px;">
-                                      • Please present this QR code at the reception desk
-                                    </li>
-                                    <li style="font-size: 14px; line-height: 20px; color: #973c00 !important; margin-bottom: 4px;">
-                                      • You can save this email or screenshot the QR code
-                                    </li>
-                                    <li style="font-size: 14px; line-height: 20px; color: #973c00 !important; margin-bottom: 4px;">
-                                      • Arrive 5-10 minutes before your appointment
-                                    </li>
-                                    <li style="font-size: 14px; line-height: 20px; color: #973c00 !important;">
-                                      • One QR code = One booking entry
-                                    </li>
-                                  </ul>
-                                </td>
-                              </tr>
-                            </table>
-                          </td>
-                        </tr>
-                      </table>
-
-                      <!-- CTA Section -->
-                      <table role="presentation" style="width: 100%; margin-bottom: 32px; background: #FF9800 !important; border-radius: 14px; padding: 24px; text-align: center;">
-                        <tr>
-                          <td style="background-color: #FF9800 !important;">
-                            <p style="font-size: 16px; line-height: 24px; color: #ffffff !important; margin: 0 0 12px 0;">
-                              Need help or want to reschedule?
-                            </p>
-                            <table role="presentation" style="margin: 0 auto;">
-                              <tr>
-                                <td style="background-color: #ffffff !important; border-radius: 10px; padding: 12px 32px;">
-                                  <a href="tel:+18327993990" style="font-size: 16px; font-weight: bold; line-height: 24px; color: #FF9800 !important; text-decoration: none;">
-                                    Call Us: (832) 799-3990
-                                  </a>
-                                </td>
-                              </tr>
-                            </table>
-                            <p style="font-size: 14px; line-height: 20px; color: #ffffff !important; margin: 12px 0 0 0;">
-                              9793 Westheimer Rd, Houston, TX 77042
-                            </p>
-                          </td>
-                        </tr>
-                      </table>
-
-                    </td>
-                  </tr>
-
-                  <!-- Footer -->
-                  <tr>
-                    <td style="padding: 0 32px 40px 32px; border-top: 1px solid #e2e8f0; background-color: #ffffff !important;">
-                      <table role="presentation" style="width: 100%; padding-top: 33px;">
-                        <tr>
-                          <td style="text-align: center;">
-                            <p style="font-size: 14px; line-height: 20px; color: #62748e !important; margin: 0 0 8px 0;">
-                              Questions? Contact our support team
-                            </p>
-                            <p style="font-size: 12px; line-height: 16px; color: #90a1b9 !important; margin: 0;">
-                              © 2026 Bitcoin Nail Bar. All rights reserved.
-                            </p>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-
-                </table>
-              </td>
-            </tr>
-          </table>
-        </body>
-        </html>
-      `;
+      // Generate Email Template
+      const emailHtml = generateBookingConfirmationEmail({
+        customerName,
+        customerEmail,
+        customerPhone,
+        appointmentId,
+        displayServices,
+        formattedTime,
+        qrCodeUrl
+      });
 
       await sendEmail(customerEmail, '✅ Appointment Confirmed - Bitcoin Nail Bar', emailHtml);
       emailSent = true;
@@ -1194,11 +878,18 @@ async function createAppointment(data: any) {
   } catch (broadcastError) {
     console.error("❌ [CREATE_APPT] Realtime broadcast error:", broadcastError);
     // Don't fail the whole booking if notification fails
-  }
+  // }
+  //
+  // return { appointment, emailSent, emailError, qrCodeUrl };
+// }
+// ========== END APPOINTMENT HELPER - MOVED TO appointments.tsx (Wave 5) ==========
+// END createAppointment helper
 
-  return { appointment, emailSent, emailError, qrCodeUrl };
-}
+// ========== INLINE ROUTES (Being refactored to modules) ==========
+// NOTE: Routes below are being gradually moved to domain modules in Phase 2
+// Phase 2.1 DONE: Health + Setup routes → moved to setup.tsx
 
+// ========== PHASE 2.1 - MOVED TO setup.tsx ==========
 // Routes
 app.get("/make-server-84f9c112/health", (c) => c.json({ status: "ok", version: "v7-staff-management" }));
 
@@ -1400,6 +1091,7 @@ app.post('/make-server-84f9c112/setup/owner', async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+// ========== END PHASE 2.1 MOVED ROUTES ==========
 
 // ========== AUTHENTICATION ENDPOINTS ==========
 // NOTE: Auth routes (login, verify, logout) and User Management have been moved to auth.tsx module
@@ -1425,7 +1117,11 @@ app.post("/make-server-84f9c112/test-resend-direct", async (c) => {
 });
 
 // KV CRUD
-const kvRoutes = ['branches', 'services', 'staff', 'appointments', 'reviews'];
+// Phase 2.2: Removed 'branches' (moved to branches.tsx)
+// Phase 2.3: Removed 'services' (moved to services.tsx)
+// Phase 2.4: Removed 'reviews' (moved to reviews.tsx) - WAVE 1 COMPLETE!
+// Phase 2.5: Removed 'staff' (moved to staff.tsx) - WAVE 2 START!
+const kvRoutes = ['appointments'];
 kvRoutes.forEach(route => {
   app.get(`/make-server-84f9c112/${route}`, async (c) => {
     try {
@@ -1467,13 +1163,16 @@ kvRoutes.forEach(route => {
   });
 });
 
+// ========== PHASE 2.2 - MOVED TO branches.tsx ==========
 app.post("/make-server-84f9c112/branches", async (c) => {
   const body = await c.req.json();
   const id = `branch:${Date.now()}`;
   await kv.set(id, { id, ...body, createdAt: new Date().toISOString() });
   return c.json({ success: true, data: { id, ...body } });
 });
+// ========== END PHASE 2.2 MOVED ROUTES ==========
 
+// ========== PHASE 2.3 - MOVED TO services.tsx ==========
 app.post("/make-server-84f9c112/services", async (c) => {
   const body = await c.req.json();
   const id = `service:${Date.now()}`;
@@ -1502,7 +1201,9 @@ app.delete("/make-server-84f9c112/services/:id", async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+// ========== END PHASE 2.3 MOVED ROUTES ==========
 
+// ========== PHASE 2.2 - MOVED TO branches.tsx ==========
 // DELETE Branch
 app.delete("/make-server-84f9c112/branches/:id", async (c) => {
   try {
@@ -1524,7 +1225,9 @@ app.delete("/make-server-84f9c112/branches/:id", async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+// ========== END PHASE 2.2 MOVED ROUTES ==========
 
+// ========== PHASE 2.5 - MOVED TO staff.tsx ==========
 app.post("/make-server-84f9c112/staff", async (c) => {
   try {
     const body = await c.req.json();
@@ -1539,265 +1242,32 @@ app.post("/make-server-84f9c112/staff", async (c) => {
 
 // Seed Staff Data - Creates 6 realistic staff members based on US nail salon business
 app.post("/make-server-84f9c112/staff/seed", async (c) => {
-  try {
-    const seedStaff = [
-      {
-        name: "Jennifer Martinez",
-        nickname: "Jenny",
-        phone: "(714) 555-0123",
-        email: "jennifer.martinez@bitcoinnailbar.com",
-        role: "Lead Technician",
-        hireDate: "2023-01-15",
-        employmentType: "W2",
-        licenseNumber: "CA-NT-987456",
-        baseHourlyRate: "18.00",
-        commissionRate: 0.70,
-        tipSplit: "100",
-        specialties: ["Manicure", "Pedicure", "Gel Polish", "Nail Art", "Nail Extension"],
-        workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-        emergencyContactName: "Maria Martinez",
-        emergencyContactPhone: "(714) 555-0124"
-      },
-      {
-        name: "Linda Nguyen",
-        nickname: "Linda",
-        phone: "(714) 555-0145",
-        email: "linda.nguyen@bitcoinnailbar.com",
-        role: "Senior Nail Artist",
-        hireDate: "2023-03-20",
-        employmentType: "1099",
-        licenseNumber: "CA-NT-876543",
-        baseHourlyRate: "16.50",
-        commissionRate: 0.65,
-        tipSplit: "100",
-        specialties: ["Nail Art", "Acrylic", "Gel Polish", "Nail Extension"],
-        workingDays: ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-        emergencyContactName: "Tom Nguyen",
-        emergencyContactPhone: "(714) 555-0146"
-      },
-      {
-        name: "Sarah Johnson",
-        nickname: "Sarah",
-        phone: "(714) 555-0167",
-        email: "sarah.johnson@bitcoinnailbar.com",
-        role: "Nail Technician",
-        hireDate: "2023-06-10",
-        employmentType: "W2",
-        licenseNumber: "CA-NT-765432",
-        baseHourlyRate: "15.50",
-        commissionRate: 0.60,
-        tipSplit: "100",
-        specialties: ["Manicure", "Pedicure", "Gel Polish", "Dip Powder"],
-        workingDays: ["Monday", "Wednesday", "Thursday", "Friday", "Saturday"],
-        emergencyContactName: "Mike Johnson",
-        emergencyContactPhone: "(714) 555-0168"
-      },
-      {
-        name: "Mai Tran",
-        nickname: "Mai",
-        phone: "(714) 555-0189",
-        email: "mai.tran@bitcoinnailbar.com",
-        role: "Pedicure Specialist",
-        hireDate: "2023-08-05",
-        employmentType: "W2",
-        licenseNumber: "CA-NT-654321",
-        baseHourlyRate: "15.50",
-        commissionRate: 0.60,
-        tipSplit: "100",
-        specialties: ["Pedicure", "Spa Treatment", "Manicure", "Gel Polish"],
-        workingDays: ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-        emergencyContactName: "Linh Tran",
-        emergencyContactPhone: "(714) 555-0190"
-      },
-      {
-        name: "Jessica Lee",
-        nickname: "Jess",
-        phone: "(714) 555-0201",
-        email: "jessica.lee@bitcoinnailbar.com",
-        role: "Nail Technician",
-        hireDate: "2024-01-12",
-        employmentType: "1099",
-        licenseNumber: "CA-NT-543210",
-        baseHourlyRate: "15.00",
-        commissionRate: 0.55,
-        tipSplit: "100",
-        specialties: ["Manicure", "Gel Polish", "Dip Powder", "Acrylic"],
-        workingDays: ["Monday", "Tuesday", "Wednesday", "Friday", "Saturday"],
-        emergencyContactName: "David Lee",
-        emergencyContactPhone: "(714) 555-0202"
-      },
-      {
-        name: "Emily Chen",
-        nickname: "Em",
-        phone: "(714) 555-0223",
-        email: "emily.chen@bitcoinnailbar.com",
-        role: "Apprentice",
-        hireDate: "2024-09-01",
-        employmentType: "W2",
-        licenseNumber: "CA-NT-432109",
-        baseHourlyRate: "14.00",
-        commissionRate: 0.50,
-        tipSplit: "100",
-        specialties: ["Manicure", "Pedicure", "Gel Polish"],
-        workingDays: ["Monday", "Tuesday", "Thursday", "Friday", "Saturday"],
-        emergencyContactName: "Amy Chen",
-        emergencyContactPhone: "(714) 555-0224"
-      }
-    ];
-
-    const created = [];
-    for (const staff of seedStaff) {
-      const id = `staff:${Date.now()}-${Math.random().toString(36).substring(7)}`;
-      await kv.set(id, { id, ...staff, createdAt: new Date().toISOString() });
-      created.push({ id, ...staff });
-      // Small delay to ensure unique timestamps
-      await new Promise(r => setTimeout(r, 10));
-    }
-
-    return c.json({ 
-      success: true, 
-      message: `Successfully seeded ${created.length} staff members`,
-      data: created 
-    });
-  } catch (error: any) {
-    console.error("Error seeding staff:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
+  // ... 170+ lines of seed data ...
 });
+// ========== END PHASE 2.5 MOVED ROUTES ==========
 
+// ========== PHASE 2.4 - MOVED TO reviews.tsx ==========
 app.post("/make-server-84f9c112/reviews", async (c) => {
   const body = await c.req.json();
   const id = `review:${Date.now()}`;
   await kv.set(id, { id, ...body, createdAt: new Date().toISOString() });
   return c.json({ success: true, data: { id, ...body } });
 });
+// ========== END PHASE 2.4 MOVED ROUTES ==========
 
 // ========== CUSTOMER ENDPOINTS ==========
-// Lookup customer by phone number
-app.get("/make-server-84f9c112/customers/phone/:phone", async (c) => {
-  try {
-    const phone = c.req.param("phone");
-    const normalizedPhone = phone.replace(/\D/g, ''); // Remove all non-digits
-    
-    console.log(`🔍 [LOOKUP CUSTOMER] Phone: ${normalizedPhone}`);
-    
-    // Try to find customer by normalized phone
-    const customerKey = `customer:${normalizedPhone}`;
-    const customerData = await kv.get(customerKey);
-    
-    if (customerData) {
-      console.log(`✅ [LOOKUP CUSTOMER] Found customer:`, customerData.name);
-      return c.json({ success: true, data: customerData });
-    }
-    
-    console.log(`ℹ️  [LOOKUP CUSTOMER] No customer found for phone: ${normalizedPhone}`);
-    return c.json({ success: true, data: null });
-  } catch (error: any) {
-    console.error(`❌ [LOOKUP CUSTOMER] Error:`, error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
+// ⚠️ DEPRECATED - Now using Postgres Implementation from customers_postgres.tsx
+// All customer routes are handled by customersApp mounted at line 132
+// These old KV Store routes have been removed to prevent conflicts
 
-// Get customers list with pagination (from kv_store_customers table)
-app.get("/make-server-84f9c112/customers", async (c) => {
-  try {
-    const page = parseInt(c.req.query('page') || '1');
-    const limit = parseInt(c.req.query('limit') || '20');
-    
-    console.log(`📋 [GET_CUSTOMERS] Fetching page ${page}, limit ${limit} (US market only)`);
-    
-    // Import customer KV helper
-    const { customerKV } = await import('./kv_store_customers.tsx');
-    
-    // Calculate offset for pagination
-    const offset = (page - 1) * limit;
-    
-    // Fetch ALL customers (US market only - no region filter)
-    const customers = await customerKV.getAll(limit, offset);
-    const totalCount = await customerKV.countAll();
-    const totalPages = Math.ceil(totalCount / limit);
-    
-    console.log(`✅ [GET_CUSTOMERS] Found ${customers.length} customers (total: ${totalCount})`);
-    if (customers.length > 0) {
-      console.log(`📊 [GET_CUSTOMERS] Sample customer:`, customers[0]);
-    }
-    
-    return c.json({
-      success: true,
-      data: {
-        customers,
-        pagination: {
-          page,
-          limit,
-          totalCount,
-          totalPages,
-        }
-      }
-    });
-  } catch (error: any) {
-    console.error('❌ [GET_CUSTOMERS] Error:', error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
+// ========== APPOINTMENTS - MOVED TO appointments.tsx (Wave 5) ==========
+// 6 routes moved: POST /appointments, GET /appointments, GET /appointments/:id, 
+// PUT /appointments/:id, POST /check-in, POST /appointments/availability
+// ==========
 
-// Search customers (from kv_store_customers table)
-app.post("/make-server-84f9c112/customers/search", async (c) => {
-  try {
-    const body = await c.req.json();
-    const { query, limit } = body;
-    
-    console.log(`🔍 [SEARCH_CUSTOMERS] Query: "${query}" (US market only)`);
-    
-    // Import customer KV helper
-    const { customerKV } = await import('./kv_store_customers.tsx');
-    
-    // Perform search (no region filter - US market only)
-    const customers = await customerKV.search(query, undefined, limit || 20);
-    
-    console.log(`✅ [SEARCH_CUSTOMERS] Found ${customers.length} matching customers`);
-    
-    return c.json({
-      success: true,
-      data: customers
-    });
-  } catch (error: any) {
-    console.error('❌ [SEARCH_CUSTOMERS] Error:', error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-// Save/Update customer info
-app.post("/make-server-84f9c112/customers", async (c) => {
-  try {
-    const body = await c.req.json();
-    const { phone, name, email } = body;
-    
-    if (!phone || !name) {
-      return c.json({ success: false, error: "Phone and name are required" }, 400);
-    }
-    
-    const normalizedPhone = phone.replace(/\D/g, '');
-    const customerKey = `customer:${normalizedPhone}`;
-    
-    const customerData = {
-      phone: normalizedPhone,
-      name,
-      email: email || "",
-      lastUpdated: new Date().toISOString(),
-    };
-    
-    await kv.set(customerKey, customerData);
-    console.log(`✅ [SAVE CUSTOMER] Saved customer: ${name} (${normalizedPhone})`);
-    
-    return c.json({ success: true, data: customerData });
-  } catch (error: any) {
-    console.error(`❌ [SAVE CUSTOMER] Error:`, error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
+// LEGACY - Appointment routes below (disabled)
 // Create Appointment (Manual/API)
-app.post("/make-server-84f9c112/appointments", async (c) => {
+// app.post("/make-server-84f9c112/appointments", async (c) => {
   try {
     const body = await c.req.json();
     const result = await createAppointment(body);
@@ -1923,14 +1393,20 @@ app.post("/make-server-84f9c112/check-in", async (c) => {
     }
     return c.json({ success: true, data: appointment });
   } catch (e: any) {
-    console.error('❌ [CHECK-IN] Error:', e);
-    return c.json({ success: false, error: e.message }, 500);
-  }
-});
+    // console.error('❌ [CHECK-IN] Error:', e);
+    // return c.json({ success: false, error: e.message }, 500);
+  // }
+// });
+// END LEGACY appointment routes (lines 1256-1392)
 
 // ========== SOCIAL MEDIA SETTINGS ==========
+// ⚠️ DEPRECATED - Now using Settings Module (settings.tsx)
+// All settings routes have been extracted to settings.tsx
+// These old inline routes have been removed to prevent conflicts
+
+// REMOVED - Now in settings.tsx
 // Get Social Media Links
-app.get("/make-server-84f9c112/settings/social-media", async (c) => {
+// app.get("/make-server-84f9c112/settings/social-media", async (c) => {
   try {
     const socialMedia = await kv.get("settings:social-media");
     if (!socialMedia) {
@@ -1966,168 +1442,9 @@ app.put("/make-server-84f9c112/settings/social-media", async (c) => {
   }
 });
 
-// ========== DASHBOARD STATS ==========
-app.get("/make-server-84f9c112/dashboard/stats", async (c) => {
-  try {
-    const appointments = await kv.getByPrefix("appointment:");
-    const staff = await kv.getByPrefix("staff:");
-    const services = await kv.getByPrefix("service:");
-    
-    // 🔍 DEBUG LOGGING
-    console.log("📊 [DASHBOARD] Total records:");
-    console.log("   - Appointments:", appointments.length);
-    console.log("   - Staff:", staff.length);
-    console.log("   - Services:", services.length);
-    
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    // Filter today's appointments
-    const todayAppointments = appointments.filter((appt: any) => {
-      const apptDate = new Date(appt.appointmentTime);
-      return apptDate >= today;
-    });
-    
-    const yesterdayAppointments = appointments.filter((appt: any) => {
-      const apptDate = new Date(appt.appointmentTime);
-      return apptDate >= yesterday && apptDate < today;
-    });
-    
-    // Calculate revenue (completed appointments only)
-    const completedToday = todayAppointments.filter((a: any) => a.status === 'completed');
-    const completedYesterday = yesterdayAppointments.filter((a: any) => a.status === 'completed');
-    
-    // Calculate revenue based on services
-    const calculateRevenue = (appointments: any[]) => {
-      let total = 0;
-      appointments.forEach((appt: any) => {
-        if (appt.serviceIds && Array.isArray(appt.serviceIds)) {
-          appt.serviceIds.forEach((serviceId: string) => {
-            const service = services.find((s: any) => s.id === serviceId);
-            if (service && service.price) {
-              total += parseFloat(service.price);
-            }
-          });
-        }
-      });
-      return total;
-    };
-    
-    const todayRevenue = calculateRevenue(completedToday);
-    const yesterdayRevenue = calculateRevenue(completedYesterday);
-    const revenueChange = yesterdayRevenue > 0 
-      ? Math.round(((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100)
-      : 0;
-    
-    // Active tickets (pending or confirmed today)
-    const activeTickets = todayAppointments.filter((a: any) => 
-      a.status === 'pending' || a.status === 'confirmed'
-    );
-    
-    const waitingForCheckout = completedToday.length;
-    
-    // Staff status (available vs busy)
-    const busyStaffIds = todayAppointments
-      .filter((a: any) => a.status === 'confirmed' || a.status === 'pending')
-      .map((a: any) => a.staffId);
-    
-    const availableStaff = staff.filter((s: any) => !busyStaffIds.includes(s.id));
-    const busyStaff = staff.filter((s: any) => busyStaffIds.includes(s.id));
-    
-    // Waitlist (pending appointments)
-    const waitlist = todayAppointments.filter((a: any) => a.status === 'pending');
-    
-    // Recent activity (last 10 completed appointments)
-    const recentCompleted = appointments
-      .filter((a: any) => a.status === 'completed')
-      .sort((a: any, b: any) => new Date(b.appointmentTime).getTime() - new Date(a.appointmentTime).getTime())
-      .slice(0, 10)
-      .map((appt: any) => {
-        const staffMember = staff.find((s: any) => s.id === appt.staffId);
-        const apptServices = services.filter((s: any) => 
-          appt.serviceIds && appt.serviceIds.includes(s.id)
-        );
-        const price = apptServices.reduce((sum: number, s: any) => sum + parseFloat(s.price || 0), 0);
-        
-        return {
-          id: appt.id.replace('appointment:', '#'),
-          client: appt.customerName,
-          service: apptServices.map((s: any) => s.name).join(', ') || 'Service',
-          staff: staffMember ? staffMember.name : 'Staff',
-          price: `$${price.toFixed(2)}`,
-          status: appt.status
-        };
-      });
-    
-    // Staff status details - Return ALL staff (pagination handled in frontend)
-    const staffStatus = staff.map((s: any) => {
-      const isBusy = busyStaffIds.includes(s.id);
-      const staffAppt = isBusy ? todayAppointments.find((a: any) => a.staffId === s.id) : null;
-      
-      let busyUntil = '';
-      if (staffAppt) {
-        // Calculate busy until time based on service duration
-        const apptServices = services.filter((service: any) => 
-          staffAppt.serviceIds && staffAppt.serviceIds.includes(service.id)
-        );
-        const totalDuration = apptServices.reduce((sum: number, service: any) => {
-          return sum + (parseInt(service.duration) || 30);
-        }, 0);
-        
-        const apptStartTime = new Date(staffAppt.appointmentTime);
-        const apptEndTime = new Date(apptStartTime.getTime() + totalDuration * 60000);
-        
-        // Format busy until time
-        const hours = apptEndTime.getHours();
-        const minutes = apptEndTime.getMinutes();
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        const displayHours = hours % 12 || 12;
-        busyUntil = `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`;
-      }
-      
-      return {
-        name: s.name,
-        status: isBusy ? 'Busy' : 'Available',
-        color: isBusy ? 'bg-orange-500' : 'bg-green-500',
-        text: isBusy ? `Busy until ${busyUntil}` : 'Available',
-        busyUntil: busyUntil,
-        isBusy: isBusy
-      };
-    });
-    
-    return c.json({
-      success: true,
-      data: {
-        stats: {
-          revenue: {
-            value: `$${todayRevenue.toFixed(0)}`,
-            change: revenueChange,
-            subtext: `${revenueChange >= 0 ? '+' : ''}${revenueChange}% from yesterday`
-          },
-          activeTickets: {
-            value: activeTickets.length.toString(),
-            subtext: `${waitingForCheckout} waiting for checkout`
-          },
-          staff: {
-            value: `${availableStaff.length}/${staff.length}`,
-            subtext: `${busyStaff.length} busy with clients`
-          },
-          waitlist: {
-            value: waitlist.length.toString(),
-            subtext: waitlist.length > 0 ? '~15 min avg wait' : 'No waiting clients'
-          }
-        },
-        recentActivity: recentCompleted,
-        staffStatus: staffStatus
-      }
-    });
-  } catch (error: any) {
-    console.error('Dashboard stats error:', error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
+// ========== MOVED TO payroll.tsx (Wave 6) ==========
+// Dashboard stats route moved to payroll.tsx
+// ==========
 
 // ========== DEBUG ENDPOINT - Check Data Quality ==========
 app.get("/make-server-84f9c112/debug/data-check", async (c) => {
@@ -2455,139 +1772,18 @@ app.post("/make-server-84f9c112/debug/cleanup-duplicates-v2", async (c) => {
     return c.json({ success: false, error: error.message || String(error) }, 500);
   }
 });
+*/
+// END LEGACY debug routes
 
-// ========== PAYROLL LOGIC (RESTORED) ==========
-app.post("/make-server-84f9c112/payroll/calculate", async (c) => {
-  try {
-    const body = await c.req.json();
-    const { staffId, startDate, endDate } = body;
-    
-    const allAppointments = await kv.getByPrefix("appointment:");
-    const completedAppointments = allAppointments.filter((appt: any) => 
-      appt.staffId === staffId && 
-      appt.status === "completed" &&
-      new Date(appt.appointmentTime) >= new Date(startDate) &&
-      new Date(appt.appointmentTime) <= new Date(endDate)
-    );
-    
-    const staff = await kv.get(staffId);
-    if (!staff) return c.json({ success: false, error: "Staff not found" }, 404);
-    
-    const services = await kv.getByPrefix("service:");
-    const serviceMap = new Map(services.map((s: any) => [s.id, s]));
-    
-    let totalRevenue = 0;
-    let totalTips = 0;
-    const details = [];
-    
-    for (const appt of completedAppointments) {
-      let apptRevenue = 0;
-      for (const serviceId of appt.serviceIds || []) {
-        const service = serviceMap.get(serviceId);
-        if (service) apptRevenue += service.price;
-      }
-      
-      const tip = appt.tip || 0;
-      const commission = apptRevenue * (staff.commissionRate || 0.6);
-      
-      totalRevenue += apptRevenue;
-      totalTips += tip;
-      
-      details.push({
-        appointmentId: appt.id,
-        customerName: appt.customerName,
-        date: appt.appointmentTime,
-        revenue: apptRevenue,
-        commission,
-        tip,
-      });
-    }
-    
-    const totalCommission = totalRevenue * (staff.commissionRate || 0.6);
-    const totalEarnings = totalCommission + totalTips;
-    
-    const payrollData = {
-      staffId,
-      staffName: staff.name,
-      startDate,
-      endDate,
-      totalRevenue,
-      totalCommission,
-      totalTips,
-      totalEarnings,
-      appointmentCount: completedAppointments.length,
-      details,
-      generatedAt: new Date().toISOString(),
-    };
-    
-    const payrollId = `payroll:${staffId}:${Date.now()}`;
-    await kv.set(payrollId, payrollData);
-    
-    return c.json({ success: true, data: payrollData });
-  } catch (error) {
-    return c.json({ success: false, error: String(error) }, 500);
-  }
-});
+/* ========== MOVED TO payroll.tsx (Wave 6) ==========
+4 routes moved: POST payroll/calculate, GET payroll/:staffId, GET analytics/revenue, GET dashboard/stats
+========== */
 
-app.get("/make-server-84f9c112/payroll/:staffId", async (c) => {
-  try {
-    const staffId = c.req.param("staffId");
-    const payrollRecords = await kv.getByPrefix(`payroll:${staffId}:`);
-    return c.json({ success: true, data: payrollRecords });
-  } catch (error) {
-    return c.json({ success: false, error: String(error) }, 500);
-  }
-});
+/* ========== MOVED TO utilities.tsx (Wave 4.3) ==========
+8 routes moved: upload, chat, menu images (GET/POST/DELETE/PUT x2), vlink proxy
+========== */
 
-// ========== ANALYTICS LOGIC (RESTORED) ==========
-app.get("/make-server-84f9c112/analytics/revenue", async (c) => {
-  try {
-    const startDate = c.req.query('startDate');
-    const endDate = c.req.query('endDate');
-    const branchId = c.req.query('branchId');
-    
-    const appointments = await kv.getByPrefix("appointment:");
-    const completed = appointments.filter((appt: any) => 
-      appt.status === "completed" &&
-      (!startDate || new Date(appt.appointmentTime) >= new Date(startDate)) &&
-      (!endDate || new Date(appt.appointmentTime) <= new Date(endDate)) &&
-      (!branchId || appt.branchId === branchId)
-    );
-    
-    const services = await kv.getByPrefix("service:");
-    const serviceMap = new Map(services.map((s: any) => [s.id, s]));
-    
-    let totalRevenue = 0;
-    const dailyRevenue: any = {};
-    
-    for (const appt of completed) {
-      let apptRevenue = 0;
-      for (const serviceId of appt.serviceIds || []) {
-        const service = serviceMap.get(serviceId);
-        if (service) apptRevenue += service.price;
-      }
-      totalRevenue += apptRevenue;
-      
-      const date = new Date(appt.appointmentTime).toISOString().split('T')[0];
-      dailyRevenue[date] = (dailyRevenue[date] || 0) + apptRevenue;
-    }
-    
-    return c.json({
-      success: true,
-      data: {
-        totalRevenue,
-        totalAppointments: completed.length,
-        dailyRevenue: Object.entries(dailyRevenue).map(([date, revenue]) => ({
-          date,
-          revenue,
-        })),
-      },
-    });
-  } catch (error) {
-    return c.json({ success: false, error: String(error) }, 500);
-  }
-});
-
+/* LEGACY - Disabled utility routes below
 // ========== UPLOAD ==========
 app.post("/make-server-84f9c112/upload", async (c) => {
   try {
@@ -2628,6 +1824,13 @@ app.post("/make-server-84f9c112/upload", async (c) => {
   }
 });
 
+/* ========== MOVED TO chatbot.tsx (Wave 7) ==========
+1 route moved: POST /make-server-84f9c112/chat (~486 lines)
+DeepSeek AI integration with function calling, service menu parsing, 
+membership context, promotions awareness, appointment booking tool
+========== */
+
+/* LEGACY - Disabled chatbot route below (moved to chatbot.tsx)
 // ========== CHATBOT ==========
 app.post("/make-server-84f9c112/chat", async (c) => {
   try {
@@ -3116,85 +2319,20 @@ app.post("/make-server-84f9c112/chat", async (c) => {
     return c.json({ success: false, error: String(error) }, 500);
   }
 });
+*/
+// END LEGACY chatbot route (moved to chatbot.tsx)
 
-// ========== SERVICE MENU SETTINGS ==========
-// Get Service Menu Data
-app.get("/make-server-84f9c112/settings/service-menu", async (c) => {
-  try {
-    console.log('🔍 [SERVICE MENU GET] Fetching data from KV store...');
-    const data = await kv.get("settings:service-menu");
-    
-    if (!data) {
-      console.log('⚠️ [SERVICE MENU GET] No data found, initializing with defaults');
-      await kv.set("settings:service-menu", initialServices);
-      return c.json({ success: true, data: initialServices });
-    }
-    
-    // Count services
-    const categoryCounts: Record<string, number> = {};
-    Object.keys(data).forEach(categoryKey => {
-      const groups = data[categoryKey]?.groups || [];
-      let totalServices = 0;
-      groups.forEach((group: any) => {
-        totalServices += group.items?.length || 0;
-      });
-      categoryCounts[categoryKey] = totalServices;
-    });
-    console.log('✅ [SERVICE MENU GET] Returning data, services per category:', categoryCounts);
-    
-    return c.json({ success: true, data });
-  } catch (error: any) {
-    console.error('❌ [SERVICE MENU GET] Error:', error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
+// ========== MOVED TO settings.tsx (Wave 4.1) ==========
+// SERVICE MENU SETTINGS (3 routes)
+// SERVICE CATEGORIES MANAGEMENT (6 routes) - see below
+// ==========
 
-// Update Service Menu Data
-app.put("/make-server-84f9c112/settings/service-menu", async (c) => {
-  try {
-    const body = await c.req.json();
-    console.log('🔍 [SERVICE MENU PUT] Received data:', JSON.stringify(body, null, 2));
-    console.log('📊 [SERVICE MENU PUT] Data size:', JSON.stringify(body).length, 'bytes');
-    
-    // Count services in each category
-    const categoryCounts: Record<string, number> = {};
-    Object.keys(body).forEach(categoryKey => {
-      const groups = body[categoryKey]?.groups || [];
-      let totalServices = 0;
-      groups.forEach((group: any) => {
-        totalServices += group.items?.length || 0;
-      });
-      categoryCounts[categoryKey] = totalServices;
-    });
-    console.log('📈 [SERVICE MENU PUT] Services per category:', categoryCounts);
-    
-    await kv.set("settings:service-menu", body);
-    console.log('✅ [SERVICE MENU PUT] Successfully saved to KV store');
-    
-    // Verify by reading back
-    const savedData = await kv.get("settings:service-menu");
-    console.log('🔍 [SERVICE MENU PUT] Verification read - data exists:', !!savedData);
-    
-    return c.json({ success: true, data: body });
-  } catch (error: any) {
-    console.error('❌ [SERVICE MENU PUT] Error:', error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
+// ========== MOVED TO settings.tsx (Wave 4.1) ==========
+// SERVICE CATEGORIES MANAGEMENT (6 routes)
+// GET/PUT/POST/DELETE categories + reorder + delete-batch
+// ==========
 
-// Reset Service Menu Data
-app.post("/make-server-84f9c112/settings/service-menu/reset", async (c) => {
-  try {
-    await kv.set("settings:service-menu", initialServices);
-    return c.json({ success: true, data: initialServices });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-// ========== SERVICE CATEGORIES MANAGEMENT ==========
-
-// Get all categories
+// LEGACY - Disabled categories routes below
 app.get("/make-server-84f9c112/settings/categories", async (c) => {
   try {
     const categories = await kv.get("settings:categories");
@@ -3401,6 +2539,7 @@ app.post("/make-server-84f9c112/settings/categories/delete-batch", async (c) => 
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+// END LEGACY categories routes
 
 // ========== MENU IMAGE MANAGEMENT (Cloudinary) ==========
 
@@ -3685,38 +2824,17 @@ app.put("/make-server-84f9c112/admin/menu/:id/update", async (c) => {
   }
 });
 
-// ========== HOMEPAGE SETTINGS ==========
+// ========== MOVED TO settings.tsx (Wave 4.1) ==========
+// HOMEPAGE SETTINGS (2 routes)
+// GET/POST homepage-menu mode
+// ==========
 
-// GET: Homepage menu mode setting
-app.get("/make-server-84f9c112/settings/homepage-menu", async (c) => {
-  try {
-    const mode = await kv.get("settings:homepage-menu-mode") || "services-list";
-    return c.json({ success: true, data: { mode } });
-  } catch (error: any) {
-    console.error("❌ [GET HOMEPAGE SETTING] Error:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
+// ========== MOVED TO settings.tsx (Wave 4.1) ==========
+// CHATBOT AVATAR SETTINGS (2 routes)
+// GET/POST chatbot-avatar
+// ==========
 
-// POST: Update homepage menu mode
-app.post("/make-server-84f9c112/admin/settings/homepage-menu", async (c) => {
-  try {
-    const { mode } = await c.req.json();
-    
-    if (!["services-list", "menu-images"].includes(mode)) {
-      return c.json({ success: false, error: "Invalid mode" }, 400);
-    }
-    
-    await kv.set("settings:homepage-menu-mode", mode);
-    
-    console.log(`✅ [HOMEPAGE SETTING] Mode set to: ${mode}`);
-    return c.json({ success: true, data: { mode } });
-  } catch (error: any) {
-    console.error("❌ [HOMEPAGE SETTING] Exception:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
+// LEGACY - Disabled homepage/chatbot routes below
 // GET: Fetch chatbot avatar
 app.get("/make-server-84f9c112/settings/chatbot-avatar", async (c) => {
   try {
@@ -3757,86 +2875,12 @@ app.post("/make-server-84f9c112/admin/settings/chatbot-avatar", async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+// END LEGACY homepage/chatbot routes
 
+// ========== MOVED TO settings.tsx (Wave 4.1) ==========
 // POST: Save promotions to KV store
-app.post("/make-server-84f9c112/admin/settings/promotions", async (c) => {
-  try {
-    const { promotions } = await c.req.json();
-    
-    if (!Array.isArray(promotions)) {
-      return c.json({ success: false, error: "Invalid promotions data" }, 400);
-    }
-    
-    await kv.set("settings:promotions", promotions);
-    
-    console.log(`✅ [PROMOTIONS SETTING] ${promotions.length} promotions saved`);
-    return c.json({ success: true, data: { promotions } });
-  } catch (error: any) {
-    console.error("❌ [PROMOTIONS SETTING] Exception:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-// GET: Fetch promotions from KV store
-app.get("/make-server-84f9c112/settings/promotions", async (c) => {
-  try {
-    const promotions = await kv.get("settings:promotions") || [];
-    
-    // Generate fresh signed URLs for images
-    const promotionsWithSignedUrls = await Promise.all(
-      (promotions as any[]).map(async (promo: any) => {
-        const updatedPromo = { ...promo };
-        
-        // Process both languages
-        for (const lang of ['vi', 'en']) {
-          if (!updatedPromo[lang]) continue;
-          
-          // Background Image
-          if (updatedPromo[lang].backgroundImagePath) {
-            try {
-              const { data: signedData, error: signError } = await supabase.storage
-                .from('make-84f9c112-promotions')
-                .createSignedUrl(updatedPromo[lang].backgroundImagePath, 86400); // 24 hours (reduced from 1 year for security)
-              
-              if (signError) {
-                console.warn(`⚠️ Failed to sign background image for ${promo.id} (${lang}):`, signError);
-              } else if (signedData?.signedUrl) {
-                updatedPromo[lang].backgroundImage = signedData.signedUrl;
-              }
-            } catch (err) {
-              console.error(`❌ Error signing background image for ${promo.id} (${lang}):`, err);
-            }
-          }
-          
-          // Icon Image
-          if (updatedPromo[lang].iconImagePath) {
-            try {
-              const { data: signedData, error: signError } = await supabase.storage
-                .from('make-84f9c112-promotions')
-                .createSignedUrl(updatedPromo[lang].iconImagePath, 86400); // 24 hours (reduced from 1 year for security)
-              
-              if (signError) {
-                console.warn(`⚠️ Failed to sign icon image for ${promo.id} (${lang}):`, signError);
-              } else if (signedData?.signedUrl) {
-                updatedPromo[lang].iconImage = signedData.signedUrl;
-              }
-            } catch (err) {
-              console.error(`❌ Error signing icon image for ${promo.id} (${lang}):`, err);
-            }
-          }
-        }
-        
-        return updatedPromo;
-      })
-    );
-    
-    console.log(`✅ [PROMOTIONS SETTING] Fetched ${promotionsWithSignedUrls.length} promotions with fresh signed URLs`);
-    return c.json({ success: true, data: { promotions: promotionsWithSignedUrls } });
-  } catch (error: any) {
-    console.error("❌ [PROMOTIONS SETTING] Exception:", error);
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
+// GET: Fetch promotions from KV store  
+// ==========
 
 // Proxy for VLinkExchange to avoid CORS
 app.get("/make-server-84f9c112/proxy/vlink", async (c) => {
@@ -3845,7 +2889,7 @@ app.get("/make-server-84f9c112/proxy/vlink", async (c) => {
     const response = await fetch('https://vlinkexchange.com/matching/public/active-markets?limit=500', {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
+        'Accept': 'application/json, text/plain, *' + '/' + '*',
         'Referer': 'https://vlinkexchange.com/',
         'Origin': 'https://vlinkexchange.com'
       }
@@ -3866,6 +2910,7 @@ app.get("/make-server-84f9c112/proxy/vlink", async (c) => {
   }
 });
 
+/* LEGACY - Availability route below (moved to appointments.tsx)
 // ========== AVAILABILITY CHECK ==========
 app.post("/make-server-84f9c112/appointments/availability", async (c) => {
   try {
@@ -4006,6 +3051,8 @@ app.post("/make-server-84f9c112/appointments/availability", async (c) => {
     return c.json({ success: false, error: error.message }, 500);
   }
 });
+*/
+// END LEGACY availability route
 
 // ========== SEED BUILT-IN ROLES ON STARTUP ==========
 async function seedBuiltInRoles() {
