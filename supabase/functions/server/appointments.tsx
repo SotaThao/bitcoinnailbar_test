@@ -131,29 +131,34 @@ async function createAppointment(data: any) {
     console.warn("⚠️ [CREATE_APPT] Could not calculate total:", e);
   }
 
-  // 3. Save Appointment
-  const appointmentId = `appointment:${Date.now()}`;
-  const appointment = {
-    id: appointmentId,
-    customerName,
-    customerPhone,
-    customerEmail,
-    branchId,
-    staffId,
-    serviceIds: finalServiceIds,
-    serviceNames: serviceNamesArray,
-    appointmentTime,
-    status: "pending",
-    notes,
-    createdAt: new Date().toISOString(),
-  };
-  
-  await kv.set(appointmentId, appointment);
-  console.log("✅ [CREATE_APPT] Saved to KV:", appointmentId);
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━���━━━━━━━━━━━━
+  // 3. NEW: Resolve Technician ID (if staffId provided)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  let technicianId = null;
+  if (staffId) {
+    try {
+      // Try to find technician by legacy_staff_id first
+      const { data: technician } = await supabase
+        .from('technician_info')
+        .select('id')
+        .eq('legacy_staff_id', staffId)
+        .maybeSingle();
+      
+      if (technician) {
+        technicianId = technician.id;
+        console.log(`✅ [CREATE_APPT] Resolved technician: ${staffId} → ${technicianId}`);
+      } else {
+        console.warn(`⚠️ [CREATE_APPT] Technician not found for staffId: ${staffId}`);
+      }
+    } catch (e) {
+      console.warn("⚠️ [CREATE_APPT] Failed to resolve technician ID:", e);
+    }
+  }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 4. NEW: Create/Update Customer Record (POSTGRES)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  let customerId = null;
   console.log("📝 [CREATE_APPT] Creating/updating customer record in Postgres...");
   try {
     // Normalize phone
@@ -193,6 +198,7 @@ async function createAppointment(data: any) {
         throw updateError;
       }
       
+      customerId = existingCustomer.id;
       console.log('✅ [CREATE_APPT] Customer updated in Postgres:', existingCustomer.id);
       
     } else {
@@ -225,6 +231,7 @@ async function createAppointment(data: any) {
         throw insertError;
       }
       
+      customerId = newCustomer?.id;
       console.log('✅ [CREATE_APPT] New customer created in Postgres:', newCustomer?.id);
     }
     
@@ -234,7 +241,47 @@ async function createAppointment(data: any) {
     console.warn('⚠️ [CREATE_APPT] Continuing despite customer integration error');
   }
 
-  // 5. Generate QR & Send Email
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 5. NEW: Save Appointment to POSTGRES (appointment_info)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  let appointment: any = null;
+  try {
+    const appointmentData = {
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      customer_email: customerEmail || null,
+      customer_id: customerId,
+      technician_id: technicianId,
+      branch_id: branchId || null,
+      service_ids: finalServiceIds,
+      service_names: serviceNamesArray,
+      appointment_time: appointmentTime,
+      status: "pending",
+      notes: notes || null,
+      total_amount: totalAmount,
+      payment_status: 'unpaid',
+    };
+    
+    const { data: insertedAppointment, error: insertError } = await supabase
+      .from('appointment_info')
+      .insert(appointmentData)
+      .select()
+      .single();
+    
+    if (insertError) {
+      console.error('❌ [CREATE_APPT] Failed to save appointment to Postgres:', insertError);
+      throw insertError;
+    }
+    
+    appointment = insertedAppointment;
+    console.log("✅ [CREATE_APPT] Saved to Postgres:", appointment.id);
+    
+  } catch (dbError) {
+    console.error('❌ [CREATE_APPT] Database error:', dbError);
+    throw dbError;
+  }
+
+  // 6. Generate QR & Send Email
   let emailSent = false;
   let emailError = null;
   let qrCodeUrl = null;
@@ -249,12 +296,12 @@ async function createAppointment(data: any) {
         });
       } catch {}
       
-      const displayServices = Array.isArray(appointment.serviceNames) ? appointment.serviceNames.join(", ") : 'Selected services';
+      const displayServices = Array.isArray(appointment.service_names) ? appointment.service_names.join(", ") : 'Selected services';
       
       // QR Generation
-      console.log("🎫 [CREATE_APPT] Generating QR code for appointment:", appointmentId);
+      console.log("🎫 [CREATE_APPT] Generating QR code for appointment:", appointment.id);
       const qrData = JSON.stringify({
-        id: appointmentId,
+        id: appointment.id,
         phone: customerPhone,
         name: customerName,
         time: appointmentTime
@@ -288,7 +335,7 @@ async function createAppointment(data: any) {
           for (let i = 0; i < binaryString.length; i++) {
             bytes[i] = binaryString.charCodeAt(i);
           }
-          const qrFile = new File([bytes], `qr-${appointmentId}.png`, { type: 'image/png' });
+          const qrFile = new File([bytes], `qr-${appointment.id}.png`, { type: 'image/png' });
           
           const formData = new FormData();
           formData.append("file", qrFile);
@@ -321,7 +368,7 @@ async function createAppointment(data: any) {
         customerName,
         customerEmail,
         customerPhone,
-        appointmentId,
+        appointmentId: appointment.id,
         displayServices,
         formattedTime,
         qrCodeUrl
@@ -337,7 +384,7 @@ async function createAppointment(data: any) {
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 6. Broadcast Realtime Notification to Admin
+  // 7. Broadcast Realtime Notification to Admin
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   try {
     console.log("📡 [CREATE_APPT] Broadcasting realtime notification...");
@@ -348,12 +395,12 @@ async function createAppointment(data: any) {
       event: 'appointment_created',
       payload: {
         id: appointment.id,
-        customerName: appointment.customerName,
-        customerPhone: appointment.customerPhone,
-        appointmentTime: appointment.appointmentTime,
-        serviceNames: appointment.serviceNames,
+        customerName: appointment.customer_name,
+        customerPhone: appointment.customer_phone,
+        appointmentTime: appointment.appointment_time,
+        serviceNames: appointment.service_names,
         status: appointment.status,
-        createdAt: appointment.createdAt
+        createdAt: appointment.created_at
       }
     });
     
@@ -361,6 +408,32 @@ async function createAppointment(data: any) {
   } catch (broadcastError) {
     console.error("❌ [CREATE_APPT] Realtime broadcast error:", broadcastError);
     // Don't fail the whole booking if notification fails
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 8. NEW: Trigger Auto-Assign if no technician assigned
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if (!technicianId) {
+    console.log("🤖 [CREATE_APPT] No technician assigned, triggering auto-assign...");
+    try {
+      // Import auto-assign module
+      const { autoAssignTechnician } = await import('./technician-assignment.tsx');
+      
+      const assignResult = await autoAssignTechnician(appointment.id);
+      
+      if (assignResult.success && assignResult.technician_id) {
+        console.log(`✅ [CREATE_APPT] Auto-assigned to technician: ${assignResult.technician_id}`);
+        // Update appointment object with new technician_id
+        appointment.technician_id = assignResult.technician_id;
+      } else {
+        console.warn("⚠️ [CREATE_APPT] Auto-assign failed:", assignResult.message);
+      }
+    } catch (autoAssignError) {
+      console.error("❌ [CREATE_APPT] Auto-assign error:", autoAssignError);
+      // Don't fail the whole booking if auto-assign fails
+    }
+  } else {
+    console.log("✅ [CREATE_APPT] Technician already assigned:", technicianId);
   }
 
   return { appointment, emailSent, emailError, qrCodeUrl };
@@ -389,17 +462,19 @@ app.post("/make-server-84f9c112/appointments", async (c) => {
 // Get All Appointments (for Admin)
 app.get("/make-server-84f9c112/appointments", async (c) => {
   try {
-    const appointments = await kv.getByPrefix("appointment:");
+    // Read from Postgres appointment_info table
+    const { data: appointments, error } = await supabase
+      .from('appointment_info')
+      .select('*')
+      .order('created_at', { ascending: false });
     
-    // Sort by creation time (newest first)
-    const sorted = appointments.sort((a: any, b: any) => {
-      const timeA = new Date(a.createdAt || a.appointmentTime).getTime();
-      const timeB = new Date(b.createdAt || b.appointmentTime).getTime();
-      return timeB - timeA;
-    });
+    if (error) {
+      console.error("❌ [GET_APPOINTMENTS] Postgres error:", error);
+      throw error;
+    }
     
-    console.log(`📋 [GET_APPOINTMENTS] Returning ${sorted.length} appointments`);
-    return c.json({ success: true, data: sorted });
+    console.log(`📋 [GET_APPOINTMENTS] Returning ${appointments?.length || 0} appointments from Postgres`);
+    return c.json({ success: true, data: appointments || [] });
   } catch (error: any) {
     console.error("❌ [GET_APPOINTMENTS] Error:", error);
     return c.json({ success: false, error: error.message }, 500);
@@ -410,7 +485,18 @@ app.get("/make-server-84f9c112/appointments", async (c) => {
 app.get("/make-server-84f9c112/appointments/:id", async (c) => {
   try {
     const id = c.req.param("id");
-    const appointment = await kv.get(id);
+    
+    // Read from Postgres
+    const { data: appointment, error } = await supabase
+      .from('appointment_info')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    
+    if (error) {
+      console.error(`❌ [GET_APPOINTMENT] Postgres error:`, error);
+      throw error;
+    }
     
     if (!appointment) {
       console.warn(`⚠️ [GET_APPOINTMENT] Not found: ${id}`);
@@ -427,13 +513,41 @@ app.get("/make-server-84f9c112/appointments/:id", async (c) => {
 
 // Update Appointment
 app.put("/make-server-84f9c112/appointments/:id", async (c) => {
-  const id = c.req.param("id");
-  const body = await c.req.json();
-  const existing = await kv.get(id);
-  if (!existing) return c.json({ success: false, error: "Not found" }, 404);
-  const updated = { ...existing, ...body, updatedAt: new Date().toISOString() };
-  await kv.set(id, updated);
-  return c.json({ success: true, data: updated });
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json();
+    
+    // Get existing appointment
+    const { data: existing, error: fetchError } = await supabase
+      .from('appointment_info')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    
+    if (fetchError) throw fetchError;
+    if (!existing) {
+      return c.json({ success: false, error: "Appointment not found" }, 404);
+    }
+    
+    // Update in Postgres
+    const { data: updated, error: updateError } = await supabase
+      .from('appointment_info')
+      .update({
+        ...body,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (updateError) throw updateError;
+    
+    console.log(`✅ [UPDATE_APPOINTMENT] Updated: ${id}`);
+    return c.json({ success: true, data: updated });
+  } catch (error: any) {
+    console.error("❌ [UPDATE_APPOINTMENT] Error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

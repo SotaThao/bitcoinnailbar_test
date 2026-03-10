@@ -103,8 +103,13 @@ export default function AdminLayout({
       icon: CreditCard,
     },
     {
-      path: "/admin/staff-payroll",
-      label: "Staff & Payroll",
+      path: "/admin/staff",
+      label: "Staff",
+      icon: Users2,
+    },
+    {
+      path: "/admin/payroll",
+      label: "Payroll",
       icon: DollarSign,
     },
     { path: "/admin/reviews", label: "Reviews", icon: Star },

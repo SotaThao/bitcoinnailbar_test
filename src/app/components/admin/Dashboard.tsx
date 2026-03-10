@@ -327,11 +327,11 @@ export default function AdminDashboard() {
                 <div className="p-12 text-center">
                   <CheckCircle2 className="h-12 w-12 mx-auto text-gray-300 mb-3" />
                   <p className="text-gray-500 font-medium">
-                    No completed appointments yet
+                    No appointments yet
                   </p>
                   <p className="text-sm text-gray-400 mt-1">
                     Activity will appear here once appointments
-                    are completed
+                    are created
                   </p>
                 </div>
               )}

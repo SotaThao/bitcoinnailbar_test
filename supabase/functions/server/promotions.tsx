@@ -72,7 +72,6 @@ app.post('/make-server-84f9c112/promotions/upload-image', async (c) => {
   try {
     const formData = await c.req.formData();
     const file = formData.get('file') as File;
-    const language = formData.get('language') as string; // 'vi' or 'en'
     const promotionId = formData.get('promotionId') as string;
     const imageType = formData.get('imageType') as string; // 'background' or 'icon'
     
@@ -80,8 +79,8 @@ app.post('/make-server-84f9c112/promotions/upload-image', async (c) => {
       return c.json({ success: false, error: 'No file provided' }, 400);
     }
     
-    if (!language || !promotionId || !imageType) {
-      return c.json({ success: false, error: 'Missing required fields: language, promotionId, imageType' }, 400);
+    if (!promotionId || !imageType) {
+      return c.json({ success: false, error: 'Missing required fields: promotionId, imageType' }, 400);
     }
 
     // Validate file type
@@ -98,7 +97,7 @@ app.post('/make-server-84f9c112/promotions/upload-image', async (c) => {
     // Generate unique filename
     const timestamp = Date.now();
     const ext = file.name.split('.').pop();
-    const filename = `${promotionId}/${language}/${imageType}-${timestamp}.${ext}`;
+    const filename = `${promotionId}/${imageType}-${timestamp}.${ext}`;
 
     // Convert File to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();

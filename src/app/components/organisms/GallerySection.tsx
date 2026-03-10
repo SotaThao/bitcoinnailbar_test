@@ -14,11 +14,13 @@ import {
   optimizeCloudinaryUrl,
   optimizeCloudinaryThumbnail,
 } from "@/utils/cloudinary";
+import { LogoBadge } from "@/app/components/atoms/LogoBadge";
 
 interface GalleryImage {
   id: string;
   cloudinary_url: string;
   order: number;
+  showLogo?: boolean;
 }
 
 // Helper function to ensure URLs have https:// prefix
@@ -43,13 +45,14 @@ export function GallerySection() {
     facebook: "",
     instagram: "",
   });
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   // Fetch gallery images from backend
   useEffect(() => {
     const fetchGalleryImages = async () => {
       try {
         const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/gallery/images`,
+          `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/gallery/images?contentFilter=new&limit=50`,
           {
             headers: {
               Authorization: `Bearer ${publicAnonKey}`,
@@ -69,6 +72,30 @@ export function GallerySection() {
     };
 
     fetchGalleryImages();
+  }, []);
+
+  // Fetch logo
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/gallery-logo`,
+          {
+            headers: {
+              Authorization: `Bearer ${publicAnonKey}`,
+            },
+          }
+        );
+        const data = await response.json();
+        if (data.logo) {
+          setLogoUrl(data.logo.url);
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error);
+      }
+    };
+
+    fetchLogo();
   }, []);
 
   // Fetch social media links
@@ -170,9 +197,9 @@ export function GallerySection() {
               <div key={setIndex} className="flex gap-4">
                 {galleryImages.map((img, i) => (
                   <div
-                    key={img.id}
+                    key={i}
                     onClick={() => setSelectedIndex(i)}
-                    className="relative w-[300px] h-[200px] rounded-lg overflow-hidden flex-shrink-0 group grayscale hover:grayscale-0 transition-all duration-500 cursor-pointer border border-white/10"
+                    className="relative w-[300px] h-[200px] rounded-lg overflow-hidden flex-shrink-0 group hover:scale-105 transition-all duration-500 cursor-pointer border border-white/10"
                   >
                     <img
                       src={optimizeCloudinaryThumbnail(
@@ -182,12 +209,21 @@ export function GallerySection() {
                       alt={`Gallery ${i + 1}`}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors"></div>
                     <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="bg-[#FF9800] p-2 rounded-full">
                         <X className="h-4 w-4 text-black fill-current" />
                       </div>
                     </div>
+                    
+                    {/* Gradient overlay for logo visibility */}
+                    {img.showLogo && logoUrl && (
+                      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
+                    )}
+                    
+                    {/* Logo Badge */}
+                    {img.showLogo && logoUrl && (
+                      <LogoBadge logoUrl={logoUrl} visible={true} size="sm" />
+                    )}
                   </div>
                 ))}
               </div>
@@ -273,14 +309,26 @@ export function GallerySection() {
                 transition={{ duration: 0.2 }}
                 className="relative w-full h-full flex items-center justify-center"
               >
-                <img
-                  src={optimizeCloudinaryUrl(
-                    galleryImages[selectedIndex].cloudinary_url,
-                    { width: 1920 },
+                <div className="relative">
+                  <img
+                    src={optimizeCloudinaryUrl(
+                      galleryImages[selectedIndex].cloudinary_url,
+                      { width: 1920 },
+                    )}
+                    alt="Gallery View"
+                    className="max-w-full max-h-[80vh] object-contain rounded-md shadow-2xl"
+                  />
+                  
+                  {/* Gradient overlay for logo visibility */}
+                  {galleryImages[selectedIndex].showLogo && logoUrl && (
+                    <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none rounded-b-md" />
                   )}
-                  alt="Gallery View"
-                  className="max-w-full max-h-[80vh] object-contain rounded-md shadow-2xl"
-                />
+                  
+                  {/* Logo Badge on Lightbox */}
+                  {galleryImages[selectedIndex].showLogo && logoUrl && (
+                    <LogoBadge logoUrl={logoUrl} visible={true} size="md" />
+                  )}
+                </div>
               </motion.div>
 
               <button

@@ -374,9 +374,7 @@ export default function CustomerManagementTab() {
                             </div>
                             <div className="text-xs text-gray-500">
                               ID:{" "}
-                              {customer.id
-                                .split("_")[1]
-                                ?.slice(0, 8)}
+                              {customer.id?.split("_")[1]?.slice(0, 8) || customer.id?.slice(0, 8) || 'N/A'}
                             </div>
                           </div>
                         </div>

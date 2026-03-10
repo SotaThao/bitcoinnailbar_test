@@ -57,8 +57,12 @@ export default function AdminAppointments() {
   const filteredAppointments = appointments.filter((appt) => {
     const matchesStatus =
       filterStatus === "all" || appt.status === filterStatus;
+    
+    // Support both camelCase and snake_case
+    const apptTime = appt.appointment_time || appt.appointmentTime || '';
     const matchesDate =
-      !date || isSameDay(new Date(appt.appointmentTime), date);
+      !date || isSameDay(new Date(apptTime), date);
+    
     return matchesStatus && matchesDate;
   });
 
@@ -187,9 +191,9 @@ export default function AdminAppointments() {
         ) : (
           <div className="space-y-4">
             {sortedAppointments.map((appointment) => {
-              const staffMember = staff.find(
-                (s) => s.id === appointment.staffId,
-              );
+              // Support both camelCase (old KV) and snake_case (Postgres) + UUID technician_id
+              const staffId = appointment.technician_id || appointment.staffId;
+              const staffMember = staff.find((s) => s.id === staffId);
 
               // Resolve services and prices using utility
               const displayServices =
@@ -208,6 +212,7 @@ export default function AdminAppointments() {
                   staffName={staffMember?.name}
                   totalAmount={totalAmount}
                   onUpdateStatus={updateStatus}
+                  onAssignmentChanged={refetch}
                 />
               );
             })}

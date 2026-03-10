@@ -4,6 +4,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { MembershipUpgradeDialog } from "./MembershipUpgradeDialog";
+import { getTierPriority } from "@/app/config/membership-tiers";
 
 interface RedeemCodeInputProps {
   onSuccess?: (data: any) => void;
@@ -52,13 +53,6 @@ export function RedeemCodeInput({
   ) => {
     const formatted = formatPhoneNumber(e.target.value);
     setPhone(formatted);
-  };
-
-  // Tier hierarchy for comparison
-  const TIER_PRIORITY: Record<string, number> = {
-    gold: 1,
-    platinum: 2,
-    diamond: 3,
   };
 
   // Check if user has existing membership and validate tier hierarchy
@@ -298,16 +292,28 @@ export function RedeemCodeInput({
                 {result.message || "Kích hoạt thành công!"}
               </h4>
               {result.data?.membership && (
-                <p className="text-xs text-gray-400 mt-2">
-                  Hết hạn:{" "}
-                  {new Date(
-                    result.data.membership.endDate,
-                  ).toLocaleDateString("vi-VN", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
+                <>
+                  <p className="text-xs text-gray-400 mt-2">
+                    <strong>Tier:</strong> {result.data.membership.tier?.toUpperCase() || 'N/A'}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    <strong>Hết hạn:</strong>{" "}
+                    {new Date(
+                      result.data.membership.endDate || result.data.membership.expiresAt,
+                    ).toLocaleDateString("vi-VN", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </p>
+                  {result.action && (
+                    <div className="mt-2 inline-block px-2 py-1 bg-green-500/20 rounded text-xs text-green-300 font-medium">
+                      {result.action === 'extension' && '➕ Extended'}
+                      {result.action === 'upgrade' && '⬆️ Upgraded'}
+                      {result.action === 'new' && '✨ New Membership'}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

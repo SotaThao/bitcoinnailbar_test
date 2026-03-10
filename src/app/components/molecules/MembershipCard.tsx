@@ -23,6 +23,7 @@ interface MembershipCardProps {
   saveText?: string | null;
   className?: string;
   previewMode?: boolean; // If true, disable animations/links
+  isPopular?: boolean; // For CTA button styling
 }
 
 export function MembershipCard({
@@ -31,6 +32,7 @@ export function MembershipCard({
   saveText,
   className,
   previewMode = false,
+  isPopular = false,
 }: MembershipCardProps) {
   const Icon = visual.icon;
   const Container = previewMode ? "div" : motion.div;
@@ -251,16 +253,36 @@ export function MembershipCard({
             variant="ghost"
             onClick={handleJoinNow}
             disabled={loadingPayment || previewMode}
-            className={`w-full py-3.5 h-auto rounded-full text-sm transition-all duration-300 uppercase tracking-wide ${visual.buttonStyle}`}
+            className={`
+              w-full py-3.5 h-auto rounded-full text-sm transition-all duration-300 uppercase tracking-wide
+              ${
+                isPopular
+                  ? "bg-gradient-to-r from-[#f7931a] to-[#ffab2e] text-white font-bold border-none hover:shadow-[0_0_20px_rgba(247,147,26,0.6)] hover:scale-[1.02]"
+                  : `relative overflow-hidden border-2 ${visual.borderColor.replace('border-', 'border-')} bg-transparent ${tier.color} font-semibold group/btn`
+              }
+            `}
           >
-            {loadingPayment ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Loading...
-              </span>
-            ) : (
-              "Join Now"
+            {/* Fill effect for outline buttons */}
+            {!isPopular && (
+              <span
+                className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-0 transition-transform duration-500 ease-out rounded-full"
+                style={{
+                  background: `linear-gradient(90deg, ${visual.hexColor}40, ${visual.hexColor}20)`,
+                }}
+              />
             )}
+            
+            {/* Button content */}
+            <span className="relative z-10">
+              {loadingPayment ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading...
+                </span>
+              ) : (
+                "Join Now"
+              )}
+            </span>
           </Button>
         </div>
 

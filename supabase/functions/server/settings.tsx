@@ -439,7 +439,143 @@ settingsApp.post("/make-server-84f9c112/admin/settings/chatbot-avatar", async (c
 // PROMOTIONS SETTINGS
 // ========================================
 
-// POST: Save promotions to KV store
+// 🤖 AUTO-TRANSLATION HELPER (using DeepSeek API)
+async function translateText(text: string, sourceLang: 'vi' | 'en', targetLang: 'vi' | 'en'): Promise<string> {
+  try {
+    const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY');
+    
+    if (!DEEPSEEK_API_KEY) {
+      console.warn('⚠️ [TRANSLATE] DEEPSEEK_API_KEY not found, returning original text');
+      return text;
+    }
+
+    // Helper: Strip HTML tags but preserve structure markers
+    const stripHtml = (html: string): { plain: string; hasHtml: boolean } => {
+      const hasHtml = /<[^>]+>/.test(html);
+      if (!hasHtml) {
+        return { plain: html, hasHtml: false };
+      }
+      
+      // Replace HTML tags with placeholders that preserve structure
+      let plain = html;
+      
+      // Replace common tags with newlines/markers
+      plain = plain.replace(/<\/p>/gi, '\n');
+      plain = plain.replace(/<br\s*\/?>/gi, '\n');
+      plain = plain.replace(/<li>/gi, '• ');
+      plain = plain.replace(/<\/li>/gi, '\n');
+      
+      // Remove all remaining HTML tags
+      plain = plain.replace(/<[^>]+>/g, '');
+      
+      // Decode HTML entities
+      plain = plain.replace(/&nbsp;/g, ' ');
+      plain = plain.replace(/&amp;/g, '&');
+      plain = plain.replace(/&lt;/g, '<');
+      plain = plain.replace(/&gt;/g, '>');
+      plain = plain.replace(/&quot;/g, '"');
+      
+      // Clean up extra whitespace
+      plain = plain.trim();
+      
+      return { plain, hasHtml: true };
+    };
+    
+    // Helper: Reconstruct HTML from translated plain text
+    const reconstructHtml = (originalHtml: string, translatedPlain: string): string => {
+      // Simple approach: wrap in paragraph tags if original had HTML
+      if (/<p>/.test(originalHtml)) {
+        // Split by newlines and wrap each in <p> tags
+        const lines = translatedPlain.split('\n').filter(line => line.trim());
+        return lines.map(line => `<p>${line.trim()}</p>`).join('');
+      }
+      
+      // If original had <strong> tags, try to preserve emphasis on numbers/key words
+      if (/<strong>/.test(originalHtml)) {
+        // Preserve strong tags around numbers, percentages, and dollar amounts
+        let html = translatedPlain;
+        html = html.replace(/(\d+%)/g, '<strong>$1</strong>');
+        html = html.replace(/(\$\d+[\d,]*)/g, '<strong>$1</strong>');
+        html = html.replace(/(<|>|&lt;|&gt;)\s*(\$?\d+)/g, '<strong>$1 $2</strong>');
+        return `<p>${html}</p>`;
+      }
+      
+      return `<p>${translatedPlain}</p>`;
+    };
+
+    // Strip HTML if present
+    const { plain: plainText, hasHtml } = stripHtml(text);
+    
+    console.log(`🔍 [TRANSLATE] Input has HTML: ${hasHtml}`);
+    if (hasHtml) {
+      console.log(`🔍 [TRANSLATE] Plain text extracted: "${plainText.substring(0, 100)}..."`);
+    }
+
+    const langMap = { vi: 'Vietnamese', en: 'English' };
+    const sourceLangName = langMap[sourceLang];
+    const targetLangName = langMap[targetLang];
+
+    // Add AbortController with 15-second timeout per translation call
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a professional translator. Translate from ${sourceLangName} to ${targetLangName}. Return ONLY the translation, no explanations. Keep the same tone and style. For marketing text, keep it concise and impactful. Preserve line breaks.`
+          },
+          {
+            role: 'user',
+            content: plainText // Translate plain text without HTML
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 800 // Increase for longer descriptions
+      })
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ [TRANSLATE] DeepSeek API error (${response.status}):`, errorText);
+      return text; // Fallback to original
+    }
+
+    const result = await response.json();
+    const translated = result.choices?.[0]?.message?.content?.trim();
+
+    if (!translated) {
+      console.warn('⚠️ [TRANSLATE] Empty response from DeepSeek');
+      return text;
+    }
+
+    // Reconstruct HTML if original had HTML tags
+    const finalText = hasHtml ? reconstructHtml(text, translated) : translated;
+
+    console.log(`✅ [TRANSLATE] "${plainText.substring(0, 50)}..." → "${translated.substring(0, 50)}..."`);
+    if (hasHtml) {
+      console.log(`🔧 [TRANSLATE] HTML reconstructed: "${finalText.substring(0, 100)}..."`);
+    }
+    
+    return finalText;
+
+  } catch (error: any) {
+    console.error('❌ [TRANSLATE] Exception:', error.message);
+    return text; // Fallback to original on error
+  }
+}
+
+// POST: Save promotions to KV store (with auto-translation)
 settingsApp.post("/make-server-84f9c112/admin/settings/promotions", async (c) => {
   try {
     const { promotions } = await c.req.json();
@@ -448,10 +584,122 @@ settingsApp.post("/make-server-84f9c112/admin/settings/promotions", async (c) =>
       return c.json({ success: false, error: "Invalid promotions data" }, 400);
     }
     
-    await kv.set("settings:promotions", promotions);
+    console.log(`🔄 [PROMOTIONS SAVE] Processing ${promotions.length} promotions with auto-translation...`);
     
-    console.log(`✅ [PROMOTIONS SETTING] ${promotions.length} promotions saved`);
-    return c.json({ success: true, data: { promotions } });
+    // Helper function to detect if text is Vietnamese
+    const isVietnamese = (text: string): boolean => {
+      // Check for Vietnamese characters
+      const vietnameseChars = /[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i;
+      return vietnameseChars.test(text);
+    };
+    
+    // 🤖 Auto-translate promotions based on input language
+    const translatedPromotions = await Promise.all(
+      promotions.map(async (promo: any) => {
+        const input = promo.input;
+        
+        // Detect language from title (most reliable field)
+        const isVi = isVietnamese(input.title || input.description || "");
+        
+        console.log(`🌐 [LANGUAGE DETECT] Promotion "${promo.id}": ${isVi ? "Vietnamese" : "English"}`);
+        
+        try {
+          if (isVi) {
+            // Input is Vietnamese → Generate English translation
+            console.log(`🤖 [TRANSLATE] VI→EN for promotion "${promo.id}"`);
+            
+            const enData: any = {};
+            const fieldsToTranslate = ['badge', 'title', 'subtitle', 'discount', 'description', 'days', 'buttonText'];
+            
+            // Translate all fields in parallel for speed
+            const translationResults = await Promise.all(
+              fieldsToTranslate.map(async (field) => {
+                if (input[field]) {
+                  const translated = await translateText(input[field], 'vi', 'en');
+                  return { field, value: translated };
+                }
+                return { field, value: undefined };
+              })
+            );
+            
+            for (const { field, value } of translationResults) {
+              if (value !== undefined) {
+                enData[field] = value;
+              }
+            }
+            
+            // Preserve non-translatable fields
+            enData.buttonLink = input.buttonLink;
+            enData.time = input.time;
+            enData.backgroundImage = input.backgroundImage;
+            enData.backgroundImagePath = input.backgroundImagePath;
+            enData.iconImage = input.iconImage;
+            enData.iconImagePath = input.iconImagePath;
+            
+            console.log(`✅ [TRANSLATE] Promotion "${promo.id}" VI→EN completed`);
+            
+            return {
+              ...promo,
+              vi: { ...input }, // VI = input data
+              en: enData,       // EN = translated
+            };
+          } else {
+            // Input is English → Generate Vietnamese translation
+            console.log(`🤖 [TRANSLATE] EN→VI for promotion "${promo.id}"`);
+            
+            const viData: any = {};
+            const fieldsToTranslate = ['badge', 'title', 'subtitle', 'discount', 'description', 'days', 'buttonText'];
+            
+            // Translate all fields in parallel for speed
+            const translationResults = await Promise.all(
+              fieldsToTranslate.map(async (field) => {
+                if (input[field]) {
+                  const translated = await translateText(input[field], 'en', 'vi');
+                  return { field, value: translated };
+                }
+                return { field, value: undefined };
+              })
+            );
+            
+            for (const { field, value } of translationResults) {
+              if (value !== undefined) {
+                viData[field] = value;
+              }
+            }
+            
+            // Preserve non-translatable fields
+            viData.buttonLink = input.buttonLink;
+            viData.time = input.time;
+            viData.backgroundImage = input.backgroundImage;
+            viData.backgroundImagePath = input.backgroundImagePath;
+            viData.iconImage = input.iconImage;
+            viData.iconImagePath = input.iconImagePath;
+            
+            console.log(`✅ [TRANSLATE] Promotion "${promo.id}" EN→VI completed`);
+            
+            return {
+              ...promo,
+              vi: viData,       // VI = translated
+              en: { ...input }, // EN = input data
+            };
+          }
+        } catch (translateError: any) {
+          console.error(`❌ [TRANSLATE] Failed for promotion "${promo.id}":`, translateError);
+          
+          // Fallback: use input for both languages
+          return {
+            ...promo,
+            vi: { ...input },
+            en: { ...input },
+          };
+        }
+      })
+    );
+    
+    await kv.set("settings:promotions", translatedPromotions);
+    
+    console.log(`✅ [PROMOTIONS SETTING] ${translatedPromotions.length} promotions saved with auto-translation`);
+    return c.json({ success: true, data: { promotions: translatedPromotions } });
   } catch (error: any) {
     console.error("❌ [PROMOTIONS SETTING] Exception:", error);
     return c.json({ success: false, error: error.message }, 500);
@@ -468,41 +716,93 @@ settingsApp.get("/make-server-84f9c112/settings/promotions", async (c) => {
       (promotions as any[]).map(async (promo: any) => {
         const updatedPromo = { ...promo };
         
-        // Process both languages
+        // 🔄 MIGRATION: Add default buttonText if missing
+        if (updatedPromo.input && !updatedPromo.input.buttonText) {
+          console.log(`⚠️ [MIGRATION] Adding default buttonText to promotion ${promo.id}`);
+          updatedPromo.input.buttonText = "Tìm hiểu thêm";
+        }
+        
+        // Also migrate vi & en translations
+        if (updatedPromo.vi && !updatedPromo.vi.buttonText) {
+          updatedPromo.vi.buttonText = "Tìm hiểu thêm";
+        }
+        if (updatedPromo.en && !updatedPromo.en.buttonText) {
+          updatedPromo.en.buttonText = "Learn More";
+        }
+        
+        // 🔄 FIX: Detect Vietnamese text in English translation and fix it
+        if (updatedPromo.en && updatedPromo.en.buttonText) {
+          const vietnameseChars = /[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i;
+          if (vietnameseChars.test(updatedPromo.en.buttonText)) {
+            console.log(`⚠️ [MIGRATION] Fixing Vietnamese buttonText in EN translation for promotion ${promo.id}`);
+            updatedPromo.en.buttonText = "Register Now";
+          }
+        }
+        
+        // Process input field for frontend editing
+        if (updatedPromo.input) {
+          // Background Image
+          if (updatedPromo.input.backgroundImagePath) {
+            try {
+              const { data: signedData } = await supabase.storage
+                .from('make-84f9c112-promotions')
+                .createSignedUrl(updatedPromo.input.backgroundImagePath, 86400);
+              
+              if (signedData?.signedUrl) {
+                updatedPromo.input.backgroundImage = signedData.signedUrl;
+              }
+            } catch (err) {
+              console.error(`❌ Error signing input background image:`, err);
+            }
+          }
+          
+          // Icon Image
+          if (updatedPromo.input.iconImagePath) {
+            try {
+              const { data: signedData } = await supabase.storage
+                .from('make-84f9c112-promotions')
+                .createSignedUrl(updatedPromo.input.iconImagePath, 86400);
+              
+              if (signedData?.signedUrl) {
+                updatedPromo.input.iconImage = signedData.signedUrl;
+              }
+            } catch (err) {
+              console.error(`❌ Error signing input icon image:`, err);
+            }
+          }
+        }
+        
+        // Process vi & en translations (for display)
         for (const lang of ['vi', 'en']) {
           if (!updatedPromo[lang]) continue;
           
           // Background Image
           if (updatedPromo[lang].backgroundImagePath) {
             try {
-              const { data: signedData, error: signError } = await supabase.storage
+              const { data: signedData } = await supabase.storage
                 .from('make-84f9c112-promotions')
-                .createSignedUrl(updatedPromo[lang].backgroundImagePath, 86400); // 24 hours
+                .createSignedUrl(updatedPromo[lang].backgroundImagePath, 86400);
               
-              if (signError) {
-                console.warn(`⚠️ Failed to sign background image for ${promo.id} (${lang}):`, signError);
-              } else if (signedData?.signedUrl) {
+              if (signedData?.signedUrl) {
                 updatedPromo[lang].backgroundImage = signedData.signedUrl;
               }
             } catch (err) {
-              console.error(`❌ Error signing background image for ${promo.id} (${lang}):`, err);
+              console.error(`❌ Error signing ${lang} background image:`, err);
             }
           }
           
           // Icon Image
           if (updatedPromo[lang].iconImagePath) {
             try {
-              const { data: signedData, error: signError } = await supabase.storage
+              const { data: signedData } = await supabase.storage
                 .from('make-84f9c112-promotions')
-                .createSignedUrl(updatedPromo[lang].iconImagePath, 86400); // 24 hours
+                .createSignedUrl(updatedPromo[lang].iconImagePath, 86400);
               
-              if (signError) {
-                console.warn(`⚠️ Failed to sign icon image for ${promo.id} (${lang}):`, signError);
-              } else if (signedData?.signedUrl) {
+              if (signedData?.signedUrl) {
                 updatedPromo[lang].iconImage = signedData.signedUrl;
               }
             } catch (err) {
-              console.error(`❌ Error signing icon image for ${promo.id} (${lang}):`, err);
+              console.error(`❌ Error signing ${lang} icon image:`, err);
             }
           }
         }
@@ -511,12 +811,33 @@ settingsApp.get("/make-server-84f9c112/settings/promotions", async (c) => {
       })
     );
     
-    console.log(`✅ [PROMOTIONS SETTING] Fetched ${promotionsWithSignedUrls.length} promotions with fresh signed URLs`);
+    console.log(`✅ [PROMOTIONS GET] Fetched ${promotionsWithSignedUrls.length} promotions with fresh signed URLs`);
     return c.json({ success: true, data: { promotions: promotionsWithSignedUrls } });
   } catch (error: any) {
-    console.error("❌ [PROMOTIONS SETTING] Exception:", error);
+    console.error("❌ [PROMOTIONS GET] Exception:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
 
-console.log('✅ Settings module initialized with 16 routes');
+// 🔍 DEBUG: Get raw promotions data from KV store (without signed URLs)
+settingsApp.get("/make-server-84f9c112/debug/promotions-raw", async (c) => {
+  try {
+    const promotions = await kv.get("settings:promotions") || [];
+    
+    console.log(`🔍 [DEBUG] Raw promotions from KV store:`, JSON.stringify(promotions, null, 2));
+    
+    return c.json({ 
+      success: true, 
+      data: { 
+        promotions,
+        count: Array.isArray(promotions) ? promotions.length : 0,
+        kvKey: "settings:promotions"
+      } 
+    });
+  } catch (error: any) {
+    console.error("❌ [DEBUG] Exception:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+console.log('✅ Settings module initialized with 17 routes');

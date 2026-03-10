@@ -1,5 +1,13 @@
 import { Hono } from 'npm:hono@4.6.14';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import {
+  getTierPriority,
+  isDowngrade,
+  isSameTier,
+  getUpgradeType,
+  getTierDisplayName,
+  calculateNewExpiry,
+} from './membership-tier-config.tsx';
 
 const app = new Hono();
 
@@ -316,12 +324,81 @@ app.post('/membership/redeem', async (c) => {
       }, 400);
     }
 
-    // ========== STEP 5: CALCULATE EXPIRY DATE ==========
-    const activatedAt = new Date();
-    const expiresAt = new Date();
-    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    // ========== STEP 5: CHECK EXISTING MEMBERSHIP & TIER HIERARCHY ==========
+    const { data: existingMembership, error: checkError } = await supabase
+      .from('kv_store_89edbd69')
+      .select('value')
+      .eq('key', `membership:${phoneDigits}`)
+      .maybeSingle();
 
-    // ========== STEP 6: CREATE MEMBERSHIP RECORD ==========
+    let isUpgrade = false;
+    let isExtension = false;
+    let activatedAt = new Date();
+    let expiresAt = new Date();
+
+    if (existingMembership && !checkError) {
+      const existing = safeParse(existingMembership.value);
+      
+      // Check if existing membership is still active
+      if (existing.status === 'active' && new Date(existing.expiresAt) > new Date()) {
+        const currentTier = existing.tier;
+        const newTier = tier.name;
+        
+        const upgradeType = getUpgradeType(currentTier, newTier);
+
+        console.log('🔍 [TIER CHECK]', {
+          current: currentTier,
+          new: newTier,
+          currentPriority: getTierPriority(currentTier),
+          newPriority: getTierPriority(newTier),
+          upgradeType,
+        });
+
+        // ❌ PREVENT DOWNGRADE
+        if (upgradeType === 'downgrade') {
+          console.error('❌ [REDEEM] Downgrade attempt blocked:', {
+            from: currentTier,
+            to: newTier,
+          });
+          return c.json({
+            success: false,
+            message: `Cannot downgrade from ${getTierDisplayName(currentTier)} to ${getTierDisplayName(newTier)}. You can only redeem the same tier or upgrade to a higher tier.`,
+          }, 400);
+        }
+
+        // ✅ SAME TIER → EXTEND DURATION
+        if (upgradeType === 'extension') {
+          isExtension = true;
+          expiresAt = calculateNewExpiry(existing.expiresAt, 'extension', 365);
+          
+          console.log('➕ [EXTEND] Same tier extension:', {
+            tier: newTier,
+            currentExpiry: existing.expiresAt,
+            newExpiry: expiresAt.toISOString(),
+          });
+        }
+        
+        // ⬆️ HIGHER TIER → UPGRADE & REPLACE
+        if (upgradeType === 'upgrade') {
+          isUpgrade = true;
+          expiresAt = calculateNewExpiry(existing.expiresAt, 'upgrade', 365);
+          
+          console.log('⬆️ [UPGRADE] Tier upgrade:', {
+            from: currentTier,
+            to: newTier,
+            newExpiry: expiresAt.toISOString(),
+          });
+        }
+      } else {
+        // Existing membership is expired or inactive - treat as new
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+      }
+    } else {
+      // No existing membership - create new
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    }
+
+    // ========== STEP 6: CREATE/UPDATE MEMBERSHIP RECORD ==========
     const membershipData = {
       phone: phoneDigits,
       tier: tier.name,
@@ -333,23 +410,6 @@ app.post('/membership/redeem', async (c) => {
       status: 'active',
       vlinkpayData: vlinkpayData,
     };
-
-    // Check if membership already exists for this phone
-    const { data: existingMembership, error: checkError } = await supabase
-      .from('kv_store_89edbd69')
-      .select('value')
-      .eq('key', `membership:${phoneDigits}`)
-      .single();
-
-    if (existingMembership && !checkError) {
-      const existing = safeParse(existingMembership.value);
-      if (existing.status === 'active' && new Date(existing.expiresAt) > new Date()) {
-        return c.json({
-          success: false,
-          message: 'This phone number already has an active membership',
-        }, 400);
-      }
-    }
 
     // Store membership
     const { error: insertError } = await supabase
@@ -409,9 +469,19 @@ app.post('/membership/redeem', async (c) => {
 
     // Success response
     console.log('🎉 [REDEEM] Membership activated successfully!');
+    // Generate appropriate success message based on action type
+    let successMessage = '';
+    if (isExtension) {
+      successMessage = `${tier.name.toUpperCase()} membership extended successfully! Your membership has been extended by 1 year.`;
+    } else if (isUpgrade) {
+      successMessage = `Congratulations! You've been upgraded to ${tier.name.toUpperCase()} membership!`;
+    } else {
+      successMessage = `${tier.name.toUpperCase()} membership activated successfully!`;
+    }
     return c.json({
       success: true,
-      message: `${tier.name} membership activated successfully!`,
+      message: successMessage,
+      action: isExtension ? 'extension' : isUpgrade ? 'upgrade' : 'new',
       membership: {
         tier: tier.name,
         expiresAt: expiresAt.toISOString(),

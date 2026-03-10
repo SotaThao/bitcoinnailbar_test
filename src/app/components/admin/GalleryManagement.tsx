@@ -3,6 +3,8 @@ import { Card } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { CategorySelector } from "@/app/components/ui/category-selector";
 import { ImageCategoryDialog } from "@/app/components/ui/image-category-dialog";
+import { LogoBadge } from "@/app/components/atoms/LogoBadge";
+import { SelectField } from "@/app/components/ui/select-field";
 import { toast } from "sonner";
 import { projectId, publicAnonKey } from "@utils/supabase/info";
 import AdminLayout from "@/app/components/AdminLayout";
@@ -35,6 +37,10 @@ import {
   Edit2,
   Check,
   Layers,
+  ChevronLeft,
+  ChevronRight,
+  Star,
+  Eye,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/app/components/ui/utils";
@@ -48,6 +54,9 @@ interface GalleryImage {
   width: number;
   height: number;
   uploadedAt: string;
+  showLogo?: boolean; // Flag to display logo on this image
+  featured?: boolean; // Admin marks as featured
+  views?: number; // Track view count
 }
 
 interface SortableItemProps {
@@ -55,9 +64,11 @@ interface SortableItemProps {
   onDelete: (id: string) => void;
   onPreview: (image: GalleryImage) => void;
   onEdit: (image: GalleryImage) => void;
+  onToggleFeatured: (id: string, featured: boolean) => void;
   isSelected: boolean;
   onToggleSelect: (id: string) => void;
   isBulkMode: boolean;
+  logoUrl: string | null;
 }
 
 function SortableItem({
@@ -65,9 +76,11 @@ function SortableItem({
   onDelete,
   onPreview,
   onEdit,
+  onToggleFeatured,
   isSelected,
   onToggleSelect,
   isBulkMode,
+  logoUrl,
 }: SortableItemProps) {
   const {
     attributes,
@@ -89,11 +102,17 @@ function SortableItem({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group relative aspect-square rounded-lg overflow-hidden bg-gray-100 transition-all duration-300",
+        "group relative aspect-square rounded-lg overflow-hidden bg-gray-100 transition-all duration-300 cursor-pointer",
         isSelected
           ? "ring-4 ring-primary ring-offset-2 border-2 border-primary"
           : "border-2 border-gray-200 hover:border-[#FF9800]",
       )}
+      onClick={() => {
+        // Always open preview when clicking the card (unless in bulk mode)
+        if (!isBulkMode) {
+          onPreview(image);
+        }
+      }}
     >
       {/* Checkbox - Top Left */}
       {isBulkMode && (
@@ -129,6 +148,7 @@ function SortableItem({
         <button
           {...attributes}
           {...listeners}
+          onClick={(e) => e.stopPropagation()}
           className="absolute top-2 right-2 z-10 cursor-grab active:cursor-grabbing bg-white/90 backdrop-blur-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-white"
         >
           <GripVertical className="w-4 h-4 text-gray-600" />
@@ -139,8 +159,7 @@ function SortableItem({
       <img
         src={image.cloudinary_url}
         alt={`Gallery ${image.order + 1}`}
-        className="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
-        onClick={() => !isBulkMode && onPreview(image)}
+        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 pointer-events-none"
       />
 
       {/* Category Badge - Bottom Left */}
@@ -149,7 +168,7 @@ function SortableItem({
       </div>
 
       {/* Hover Overlay with Actions */}
-      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2 pointer-events-none">
         {!isBulkMode && (
           <>
             {/* Edit Category Button */}
@@ -158,7 +177,7 @@ function SortableItem({
                 e.stopPropagation();
                 onEdit(image);
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-xl transition-transform transform hover:scale-110"
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-xl transition-transform transform hover:scale-110 pointer-events-auto"
               title="Change category"
             >
               <Edit2 className="w-5 h-5" />
@@ -170,7 +189,7 @@ function SortableItem({
                 e.stopPropagation();
                 onDelete(image.id);
               }}
-              className="bg-red-600 hover:bg-red-700 text-white rounded-full p-3 shadow-xl transition-transform transform hover:scale-110"
+              className="bg-red-600 hover:bg-red-700 text-white rounded-full p-3 shadow-xl transition-transform transform hover:scale-110 pointer-events-auto"
               title="Delete image"
             >
               <Trash2 className="w-5 h-5" />
@@ -183,11 +202,34 @@ function SortableItem({
       {!isBulkMode && (
         <div
           className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
-          onClick={() => onPreview(image)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPreview(image);
+          }}
         >
           <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 hover:bg-white transition-colors">
             <ZoomIn className="w-4 h-4 text-gray-700" />
           </div>
+        </div>
+      )}
+
+      {/* Logo Badge */}
+      {image.showLogo && logoUrl && (
+        <LogoBadge logoUrl={logoUrl} visible={true} size="sm" />
+      )}
+      
+      {/* Featured Star Badge - Top Right (when featured) */}
+      {!isBulkMode && image.featured && (
+        <div className="absolute top-2 right-2 z-10 bg-yellow-500 text-white p-1.5 rounded-full shadow-lg">
+          <Star className="w-3 h-3 fill-current" />
+        </div>
+      )}
+      
+      {/* Views Badge - Bottom Right Corner */}
+      {!isBulkMode && (image.views || 0) > 0 && (
+        <div className="absolute bottom-2 right-2 z-10 bg-black/70 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded-md flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Eye className="w-3 h-3" />
+          {image.views}
         </div>
       )}
     </div>
@@ -217,6 +259,7 @@ export default function GalleryManagement() {
   // Filter Management
   const [filterCategory, setFilterCategory] =
     useState<string>("All");
+  const [contentFilter, setContentFilter] = useState<string>("all");
 
   // Bulk Selection & Edit
   const [selectedImages, setSelectedImages] = useState<
@@ -229,6 +272,11 @@ export default function GalleryManagement() {
   const [editingImage, setEditingImage] =
     useState<GalleryImage | null>(null);
 
+  // Logo Management  
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [showLogoOnUpload, setShowLogoOnUpload] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -239,6 +287,7 @@ export default function GalleryManagement() {
   useEffect(() => {
     fetchImages();
     fetchServiceCategories();
+    fetchLogo(); // Fetch logo on mount
   }, []);
 
   const fetchImages = async () => {
@@ -298,6 +347,7 @@ export default function GalleryManagement() {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("category", selectedCategory); // Use selected category
+        formData.append("showLogo", showLogoOnUpload ? "true" : "false"); // Add logo flag
 
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/gallery/upload`,
@@ -488,6 +538,88 @@ export default function GalleryManagement() {
     }
   };
 
+  const fetchLogo = async () => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/gallery-logo`,
+        {
+          headers: { Authorization: `Bearer ${publicAnonKey}` },
+        }
+      );
+      const data = await response.json();
+      if (data.logo) {
+        setLogoUrl(data.logo.url);
+      }
+    } catch (error) {
+      console.error('Error fetching logo:', error);
+      // Don't show error - logo is optional
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate
+    if (!file.type.startsWith('image/')) {
+      toast.error('File must be an image (PNG, SVG, or JPEG)');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo must be less than 2MB');
+      return;
+    }
+
+    setUploadingLogo(true);
+
+    try {
+      // Upload to Cloudinary via utilities route
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const uploadResponse = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/upload`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${publicAnonKey}` },
+          body: formData,
+        }
+      );
+
+      const uploadData = await uploadResponse.json();
+      if (!uploadData.url) {
+        throw new Error('Upload failed');
+      }
+
+      // Save logo URL to KV
+      const saveResponse = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/gallery-logo`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${publicAnonKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url: uploadData.url }),
+        }
+      );
+
+      const saveData = await saveResponse.json();
+      if (saveData.success) {
+        setLogoUrl(uploadData.url);
+        toast.success('Logo uploaded successfully!');
+      } else {
+        throw new Error(saveData.error || 'Failed to save logo');
+      }
+    } catch (error: any) {
+      console.error('Logo upload error:', error);
+      toast.error(error.message || 'Failed to upload logo');
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = ''; // Reset
+    }
+  };
+
   const handleEditCategory = (
     oldName: string,
     newName: string,
@@ -580,6 +712,38 @@ export default function GalleryManagement() {
     } catch (error) {
       console.error("Update category error:", error);
       toast.error("Failed to update category");
+    }
+  };
+
+  // Toggle Featured Status
+  const handleToggleFeatured = async (id: string, featured: boolean) => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/gallery/${id}/featured`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${publicAnonKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ featured }),
+        },
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        setImages((prev) =>
+          prev.map((img) =>
+            img.id === id ? { ...img, featured } : img,
+          ),
+        );
+        toast.success(featured ? "Marked as featured" : "Unmarked as featured");
+      } else {
+        toast.error(data.error || "Failed to update featured status");
+      }
+    } catch (error) {
+      console.error("Toggle featured error:", error);
+      toast.error("Failed to update featured status");
     }
   };
 
@@ -790,11 +954,54 @@ export default function GalleryManagement() {
     return Array.from(categories);
   };
 
-  // Filter images by category
-  const filteredImages =
-    filterCategory === "All"
-      ? images
-      : images.filter((img) => img.category === filterCategory);
+  // Apply Content Filter + Category Filter
+  const getFilteredImages = () => {
+    let result = [...images];
+
+    // Step 1: Apply Content Filter
+    switch (contentFilter) {
+      case "new":
+        result = result.sort((a, b) => 
+          new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+        );
+        break;
+      case "popular":
+        result = result.sort((a, b) => (b.views || 0) - (a.views || 0));
+        break;
+      case "featured":
+        result = result.filter((img) => img.featured);
+        break;
+      case "all":
+      default:
+        // No filtering, keep original order
+        break;
+    }
+
+    // Step 2: Apply Category Filter
+    if (filterCategory !== "All") {
+      result = result.filter((img) => img.category === filterCategory);
+    }
+
+    return result;
+  };
+
+  const filteredImages = getFilteredImages();
+
+  // Count images by Content Filter
+  const getContentFilterCount = (filter: string) => {
+    const lowerFilter = filter.toLowerCase();
+    switch (lowerFilter) {
+      case "new":
+      case "all":
+        return images.length;
+      case "popular":
+        return images.filter((img) => (img.views || 0) > 0).length;
+      case "featured":
+        return images.filter((img) => img.featured).length;
+      default:
+        return 0;
+    }
+  };
 
   // Count images by category
   const getCategoryCount = (category: string) => {
@@ -866,6 +1073,81 @@ export default function GalleryManagement() {
                 onEditCategory={handleEditCategory}
                 onDeleteCategory={handleDeleteCategory}
               />
+            </div>
+          </div>
+
+          {/* Logo Upload Section */}
+          <div className="mt-6 border-t border-border pt-6">
+            <div className="flex flex-col gap-4">
+              {/* Checkbox */}
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={showLogoOnUpload}
+                  onChange={(e) => setShowLogoOnUpload(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                  Show logo on uploaded images
+                </span>
+              </label>
+
+              {/* Logo Upload (shown when checkbox checked) */}
+              <AnimatePresence>
+                {showLogoOnUpload && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex flex-col gap-2">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/png,image/svg+xml,image/jpeg"
+                          onChange={handleLogoUpload}
+                          disabled={uploadingLogo}
+                          className="hidden"
+                          id="logo-upload-input"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={uploadingLogo}
+                          className="gap-2"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            document.getElementById('logo-upload-input')?.click();
+                          }}
+                        >
+                          {uploadingLogo ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4" />
+                          )}
+                          {logoUrl ? 'Change Logo' : 'Upload Logo'}
+                        </Button>
+                        {logoUrl && (
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={logoUrl}
+                              alt="Logo preview"
+                              className="h-8 w-auto object-contain border border-border rounded px-2 bg-white"
+                            />
+                            <span className="text-xs text-green-600 font-medium">✓ Uploaded</span>
+                          </div>
+                        )}
+                      </label>
+                      <p className="text-xs text-muted-foreground">
+                        PNG, SVG, or JPEG (max 2MB, horizontal layout recommended)
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
@@ -958,41 +1240,34 @@ export default function GalleryManagement() {
           </Card>
         ) : (
           <div>
-            {/* Category Filter Tabs */}
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-                <Tag className="w-4 h-4" />
-                Filter by Category
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {getAllCategories().map((category) => {
-                  const count = getCategoryCount(category);
-                  const isActive = filterCategory === category;
+            {/* Filters Section - Compact Row */}
+            <div className="mb-6 flex flex-wrap items-center gap-4">
+              {/* Content Filter */}
+              <div className="flex items-center gap-2">
+                <Star className="w-4 h-4 text-muted-foreground" />
+                <SelectField
+                  value={contentFilter}
+                  onValueChange={setContentFilter}
+                  triggerClassName="min-w-[160px]"
+                  options={["New", "Popular", "Featured", "All"].map((label) => ({
+                    value: label.toLowerCase(),
+                    label: `${label} (${getContentFilterCount(label)})`,
+                  }))}
+                />
+              </div>
 
-                  return (
-                    <button
-                      key={category}
-                      onClick={() =>
-                        setFilterCategory(category)
-                      }
-                      className={`
-                        px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200
-                        ${
-                          isActive
-                            ? "bg-primary text-primary-foreground shadow-md scale-105"
-                            : "bg-card border border-border text-foreground hover:bg-accent hover:border-primary/50"
-                        }
-                      `}
-                    >
-                      {category}
-                      <span
-                        className={`ml-2 text-xs ${isActive ? "opacity-90" : "opacity-60"}`}
-                      >
-                        ({count})
-                      </span>
-                    </button>
-                  );
-                })}
+              {/* Category Filter */}
+              <div className="flex items-center gap-2">
+                <Tag className="w-4 h-4 text-muted-foreground" />
+                <SelectField
+                  value={filterCategory}
+                  onValueChange={setFilterCategory}
+                  triggerClassName="min-w-[160px]"
+                  options={getAllCategories().map((category) => ({
+                    value: category,
+                    label: `${category} (${getCategoryCount(category)})`,
+                  }))}
+                />
               </div>
             </div>
 
@@ -1062,11 +1337,13 @@ export default function GalleryManagement() {
                           onDelete={handleDelete}
                           onPreview={setPreviewImage}
                           onEdit={handleEditImage}
+                          onToggleFeatured={handleToggleFeatured}
                           isSelected={selectedImages.includes(
                             image.id,
                           )}
                           onToggleSelect={handleToggleSelect}
                           isBulkMode={isBulkMode}
+                          logoUrl={logoUrl}
                         />
                       ))}
                     </div>
@@ -1180,6 +1457,123 @@ export default function GalleryManagement() {
         }
         isMultiple={!editingImage}
       />
+
+      {/* Image Preview Lightbox */}
+      <AnimatePresence>
+        {previewImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 bg-[rgba(0,0,0,0.6)]"
+            onClick={() => setPreviewImage(null)}
+            onKeyDown={(e) => {
+              const currentIndex = filteredImages.findIndex(
+                (img) => img.id === previewImage.id,
+              );
+              if (e.key === "ArrowLeft" && currentIndex > 0) {
+                setPreviewImage(filteredImages[currentIndex - 1]);
+              } else if (
+                e.key === "ArrowRight" &&
+                currentIndex < filteredImages.length - 1
+              ) {
+                setPreviewImage(filteredImages[currentIndex + 1]);
+              } else if (e.key === "Escape") {
+                setPreviewImage(null);
+              }
+            }}
+            tabIndex={0}
+          >
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors z-50 p-2"
+            >
+              <X className="w-8 h-8" />
+            </button>
+
+            {/* Previous Button */}
+            {(() => {
+              const currentIndex = filteredImages.findIndex(
+                (img) => img.id === previewImage.id,
+              );
+              return currentIndex > 0 ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewImage(filteredImages[currentIndex - 1]);
+                  }}
+                  className="absolute left-6 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full p-3 transition-all hover:scale-110 z-50"
+                  title="Previous image"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+              ) : null;
+            })()}
+
+            {/* Next Button */}
+            {(() => {
+              const currentIndex = filteredImages.findIndex(
+                (img) => img.id === previewImage.id,
+              );
+              return currentIndex < filteredImages.length - 1 ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewImage(filteredImages[currentIndex + 1]);
+                  }}
+                  className="absolute right-6 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full p-3 transition-all hover:scale-110 z-50"
+                  title="Next image"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              ) : null;
+            })()}
+
+            <div
+              className="relative w-full max-w-7xl flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <motion.div
+                key={previewImage.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="relative w-full h-full flex flex-col items-center justify-center gap-4"
+              >
+                <div className="relative">
+                  <img
+                    src={previewImage.cloudinary_url}
+                    alt="Preview"
+                    className="max-w-full max-h-[85vh] object-contain rounded-md shadow-2xl"
+                  />
+                  
+                  {/* Logo Badge on Preview */}
+                  {previewImage.showLogo && logoUrl && (
+                    <LogoBadge logoUrl={logoUrl} visible={true} size="lg" />
+                  )}
+                </div>
+                
+                {/* Image Info */}
+                <div className="bg-black/60 backdrop-blur-md text-white px-4 py-2 rounded-lg flex items-center gap-4 text-sm">
+                  <span className="flex items-center gap-2">
+                    <Tag className="w-4 h-4" />
+                    <span className="font-semibold">{previewImage.category}</span>
+                  </span>
+                  <span className="text-white/50">•</span>
+                  <span>
+                    {previewImage.width} × {previewImage.height}
+                  </span>
+                  <span className="text-white/50">•</span>
+                  <span>
+                    {filteredImages.findIndex((img) => img.id === previewImage.id) + 1} / {filteredImages.length}
+                  </span>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AdminLayout>
   );
 }

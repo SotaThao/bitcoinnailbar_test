@@ -21,6 +21,9 @@ interface GalleryImage {
   width: number;
   height: number;
   uploadedAt: string;
+  showLogo?: boolean; // Flag to display logo on this image
+  featured?: boolean; // Admin marks as featured
+  views?: number; // Track view count
 }
 
 // ============================================================================
@@ -161,15 +164,68 @@ async function deleteFromCloudinary(publicId: string): Promise<void> {
  */
 galleryApp.get("/make-server-84f9c112/gallery/images", async (c) => {
   try {
+    const contentFilter = c.req.query("contentFilter") || "all";
+    const limit = parseInt(c.req.query("limit") || "0", 10);
+    
     const images = (await kv.get("gallery:images")) || [];
-    console.log(`📸 [GALLERY] Fetched ${images.length} images`);
+    console.log(`📸 [GALLERY] Fetched ${images.length} images - Filter: ${contentFilter}, Limit: ${limit}`);
     
-    // Sort by order
-    const sortedImages = images.sort((a: GalleryImage, b: GalleryImage) => a.order - b.order);
+    // Sort by order first
+    let filteredImages = images.sort((a: GalleryImage, b: GalleryImage) => a.order - b.order);
     
-    return c.json({ success: true, data: sortedImages });
+    // Apply content filter
+    if (contentFilter === "new") {
+      // Sort by uploadedAt descending (newest first)
+      filteredImages = filteredImages.sort((a: GalleryImage, b: GalleryImage) => 
+        new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+      );
+    } else if (contentFilter === "popular") {
+      // Sort by views descending (most viewed first)
+      filteredImages = filteredImages.sort((a: GalleryImage, b: GalleryImage) => 
+        (b.views || 0) - (a.views || 0)
+      );
+    } else if (contentFilter === "featured") {
+      // Filter only featured images
+      filteredImages = filteredImages.filter((img: GalleryImage) => img.featured === true);
+    }
+    // "all" - keep original order sort
+    
+    // Apply limit if specified
+    if (limit > 0) {
+      filteredImages = filteredImages.slice(0, limit);
+    }
+    
+    return c.json({ success: true, data: filteredImages });
   } catch (error: any) {
     console.error("❌ [GALLERY] Fetch error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * POST /gallery/image/:id/view
+ * Public endpoint - Increment view count when user opens lightbox
+ */
+galleryApp.post("/make-server-84f9c112/gallery/image/:id/view", async (c) => {
+  try {
+    const id = c.req.param("id");
+
+    const images = (await kv.get("gallery:images")) || [];
+    const imageIndex = images.findIndex((img: GalleryImage) => img.id === id);
+
+    if (imageIndex === -1) {
+      return c.json({ success: false, error: "Image not found" }, 404);
+    }
+
+    // Increment view count (initialize to 0 if undefined)
+    images[imageIndex].views = (images[imageIndex].views || 0) + 1;
+    await kv.set("gallery:images", images);
+
+    console.log(`👁️ [GALLERY] View tracked - ID: ${id}, Views: ${images[imageIndex].views}`);
+
+    return c.json({ success: true, views: images[imageIndex].views });
+  } catch (error: any) {
+    console.error("❌ [GALLERY] View tracking error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -187,6 +243,7 @@ galleryApp.post("/make-server-84f9c112/admin/gallery/upload", async (c) => {
     const body = await c.req.parseBody();
     const file = body["file"];
     const category = (body["category"] as string) || "Uncategorized";
+    const showLogo = body["showLogo"] === "true"; // Parse logo flag
 
     if (!file || !(file instanceof File)) {
       return c.json({ success: false, error: "No file provided" }, 400);
@@ -202,7 +259,7 @@ galleryApp.post("/make-server-84f9c112/admin/gallery/upload", async (c) => {
       return c.json({ success: false, error: "Image must be less than 10MB" }, 400);
     }
 
-    console.log(`📤 [GALLERY] Uploading image - Category: ${category}, Size: ${file.size}`);
+    console.log(`📤 [GALLERY] Uploading image - Category: ${category}, Show Logo: ${showLogo}, Size: ${file.size}`);
 
     // Upload to Cloudinary with category-based folder structure
     const sanitizedCategory = sanitizeFolderName(category);
@@ -222,13 +279,14 @@ galleryApp.post("/make-server-84f9c112/admin/gallery/upload", async (c) => {
       width,
       height,
       uploadedAt: new Date().toISOString(),
+      showLogo, // Include logo flag
     };
 
     // Save to KV
     const updatedImages = [...images, newImage];
     await kv.set("gallery:images", updatedImages);
 
-    console.log(`✅ [GALLERY] Image uploaded - ID: ${newImage.id}, URL: ${url}`);
+    console.log(`✅ [GALLERY] Image uploaded - ID: ${newImage.id}, URL: ${url}, Show Logo: ${showLogo}`);
 
     return c.json({ success: true, data: newImage });
   } catch (error: any) {
@@ -385,6 +443,35 @@ galleryApp.put("/make-server-84f9c112/admin/gallery/:id", async (c) => {
     return c.json({ success: true, data: existingImage });
   } catch (error: any) {
     console.error("❌ [GALLERY] Update error:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+/**
+ * PUT /admin/gallery/:id/featured
+ * Admin endpoint - Toggle featured status
+ */
+galleryApp.put("/make-server-84f9c112/admin/gallery/:id/featured", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const { featured } = await c.req.json();
+
+    const images = (await kv.get("gallery:images")) || [];
+    const imageIndex = images.findIndex((img: GalleryImage) => img.id === id);
+
+    if (imageIndex === -1) {
+      return c.json({ success: false, error: "Image not found" }, 404);
+    }
+
+    // Update featured status
+    images[imageIndex].featured = featured;
+    await kv.set("gallery:images", images);
+
+    console.log(`✅ [GALLERY] Featured status updated - ID: ${id}, Featured: ${featured}`);
+
+    return c.json({ success: true, data: images[imageIndex] });
+  } catch (error: any) {
+    console.error("❌ [GALLERY] Featured update error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

@@ -1,17 +1,19 @@
 # POSTGRES MIGRATION STATUS
 
-**Last Updated:** 2026-01-23  
-**Overall Status:** ✅ **COMPLETE**
+**Last Updated:** 2026-01-28  
+**Overall Status:** 🚀 **IN PROGRESS - PHASE 2**
 
 ---
 
 ## 📊 **MIGRATION OVERVIEW:**
 
-Bitcoin Nail Bar đã chuyển đổi hoàn toàn từ **KV Store** sang **Postgres** cho customer data.
+Bitcoin Nail Bar đang mở rộng migration từ **KV Store** sang **Postgres**:
+- ✅ **PHASE 1 COMPLETE:** Customer profiles
+- 🚀 **PHASE 2 IN PROGRESS:** Appointments & Technicians
 
 ---
 
-## ✅ **COMPLETED MIGRATIONS:**
+## ✅ **PHASE 1 COMPLETE: CUSTOMER DATA**
 
 ### **1. Customer Profiles** ✅
 
@@ -35,6 +37,128 @@ Bitcoin Nail Bar đã chuyển đổi hoàn toàn từ **KV Store** sang **Postg
   - CRUD operations
   - Search & pagination
   - Admin UI integration
+
+---
+
+## 🚀 **PHASE 2 IN PROGRESS: APPOINTMENTS & TECHNICIANS**
+
+### **Step 1: SQL Schema** ✅ COMPLETE
+
+**Date:** 2026-01-28  
+**File:** `/docs/01-architecture/POSTGRES_MIGRATION_SCHEMA.sql.tsx`
+
+**Tables Created:**
+1. ✅ `technician_info` - Staff/technician profiles
+2. ✅ `appointment_info` - Customer appointments
+3. ✅ `assignment_change_log` - Audit trail for technician assignments
+
+**Status:** Tables successfully created in Supabase Postgres
+
+---
+
+### **Step 2: Backend Migration Module** ✅ COMPLETE
+
+**Date:** 2026-01-28  
+**File:** `/supabase/functions/server/migrate-to-postgres.tsx`
+
+**API Endpoints:**
+1. ✅ `POST /migrate-to-postgres/migrate-technicians`
+2. ✅ `POST /migrate-to-postgres/migrate-appointments`
+3. ✅ `POST /migrate-to-postgres/migrate-assignment-logs`
+4. ✅ `POST /migrate-to-postgres/migrate-all` (runs all 3 in sequence)
+5. ✅ `GET /migrate-to-postgres/migration-status`
+
+**Features:**
+- ✅ Idempotent (safe to run multiple times)
+- ✅ Foreign key mapping (KV Store IDs → Postgres UUIDs)
+- ✅ Error handling & detailed logging
+- ✅ Progress tracking
+- ✅ Skips already-migrated records
+
+**Status:** Backend mounted on `/make-server-89edbd69/migrate-to-postgres/*`
+
+---
+
+### **Step 3: Data Migration** 🔄 READY TO RUN
+
+**Prerequisites:**
+- [x] Postgres tables created
+- [x] Backend module deployed
+- [x] Testing guide created
+- [ ] Run migration script
+- [ ] Verify data integrity
+
+**Next Actions:**
+1. Check migration status: `GET /migration-status`
+2. Run migration: `POST /migrate-all`
+3. Verify results: Check Postgres table counts
+4. Update backend modules to use Postgres instead of KV
+
+**Testing Guide:** `/docs/03-guides/POSTGRES_MIGRATION_TESTING.md`
+
+---
+
+### **Step 4: Backend Refactor** ⏳ PENDING
+
+**Files to Update:**
+
+**Appointments Module:**
+- [ ] `/supabase/functions/server/appointments.tsx` - Switch to Postgres queries
+- [ ] Remove KV Store `appointment:*` references
+- [ ] Use foreign keys to `technician_info` and `customer_profiles`
+
+**Staff Module:**
+- [ ] `/supabase/functions/server/staff.tsx` - Switch to Postgres queries
+- [ ] Remove KV Store `staff:*` references
+- [ ] Update performance metrics
+
+**Technician Assignment:**
+- [ ] `/supabase/functions/server/technician-assignment.tsx` - Use Postgres
+- [ ] Query `technician_info` for availability
+- [ ] Update scoring algorithm
+
+**Assignment Logs:**
+- [ ] `/supabase/functions/server/assignment-logs.tsx` - Use Postgres
+- [ ] Query `assignment_change_log` table
+- [ ] Maintain audit trail
+
+**Assignment Reasons:**
+- [ ] Keep in KV Store for now (low priority)
+- [ ] Can migrate later if needed
+
+---
+
+### **Step 5: Frontend Updates** ⏳ PENDING
+
+**Admin Pages to Update:**
+
+**Staff Management:**
+- [ ] `/src/app/admin/staff/*` - Display from Postgres
+- [ ] Update staff list queries
+- [ ] Update staff CRUD operations
+
+**Appointments:**
+- [ ] `/src/app/admin/appointments/*` - Display from Postgres
+- [ ] Update appointment list queries
+- [ ] Update technician assignment UI
+
+**Dashboard:**
+- [ ] Update stats to query Postgres
+- [ ] Staff performance metrics
+- [ ] Appointment analytics
+
+---
+
+### **Phase 2 Progress:** 40% Complete
+
+**Timeline:**
+- ✅ Planning: 2026-01-28 (Complete)
+- ✅ SQL Schema: 2026-01-28 (Complete)
+- ✅ Migration Module: 2026-01-28 (Complete)
+- 🔄 Data Migration: 2026-01-28 (Ready)
+- ⏳ Backend Refactor: TBD
+- ⏳ Frontend Updates: TBD
+- ⏳ Testing & Validation: TBD
 
 ---
 
@@ -368,6 +492,6 @@ CREATE TABLE customer_profiles (
 
 ---
 
-**Last Updated:** 2026-01-23  
-**Migration Status:** ✅ **COMPLETE**  
+**Last Updated:** 2026-01-28  
+**Migration Status:** 🚀 **IN PROGRESS - PHASE 2**  
 **Confidence Level:** 🟢 **HIGH** (90%+)

@@ -17,12 +17,18 @@ import {
   optimizeCloudinaryUrl,
   optimizeCloudinaryThumbnail,
 } from "@/utils/cloudinary";
+import { LogoBadge } from "@/app/components/atoms/LogoBadge";
+import { FilterTabs } from "@/app/components/atoms/FilterTabs";
 
 interface GalleryImage {
   id: string;
   cloudinary_url: string;
   order: number;
   category: string;
+  showLogo?: boolean;
+  featured?: boolean;
+  views?: number;
+  uploadedAt: string;
 }
 
 // Helper function to ensure URLs have https:// prefix
@@ -44,10 +50,37 @@ export default function GalleryPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] =
     useState<string>("all");
+  
+  // Content Filter State (NEW)
+  const [contentFilter, setContentFilter] = useState<string>("new");
+  
   const [socialMedia, setSocialMedia] = useState({
     facebook: "",
     instagram: "",
   });
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  // Fetch logo
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/gallery-logo`,
+          {
+            headers: { Authorization: `Bearer ${publicAnonKey}` },
+          }
+        );
+        const data = await response.json();
+        if (data.logo) {
+          setLogoUrl(data.logo.url);
+        }
+      } catch (error) {
+        console.error("Error fetching logo:", error);
+      }
+    };
+
+    fetchLogo();
+  }, []);
 
   // Fetch images from backend
   useEffect(() => {
@@ -116,13 +149,55 @@ export default function GalleryPage() {
     fetchSocialMedia();
   }, []);
 
-  // Filter images by category
-  const filteredImages =
+  // Track view when lightbox opens
+  useEffect(() => {
+    if (selectedIndex !== null && filteredImages[selectedIndex]) {
+      const trackView = async () => {
+        try {
+          await fetch(
+            `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/gallery/image/${filteredImages[selectedIndex].id}/view`,
+            {
+              method: "POST",
+              headers: { Authorization: `Bearer ${publicAnonKey}` },
+            }
+          );
+        } catch (error) {
+          console.error("Failed to track view:", error);
+        }
+      };
+      trackView();
+    }
+  }, [selectedIndex]);
+
+  // Apply content filter and sorting
+  const applyContentFilter = (imgs: GalleryImage[]) => {
+    switch (contentFilter) {
+      case "new":
+        // Sort by uploadedAt (newest first)
+        return [...imgs].sort(
+          (a, b) =>
+            new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+        );
+      case "popular":
+        // Sort by views (highest first)
+        return [...imgs].sort((a, b) => (b.views || 0) - (a.views || 0));
+      case "featured":
+        // Filter only featured images
+        return imgs.filter((img) => img.featured === true);
+      case "all":
+      default:
+        // Return as-is (use default order)
+        return imgs;
+    }
+  };
+
+  // Filter images by category, then apply content filter
+  const categoryFilteredImages =
     selectedCategory === "all"
       ? images
-      : images.filter(
-          (img) => img.category === selectedCategory,
-        );
+      : images.filter((img) => img.category === selectedCategory);
+
+  const filteredImages = applyContentFilter(categoryFilteredImages);
 
   const showNext = useCallback(
     (e?: any) => {
@@ -187,33 +262,32 @@ export default function GalleryPage() {
             </p>
           </motion.div>
 
-          {/* Category Filter Tabs */}
+          {/* Content Filter Tabs (NEW - Primary Layer) */}
+          <FilterTabs
+            options={[
+              { id: "new", label: "New" },
+              { id: "popular", label: "Popular" },
+              { id: "featured", label: "Featured" },
+              { id: "all", label: "All" },
+            ]}
+            selected={contentFilter}
+            onSelect={setContentFilter}
+            variant="primary"
+            className="mb-8"
+          />
+
+          {/* Category Filter Tabs (Secondary Layer) */}
           {categories.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-3 mb-12">
-              <button
-                onClick={() => setSelectedCategory("all")}
-                className={`px-6 py-2 rounded-full font-medium transition-all ${
-                  selectedCategory === "all"
-                    ? "bg-[#FF9800] text-black shadow-lg shadow-[#FF9800]/30"
-                    : "bg-white/10 text-gray-300 hover:bg-white/20"
-                }`}
-              >
-                All
-              </button>
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`px-6 py-2 rounded-full font-medium transition-all capitalize ${
-                    selectedCategory === category
-                      ? "bg-[#FF9800] text-black shadow-lg shadow-[#FF9800]/30"
-                      : "bg-white/10 text-gray-300 hover:bg-white/20"
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
+            <FilterTabs
+              options={[
+                { id: "all", label: "All" },
+                ...categories.map((cat) => ({ id: cat, label: cat })),
+              ]}
+              selected={selectedCategory}
+              onSelect={setSelectedCategory}
+              variant="secondary"
+              className="mb-12"
+            />
           )}
 
           {/* Masonry-style Grid */}
@@ -251,6 +325,16 @@ export default function GalleryPage() {
                       alt={`Gallery Image ${index + 1}`}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
+
+                    {/* Gradient overlay for logo visibility */}
+                    {img.showLogo && logoUrl && (
+                      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
+                    )}
+
+                    {/* Logo Badge */}
+                    {img.showLogo && logoUrl && (
+                      <LogoBadge logoUrl={logoUrl} visible={true} size="sm" />
+                    )}
 
                     {/* Overlay */}
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -320,7 +404,7 @@ export default function GalleryPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-md p-4"
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 bg-[rgba(0,0,0,0.6)]"
               onClick={closeLightbox}
             >
               <button
@@ -349,15 +433,27 @@ export default function GalleryPage() {
                   transition={{ duration: 0.3 }}
                   className="relative w-full h-full flex items-center justify-center"
                 >
-                  <img
-                    src={optimizeCloudinaryUrl(
-                      filteredImages[selectedIndex]
-                        .cloudinary_url,
-                      { width: 1920 },
+                  <div className="relative">
+                    <img
+                      src={optimizeCloudinaryUrl(
+                        filteredImages[selectedIndex]
+                          .cloudinary_url,
+                        { width: 1920 },
+                      )}
+                      alt="Gallery View"
+                      className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                    />
+                    
+                    {/* Gradient overlay for logo visibility */}
+                    {filteredImages[selectedIndex].showLogo && logoUrl && (
+                      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none rounded-b-lg" />
                     )}
-                    alt="Gallery View"
-                    className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
-                  />
+                    
+                    {/* Logo Badge on Lightbox */}
+                    {filteredImages[selectedIndex].showLogo && logoUrl && (
+                      <LogoBadge logoUrl={logoUrl} visible={true} size="lg" />
+                    )}
+                  </div>
                 </motion.div>
 
                 <button

@@ -15,6 +15,11 @@ import { useLanguage } from "../context/LanguageContext";
 import ReactMarkdown from "react-markdown";
 import { QRCodeSVG } from "qrcode.react";
 import { RotatingMarketingMessage } from "./RotatingMarketingMessage";
+import {
+  isBeforeGrandOpening,
+  GRAND_OPENING_EVENT_URL,
+  getGrandOpeningDateString,
+} from "../lib/grand-opening";
 
 interface Message {
   role: "user" | "assistant";
@@ -127,12 +132,20 @@ export function Chatbot() {
 
   // Set welcome message on mount and language change
   useEffect(() => {
-    setMessages([
-      {
-        role: "assistant",
-        content: t("chatbot.welcome"),
-      },
-    ]);
+    const baseWelcome = t("chatbot.welcome");
+
+    // Add grand opening announcement if before opening date
+    if (isBeforeGrandOpening()) {
+      const dateStr = getGrandOpeningDateString(language);
+      const grandOpeningMsg =
+        language === "vi"
+          ? `${baseWelcome}\n\n🎉 **Tin vui!** Bitcoin Nail Bar chính thức khai trương ngày **${dateStr}**! Xem chương trình khai trương với nhiều ưu đãi đặc biệt tại đây: [Chương trình khai trương](${GRAND_OPENING_EVENT_URL})`
+          : `${baseWelcome}\n\n🎉 **Exciting news!** Bitcoin Nail Bar is having our **Grand Opening on ${dateStr}**! Check out our special opening program with exclusive deals: [Grand Opening Program](${GRAND_OPENING_EVENT_URL})`;
+
+      setMessages([{ role: "assistant", content: grandOpeningMsg }]);
+    } else {
+      setMessages([{ role: "assistant", content: baseWelcome }]);
+    }
   }, [language, t]);
 
   const bubbleMessages = t("chatbot.bubbles") as string[];

@@ -308,10 +308,32 @@ app.post("/make-server-84f9c112/chat", async (c) => {
     serviceContext += validServiceNames.join(', ') + '\n';
     serviceContext += '\n⚠️ IMPORTANT: If customer asks about a service NOT in this list, politely say it\'s not available.\n';
     
+    // Grand Opening: Mar 28, 2026 23:59 CST = Mar 29 05:59 UTC
+    const GRAND_OPENING_TS = Date.UTC(2026, 2, 29, 5, 59, 59);
+    const isPreOpening = Date.now() < GRAND_OPENING_TS;
+
+    const grandOpeningContext = isPreOpening ? `
+    🎉🎉🎉 GRAND OPENING ANNOUNCEMENT (TOP PRIORITY) 🎉🎉🎉
+    Bitcoin Nail Bar is having our GRAND OPENING on March 27-28, 2026!
+    
+    ⚠️ THE SALON HAS NOT OPENED YET. We are in pre-opening phase.
+    
+    INSTRUCTIONS FOR GRAND OPENING:
+    1. ALWAYS mention the grand opening when greeting customers or when they ask about the salon
+    2. Enthusiastically invite customers to our Grand Opening Event program
+    3. Share the event link: https://event.bitcoinnailbar.com/
+    4. If customer wants to book: Let them know they can PRE-BOOK for the grand opening days (Mar 27-28) or after
+    5. Emphasize exclusive grand opening deals and offers available at the event page
+    6. When responding in Vietnamese: "Chúng tôi chính thức khai trương vào ngày 27-28 tháng 3, 2026! Xem chương trình khai trương tại: https://event.bitcoinnailbar.com/"
+    7. When responding in English: "We're having our Grand Opening on March 27-28, 2026! Check out our special opening program at: https://event.bitcoinnailbar.com/"
+    
+    🎯 This is the #1 most important thing to communicate to every customer right now.
+    ` : '';
+
     const systemPrompt = `You are the AI receptionist for "Bitcoin Nail Bar" - an intelligent, helpful, and knowledgeable assistant.
     
     CURRENT DATE/TIME: ${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' })} (Central Time - Houston, TX)
-    
+    ${grandOpeningContext}
     📍 BUSINESS INFORMATION:
     - Address: 9793 Westheimer Rd, Houston, TX 77042
     - Store Phone: (346) 802-4906
@@ -319,6 +341,7 @@ app.post("/make-server-84f9c112/chat", async (c) => {
     - Email: customerbitcoinnailbar@gmail.com
     - Payment Methods: Cash, Credit Card, Bitcoin, VLINKPAY (crypto payment)
     - Special Feature: We are the first nail salon in Houston accepting Bitcoin payments
+    ${isPreOpening ? '- STATUS: PRE-OPENING (Grand Opening: March 27-28, 2026)' : '- STATUS: OPEN'}
     
     ${serviceContext}
     ${membershipContext}

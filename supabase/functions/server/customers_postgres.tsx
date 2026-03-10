@@ -56,6 +56,17 @@ const formatPhoneUS = (phone: string): string => {
  * Transform Postgres customer to KV Store format for frontend compatibility
  */
 const transformCustomerResponse = (customer: any) => {
+  // Check if customer has active membership (tier is not 'guest' and has valid dates)
+  const hasMembership = customer.tier && customer.tier !== 'guest' && customer.membership_end_date;
+  
+  // Determine membership status
+  let membershipStatus = 'expired';
+  if (hasMembership && customer.membership_end_date) {
+    const now = new Date();
+    const endDate = new Date(customer.membership_end_date);
+    membershipStatus = endDate > now ? 'active' : 'expired';
+  }
+
   return {
     id: customer.id, // UUID
     phone: customer.phone,
@@ -68,16 +79,20 @@ const transformCustomerResponse = (customer: any) => {
     notes: customer.notes,
     
     // Statistics (renamed fields)
-    total_visits: customer.total_visits,
-    total_spent: customer.lifetime_spend, // Renamed from lifetime_spend
+    total_visits: customer.total_visits || 0,
+    total_spent: customer.lifetime_spend || 0, // Renamed from lifetime_spend
     last_visit: customer.last_visit_date, // Renamed from last_visit_date
     
     // Membership (flattened from separate fields)
-    membership: customer.membership_id ? {
+    // ✅ FIX: Check tier instead of membership_id (which doesn't exist in Postgres)
+    membership: hasMembership ? {
+      id: `mem_${customer.id}`, // Generate pseudo membership ID
       tier: customer.tier,
-      status: customer.status === 'active' ? 'active' : 'expired',
+      amount: customer.membership_amount || 0,
+      status: membershipStatus,
       activated_at: customer.membership_start_date,
       expires_at: customer.membership_end_date,
+      benefits: [], // TODO: Load from tier config
     } : undefined,
     
     created_at: customer.created_at,

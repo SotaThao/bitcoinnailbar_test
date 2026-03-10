@@ -3,10 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import { CheckCircle, Loader2, XCircle, Gift, Phone, Sparkles } from 'lucide-react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { MembershipUpgradeDialog } from '@/app/components/membership/MembershipUpgradeDialog';
+import { getTierPriority, compareTiers, getUpgradeType } from '@/app/config/membership-tiers';
 
 export default function RedeemMembershipStandalonePage() {
   const [searchParams] = useSearchParams();
-  const [status, setStatus] = useState<'processing' | 'ready' | 'activating' | 'success' | 'error'>('processing');
+  const [status, setStatus] = useState<'processing' | 'ready' | 'checking' | 'activating' | 'success' | 'error'>('processing');
   const [redeemCode, setRedeemCode] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
@@ -76,13 +77,6 @@ export default function RedeemMembershipStandalonePage() {
     }
   };
 
-  // Tier hierarchy for comparison
-  const TIER_PRIORITY: Record<string, number> = {
-    'gold': 1,
-    'platinum': 2,
-    'diamond': 3
-  };
-
   // Check if user has existing membership and validate tier hierarchy
   const checkExistingMembership = async (userId: string, newTier: string): Promise<{ canProceed: boolean; needsConfirmation: boolean; message?: string }> => {
     try {
@@ -123,8 +117,8 @@ export default function RedeemMembershipStandalonePage() {
       const currentTier = activeMembership.tier.toLowerCase();
       const newTierLower = newTier.toLowerCase();
 
-      const currentPriority = TIER_PRIORITY[currentTier] || 0;
-      const newPriority = TIER_PRIORITY[newTierLower] || 0;
+      const currentPriority = getTierPriority(currentTier);
+      const newPriority = getTierPriority(newTierLower);
 
       console.log('⚖️  [CHECK] Tier comparison:', {
         current: currentTier,
@@ -273,17 +267,24 @@ export default function RedeemMembershipStandalonePage() {
       return;
     }
 
+    // ✅ NEW: Set "checking" state before API call
+    setStatus('checking');
+    setError('');
+    setPhoneError('');
+
     // Check existing membership and tier hierarchy
     const tierCheck = await checkExistingMembership(phoneNumber.trim(), membershipData?.membershipTier || '');
     
     if (!tierCheck.canProceed) {
-      // Cannot proceed - show error
+      // Cannot proceed - show error and go back to ready
+      setStatus('ready');
       setError(tierCheck.message || 'Cannot activate this membership');
       return;
     }
 
     if (tierCheck.needsConfirmation) {
-      // Needs confirmation - show dialog
+      // Needs confirmation - show dialog and go back to ready
+      setStatus('ready');
       setShowUpgradeConfirm(true);
       return;
     }
@@ -482,6 +483,18 @@ export default function RedeemMembershipStandalonePage() {
               </h1>
               <p className="text-gray-400">
                 Please wait while we set up your account
+              </p>
+            </div>
+          )}
+
+          {status === 'checking' && (
+            <div className="p-12 text-center">
+              <Loader2 className="w-20 h-20 text-blue-500 mx-auto mb-6 animate-spin" />
+              <h1 className="text-2xl font-bold text-white mb-3">
+                Checking Membership Status...
+              </h1>
+              <p className="text-gray-400">
+                Validating your account information
               </p>
             </div>
           )}

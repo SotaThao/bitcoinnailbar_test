@@ -21,7 +21,100 @@ import { Label } from "@/app/components/ui/label";
 import { Textarea } from "@/app/components/ui/textarea";
 import { SelectItem } from "@/app/components/ui/select";
 import { SelectField } from "@/app/components/ui/select-field";
-import { Loader2, Save, RotateCcw } from "lucide-react";
+import { Loader2, Save, GripVertical } from "lucide-react";
+import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+// Draggable Tier Item Component
+function DraggableTierItem({
+  tier,
+  isSelected,
+  onSelect,
+  onDelete,
+}: {
+  tier: MembershipTier;
+  isSelected: boolean;
+  onSelect: () => void;
+  onDelete: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: tier.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+        isSelected
+          ? "bg-primary text-white shadow-md"
+          : "hover:bg-gray-100 text-gray-700"
+      }`}
+    >
+      {/* Drag Handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className={`cursor-grab active:cursor-grabbing flex-shrink-0 ${
+          isSelected ? "text-white/70 hover:text-white" : "text-gray-400 hover:text-gray-600"
+        }`}
+      >
+        <GripVertical className="w-4 h-4" />
+      </div>
+
+      {/* Tier Name - Clickable */}
+      <span
+        onClick={onSelect}
+        className="truncate flex-1 cursor-pointer"
+      >
+        {tier.display_name}
+      </span>
+
+      {/* Delete Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className={`h-7 w-7 min-w-7 opacity-0 group-hover:opacity-100 transition-all ${
+          isSelected
+            ? "text-white/70 hover:text-white hover:bg-white/20"
+            : "text-gray-400 hover:text-red-600 hover:bg-red-50"
+        }`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M3 6h18" />
+          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+        </svg>
+      </Button>
+    </div>
+  );
+}
 
 export function MembershipTiersEditor() {
   const {
@@ -93,6 +186,25 @@ export function MembershipTiersEditor() {
     );
   };
 
+  // Handle drag end - reorder tiers
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    setTiers((items) => {
+      const oldIndex = items.findIndex((item) => item.id === active.id);
+      const newIndex = items.findIndex((item) => item.id === over.id);
+
+      // Reorder array
+      const newItems = [...items];
+      const [movedItem] = newItems.splice(oldIndex, 1);
+      newItems.splice(newIndex, 0, movedItem);
+
+      return newItems;
+    });
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -159,7 +271,7 @@ export function MembershipTiersEditor() {
       {/* Header with Add Button - OUTSIDE grid */}
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-gray-500">
-          Manage membership tiers and pricing
+          Manage membership tiers and pricing. Tiers are ordered by priority (higher number = higher tier)
         </p>
         <Button
           variant="outline"
@@ -194,62 +306,33 @@ export function MembershipTiersEditor() {
         <div className="lg:col-span-3 space-y-4">
           <Card>
             <CardContent className="p-2">
-              <div className="flex flex-col gap-2">
-                {tiers.map((tier) => (
-                  <div
-                    key={tier.id}
-                    onClick={() => setSelectedTierId(tier.id)}
-                    className={`group flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                      selectedTierId === tier.id
-                        ? "bg-primary text-white shadow-md"
-                        : "hover:bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    <span className="truncate mr-2">
-                      {tier.display_name}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`h-7 w-7 min-w-7 opacity-0 group-hover:opacity-100 transition-all ${
-                        selectedTierId === tier.id
-                          ? "text-white/70 hover:text-white hover:bg-white/20"
-                          : "text-gray-400 hover:text-red-600 hover:bg-red-50"
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (
-                          confirm(
-                            "Are you sure you want to delete this tier?",
-                          )
-                        ) {
+              <DndContext
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={tiers.map((tier) => tier.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="flex flex-col gap-2">
+                    {tiers.map((tier) => (
+                      <DraggableTierItem
+                        key={tier.id}
+                        tier={tier}
+                        isSelected={selectedTierId === tier.id}
+                        onSelect={() => setSelectedTierId(tier.id)}
+                        onDelete={() => {
                           setTiers(
                             tiers.filter((t) => t.id !== tier.id),
                           );
                           if (selectedTierId === tier.id)
                             setSelectedTierId(null);
-                        }
-                      }}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M3 6h18" />
-                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                      </svg>
-                    </Button>
+                        }}
+                      />
+                    ))}
                   </div>
-                ))}
-              </div>
+                </SortableContext>
+              </DndContext>
             </CardContent>
           </Card>
         </div>

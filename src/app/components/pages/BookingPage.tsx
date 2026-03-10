@@ -32,6 +32,28 @@ import { useLanguage } from "../../context/LanguageContext";
 import { BookingSuccessTicket } from "../booking/BookingSuccessTicket";
 import { useServiceCategories } from "../../hooks/useServiceCategories";
 import { useServiceMenu } from "../../hooks/useServiceMenu";
+import { MEMBERSHIP_TIERS } from "../../config/membership-tiers";
+import { GrandOpeningDialog } from "../GrandOpeningDialog";
+import { isBeforeGrandOpening } from "../../lib/grand-opening";
+
+// Helper function to normalize tier names for matching
+const normalizeTier = (tier: string): string => {
+  const normalized = tier.toLowerCase().trim();
+  
+  // Handle VIP/Crypto variations
+  if (normalized.includes("vip") || normalized.includes("crypto")) {
+    return "vip-crypto";
+  }
+  
+  // Standard tiers
+  if (normalized.includes("silver")) return "silver";
+  if (normalized.includes("platinum")) return "platinum";
+  if (normalized.includes("gold")) return "gold";
+  if (normalized.includes("diamond")) return "diamond";
+  
+  // Return normalized with dashes instead of spaces/underscores
+  return normalized.replace(/[\s_]+/g, "-");
+};
 
 export default function BookingPage() {
   const { t } = useLanguage();
@@ -39,6 +61,7 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [showGrandOpening, setShowGrandOpening] = useState(() => isBeforeGrandOpening());
 
   // Load categories and services from backend
   const {
@@ -146,6 +169,7 @@ export default function BookingPage() {
   const [notes, setNotes] = useState("");
   const [activeCategory, setActiveCategory] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [customerMembership, setCustomerMembership] = useState<any>(null);
   const [bookingSuccessData, setBookingSuccessData] = useState<{
     id: string;
     customerName: string;
@@ -394,15 +418,22 @@ export default function BookingPage() {
       );
       const data = await response.json();
 
+      console.log('🔍 [BOOKING] Lookup response:', data);
+
       if (data.success && data.found && data.data?.customer) {
         setCustomerName(data.data.customer.full_name);
         setCustomerEmail(data.data.customer.email || "");
+
+        console.log('🔍 [BOOKING] has_valid_membership:', data.data.has_valid_membership);
+        console.log('🔍 [BOOKING] membership data:', data.data.membership);
 
         // Check membership validity
         if (
           data.data.has_valid_membership &&
           data.data.membership
         ) {
+          setCustomerMembership(data.data.membership);
+          console.log('✅ [BOOKING] Membership set:', data.data.membership);
           toast.success(
             `Welcome back! 💎 ${data.data.membership.tier} Member`,
             {
@@ -410,6 +441,8 @@ export default function BookingPage() {
             },
           );
         } else {
+          setCustomerMembership(null);
+          console.log('❌ [BOOKING] No valid membership');
           toast.success("Customer info loaded! 👤");
         }
       }
@@ -636,6 +669,12 @@ export default function BookingPage() {
         keywords="book nail appointment online, schedule pedicure houston, nail salon reservation, online booking nail bar"
         canonicalUrl="https://bitcoinnailbar.com/booking"
       />
+
+      {/* Grand Opening Popup - auto-removes after Feb 27, 2026 CST */}
+      {showGrandOpening && (
+        <GrandOpeningDialog onContinue={() => setShowGrandOpening(false)} />
+      )}
+
       <div className="container mx-auto p-[16px] max-w-4xl relative z-10">
         {bookingSuccessData ? (
           <BookingSuccessTicket
@@ -1376,6 +1415,9 @@ export default function BookingPage() {
                             required
                             value={customerPhone}
                             onChange={(e) => {
+                              // Clear membership when phone changes
+                              setCustomerMembership(null);
+                              
                               // Auto-format phone: (XXX) XXX-XXXX
                               let val = e.target.value.replace(
                                 /\D/g,
@@ -1552,6 +1594,51 @@ export default function BookingPage() {
                             </span>
                           </div>
                         )}
+
+                        {(() => {
+                          console.log('🎨 [RENDER] customerMembership state:', customerMembership);
+                          return null;
+                        })()}
+                        
+                        {customerMembership && (() => {
+                          const normalizedTierName = normalizeTier(customerMembership.tier);
+                          const tierConfig = MEMBERSHIP_TIERS.find(t => t.id === normalizedTierName);
+                          const tierName = tierConfig?.displayName || customerMembership.tier.toUpperCase();
+                          const tierColor = tierConfig?.visual.hexColor || '#FF9800';
+                          const TierIcon = tierConfig?.visual.icon;
+                          
+                          console.log('🎨 [RENDER] Rendering membership badge:', { 
+                            originalTier: customerMembership.tier, 
+                            normalizedTier: normalizedTierName,
+                            tierConfig, 
+                            tierName, 
+                            tierColor 
+                          });
+                          
+                          return (
+                            <div 
+                              className="bg-gradient-to-r from-black/40 to-transparent border rounded-lg p-3 flex items-center gap-3"
+                              style={{ 
+                                borderColor: `${tierColor}40`,
+                                backgroundColor: `${tierColor}08`
+                              }}
+                            >
+                              {TierIcon ? (
+                                <TierIcon className="w-6 h-6" style={{ color: tierColor }} />
+                              ) : (
+                                <div className="text-2xl">💎</div>
+                              )}
+                              <div className="flex-1">
+                                <div className="font-bold text-sm uppercase" style={{ color: tierColor }}>
+                                  {tierName} MEMBER
+                                </div>
+                                <div className="text-gray-400 text-xs">
+                                  Active until {new Date(customerMembership.expires_at).toLocaleDateString()}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
 
                         <div className="border-t border-zinc-800 pt-4 mt-4 flex justify-between items-center">
                           <span className="text-gray-300 font-bold">

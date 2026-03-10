@@ -228,6 +228,15 @@ export function BookingSuccessTicket({
               Scan this code at the kiosk to check in
               automatically.
             </p>
+            
+            {/* Save Button Below QR Code */}
+            <Button
+              onClick={handleDownload}
+              className="mt-4 bg-[#FF9800] hover:bg-[#FF9800]/90 text-white font-bold h-11 px-8 shadow-[0_0_20px_rgba(255,152,0,0.3)] hover:shadow-[0_0_30px_rgba(255,152,0,0.5)] transition-all rounded-full"
+            >
+              <ImageDown className="w-4 h-4 mr-2" />
+              Save Tickets
+            </Button>
           </div>
 
           {/* Details */}
@@ -421,13 +430,6 @@ export function BookingSuccessTicket({
             <RotateCcw className="w-4 h-4" />
             Book Another
           </span>
-        </Button>
-        <Button
-          onClick={handleDownload}
-          className="flex-1 bg-[#FF9800] hover:bg-[#FF9800]/90 text-white font-bold h-12 shadow-[0_0_20px_rgba(255,152,0,0.3)] hover:shadow-[0_0_30px_rgba(255,152,0,0.5)] transition-all"
-        >
-          <ImageDown className="w-4 h-4 mr-2" />
-          Save Tickets
         </Button>
       </div>
     </div>

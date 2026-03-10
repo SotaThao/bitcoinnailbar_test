@@ -16,6 +16,7 @@ export const AVAILABLE_PERMISSIONS = [
   { id: 'manage_services', name: 'Manage Services', category: 'Services' },
   { id: 'view_staff', name: 'View Staff', category: 'Staff' },
   { id: 'manage_staff', name: 'Manage Staff Schedule', category: 'Staff' },
+  { id: 'assign_technicians', name: 'Assign Technicians to Appointments', category: 'Staff' },
   { id: 'view_reports', name: 'View Reports', category: 'Reports' },
   { id: 'manage_reports', name: 'Manage Reports', category: 'Reports' },
   { id: 'view_memberships', name: 'View Memberships', category: 'Memberships' },

@@ -1,5 +1,6 @@
 import { Hono } from 'npm:hono@4.6.14';
 import { kvAdmin as kv } from './_shared_kv.tsx';
+import { getSupabaseClient } from './_shared_supabase_client.tsx';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // PAYROLL & ANALYTICS MODULE (Wave 6)
@@ -170,32 +171,53 @@ payrollApp.get("/make-server-84f9c112/analytics/revenue", async (c) => {
 /**
  * GET /make-server-84f9c112/dashboard/stats
  * Real-time dashboard statistics for today
+ * ✅ REFACTORED: Now reads staff from Postgres technician_info, appointments from Postgres appointment_info
+ * Services still from KV Store (not yet migrated)
  */
 payrollApp.get("/make-server-84f9c112/dashboard/stats", async (c) => {
   try {
-    const appointments = await kv.getByPrefix("appointment:");
-    const staff = await kv.getByPrefix("staff:");
+    const supabase = getSupabaseClient();
+
+    // ✅ Read from Postgres tables
+    const [appointmentsResult, staffResult] = await Promise.all([
+      supabase.from('appointment_info').select('*').order('created_at', { ascending: false }),
+      supabase.from('technician_info').select('*').order('created_at', { ascending: true }),
+    ]);
+
+    if (appointmentsResult.error) {
+      console.error('❌ [DASHBOARD] Postgres appointment_info error:', appointmentsResult.error);
+      throw appointmentsResult.error;
+    }
+    if (staffResult.error) {
+      console.error('❌ [DASHBOARD] Postgres technician_info error:', staffResult.error);
+      throw staffResult.error;
+    }
+
+    const appointments = appointmentsResult.data || [];
+    const staff = staffResult.data || [];
+
+    // Services still from KV Store (not yet migrated)
     const services = await kv.getByPrefix("service:");
     
     // 🔍 DEBUG LOGGING
     console.log("📊 [DASHBOARD] Total records:");
-    console.log("   - Appointments:", appointments.length);
-    console.log("   - Staff:", staff.length);
-    console.log("   - Services:", services.length);
+    console.log("   - Appointments (Postgres):", appointments.length);
+    console.log("   - Staff (Postgres):", staff.length);
+    console.log("   - Services (KV):", services.length);
     
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     
-    // Filter today's appointments
+    // Filter today's appointments (using Postgres snake_case field)
     const todayAppointments = appointments.filter((appt: any) => {
-      const apptDate = new Date(appt.appointmentTime);
+      const apptDate = new Date(appt.appointment_time);
       return apptDate >= today;
     });
     
     const yesterdayAppointments = appointments.filter((appt: any) => {
-      const apptDate = new Date(appt.appointmentTime);
+      const apptDate = new Date(appt.appointment_time);
       return apptDate >= yesterday && apptDate < today;
     });
     
@@ -203,12 +225,14 @@ payrollApp.get("/make-server-84f9c112/dashboard/stats", async (c) => {
     const completedToday = todayAppointments.filter((a: any) => a.status === 'completed');
     const completedYesterday = yesterdayAppointments.filter((a: any) => a.status === 'completed');
     
-    // Calculate revenue based on services
-    const calculateRevenue = (appointments: any[]) => {
+    // Calculate revenue - use total_amount from Postgres first, fallback to service lookup
+    const calculateRevenue = (appts: any[]) => {
       let total = 0;
-      appointments.forEach((appt: any) => {
-        if (appt.serviceIds && Array.isArray(appt.serviceIds)) {
-          appt.serviceIds.forEach((serviceId: string) => {
+      appts.forEach((appt: any) => {
+        if (appt.total_amount) {
+          total += parseFloat(appt.total_amount);
+        } else if (appt.service_ids && Array.isArray(appt.service_ids)) {
+          appt.service_ids.forEach((serviceId: string) => {
             const service = services.find((s: any) => s.id === serviceId);
             if (service && service.price) {
               total += parseFloat(service.price);
@@ -232,10 +256,10 @@ payrollApp.get("/make-server-84f9c112/dashboard/stats", async (c) => {
     
     const waitingForCheckout = completedToday.length;
     
-    // Staff status (available vs busy)
+    // Staff status (available vs busy) - using Postgres UUID technician_id
     const busyStaffIds = todayAppointments
       .filter((a: any) => a.status === 'confirmed' || a.status === 'pending')
-      .map((a: any) => a.staffId);
+      .map((a: any) => a.technician_id);
     
     const availableStaff = staff.filter((s: any) => !busyStaffIds.includes(s.id));
     const busyStaff = staff.filter((s: any) => busyStaffIds.includes(s.id));
@@ -243,23 +267,37 @@ payrollApp.get("/make-server-84f9c112/dashboard/stats", async (c) => {
     // Waitlist (pending appointments)
     const waitlist = todayAppointments.filter((a: any) => a.status === 'pending');
     
-    // Recent activity (last 10 completed appointments)
-    const recentCompleted = appointments
-      .filter((a: any) => a.status === 'completed')
-      .sort((a: any, b: any) => new Date(b.appointmentTime).getTime() - new Date(a.appointmentTime).getTime())
+    // Recent activity (last 10 appointments - completed, pending, confirmed)
+    const recentActivity = appointments
+      .filter((a: any) => ['completed', 'pending', 'confirmed'].includes(a.status))
+      .sort((a: any, b: any) => new Date(b.appointment_time).getTime() - new Date(a.appointment_time).getTime())
       .slice(0, 10)
       .map((appt: any) => {
-        const staffMember = staff.find((s: any) => s.id === appt.staffId);
-        const apptServices = services.filter((s: any) => 
-          appt.serviceIds && appt.serviceIds.includes(s.id)
-        );
-        const price = apptServices.reduce((sum: number, s: any) => sum + parseFloat(s.price || 0), 0);
+        const staffMember = staff.find((s: any) => s.id === appt.technician_id);
+        
+        // Use service_names from Postgres if available, fallback to KV lookup
+        let serviceName = 'Service';
+        let price = 0;
+        
+        if (appt.service_names && Array.isArray(appt.service_names) && appt.service_names.length > 0) {
+          serviceName = appt.service_names.join(', ');
+        } else if (appt.service_ids && Array.isArray(appt.service_ids)) {
+          const apptServices = services.filter((s: any) => appt.service_ids.includes(s.id));
+          serviceName = apptServices.map((s: any) => s.name).join(', ') || 'Service';
+        }
+        
+        if (appt.total_amount) {
+          price = parseFloat(appt.total_amount);
+        } else if (appt.service_ids && Array.isArray(appt.service_ids)) {
+          const apptServices = services.filter((s: any) => appt.service_ids.includes(s.id));
+          price = apptServices.reduce((sum: number, s: any) => sum + parseFloat(s.price || 0), 0);
+        }
         
         return {
-          id: appt.id.replace('appointment:', '#'),
-          client: appt.customerName,
-          service: apptServices.map((s: any) => s.name).join(', ') || 'Service',
-          staff: staffMember ? staffMember.name : 'Staff',
+          id: `#${appt.id.substring(0, 6)}`,
+          client: appt.customer_name,
+          service: serviceName,
+          staff: staffMember ? staffMember.name : 'Unassigned',
           price: `$${price.toFixed(2)}`,
           status: appt.status
         };
@@ -268,19 +306,26 @@ payrollApp.get("/make-server-84f9c112/dashboard/stats", async (c) => {
     // Staff status details - Return ALL staff (pagination handled in frontend)
     const staffStatus = staff.map((s: any) => {
       const isBusy = busyStaffIds.includes(s.id);
-      const staffAppt = isBusy ? todayAppointments.find((a: any) => a.staffId === s.id) : null;
+      const staffAppt = isBusy ? todayAppointments.find((a: any) => a.technician_id === s.id) : null;
       
       let busyUntil = '';
       if (staffAppt) {
-        // Calculate busy until time based on service duration
-        const apptServices = services.filter((service: any) => 
-          staffAppt.serviceIds && staffAppt.serviceIds.includes(service.id)
-        );
-        const totalDuration = apptServices.reduce((sum: number, service: any) => {
-          return sum + (parseInt(service.duration) || 30);
-        }, 0);
+        // Use estimated_duration from Postgres if available, fallback to service lookup
+        let totalDuration = 0;
+        if (staffAppt.estimated_duration) {
+          totalDuration = parseInt(staffAppt.estimated_duration);
+        } else if (staffAppt.service_ids && Array.isArray(staffAppt.service_ids)) {
+          const apptServices = services.filter((service: any) => 
+            staffAppt.service_ids.includes(service.id)
+          );
+          totalDuration = apptServices.reduce((sum: number, service: any) => {
+            return sum + (parseInt(service.duration) || 30);
+          }, 0);
+        } else {
+          totalDuration = 30; // Default 30 min
+        }
         
-        const apptStartTime = new Date(staffAppt.appointmentTime);
+        const apptStartTime = new Date(staffAppt.appointment_time);
         const apptEndTime = new Date(apptStartTime.getTime() + totalDuration * 60000);
         
         // Format busy until time
@@ -323,7 +368,7 @@ payrollApp.get("/make-server-84f9c112/dashboard/stats", async (c) => {
             subtext: waitlist.length > 0 ? '~15 min avg wait' : 'No waiting clients'
           }
         },
-        recentActivity: recentCompleted,
+        recentActivity: recentActivity,
         staffStatus: staffStatus
       }
     });

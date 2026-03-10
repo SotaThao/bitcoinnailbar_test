@@ -1,8 +1,7 @@
-import { CreditCard, Megaphone, Calendar } from "lucide-react";
+import { CreditCard, Megaphone } from "lucide-react";
 import AdminLayout from "../AdminLayout";
 import { MembershipTiersEditor } from "./organisms/MembershipTiersEditor";
 import { PromotionEditor } from "./organisms/PromotionEditor";
-import { EventEditor } from "./organisms/EventEditor";
 import {
   PillTabs,
   PillTabsContent,
@@ -36,11 +35,7 @@ export default function AdminMembershipPage() {
                 className="gap-2"
               >
                 <Megaphone className="h-4 w-4" />
-                Promotions
-              </PillTabsTrigger>
-              <PillTabsTrigger value="events" className="gap-2">
-                <Calendar className="h-4 w-4" />
-                Events
+                Promotions & Events
               </PillTabsTrigger>
             </PillTabsList>
           </div>
@@ -51,10 +46,6 @@ export default function AdminMembershipPage() {
 
           <PillTabsContent value="promotions" className="mt-0">
             <PromotionEditor />
-          </PillTabsContent>
-
-          <PillTabsContent value="events" className="mt-0">
-            <EventEditor />
           </PillTabsContent>
         </PillTabs>
       </div>

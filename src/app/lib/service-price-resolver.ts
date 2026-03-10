@@ -2,6 +2,8 @@
  * Service Price Resolver Utility
  * Resolves service prices from backend data with fallback to translations.ts
  * Extracted from Appointments.tsx for reusability
+ * 
+ * ✅ UPDATED: Supports both camelCase (old KV) and snake_case (Postgres)
  */
 
 import { translations } from '../../utils/translations';
@@ -49,20 +51,28 @@ function stripPrefixes(name: string): string {
  * 2. Fallback to fuzzy name matching in services list (with better Vietnamese support)
  * 3. Fallback to translations.ts price lookup
  * 4. Return "unknown" if no match found
+ * 
+ * ✅ UPDATED: Supports both camelCase (old KV) and snake_case (Postgres)
  */
 export function resolveAppointmentServices(
   appointment: {
     serviceIds?: string[];
+    service_ids?: string[];
     serviceNames?: string[];
+    service_names?: string[];
   },
   availableServices: Service[]
 ): ServiceWithPrice[] {
   let displayServices: ServiceWithPrice[] = [];
 
+  // Support both camelCase and snake_case
+  const serviceIds = appointment.service_ids || appointment.serviceIds || [];
+  const serviceNames = appointment.service_names || appointment.serviceNames || [];
+
   // Strategy 1: Try to find by IDs
-  if (appointment.serviceIds && appointment.serviceIds.length > 0) {
+  if (serviceIds.length > 0) {
     displayServices = availableServices
-      .filter(s => appointment.serviceIds!.includes(s.id))
+      .filter(s => serviceIds.includes(s.id))
       .map(s => ({
         id: s.id,
         name: s.name,
@@ -72,8 +82,8 @@ export function resolveAppointmentServices(
   }
 
   // Strategy 2 & 3: If no services found by ID, try name matching + translations fallback
-  if (displayServices.length === 0 && appointment.serviceNames && appointment.serviceNames.length > 0) {
-    displayServices = appointment.serviceNames.map((originalName: string) => {
+  if (displayServices.length === 0 && serviceNames.length > 0) {
+    displayServices = serviceNames.map((originalName: string) => {
       // 1. Clean the input name (remove prefixes, normalize)
       const nameWithoutPrefix = stripPrefixes(originalName);
       const cleanInputName = normalizeString(nameWithoutPrefix);

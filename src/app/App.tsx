@@ -33,6 +33,7 @@ import LoginPage from "@/app/pages/admin/LoginPage";
 import DebugAuth from "@/app/pages/admin/DebugAuth";
 import TestSetup from "@/app/pages/admin/TestSetup";
 import TestJWT from "@/app/pages/admin/TestJWT";
+import { TestMigration } from "@/app/components/TestMigration";
 
 const AdminDashboard = lazy(() => import("@/app/components/admin/Dashboard"));
 const AdminAppointments = lazy(() => import("@/app/components/admin/Appointments"));
@@ -109,8 +110,42 @@ export default function App() {
 
         const result = await response.json();
 
+        console.log('🔍 [APP.TSX] Fetch promotions response:', {
+          success: result.success,
+          dataExists: !!result.data,
+          promotionsCount: result.data?.promotions?.length || 0,
+          rawPromotions: result.data?.promotions
+        });
+
+        // 🔍 DEBUG: Log buttonLink for each promotion
+        if (result.data?.promotions) {
+          result.data.promotions.forEach((promo: any) => {
+            console.log(`🔗 [PROMOTION ${promo.id}] buttonLink:`, {
+              vi: promo.vi?.buttonLink,
+              en: promo.en?.buttonLink
+            });
+          });
+        }
+
         if (result.success && result.data) {
           const promotionsData = result.data.promotions || [];
+          
+          // 🔍 Debug: Log each promotion's structure
+          promotionsData.forEach((promo: any, index: number) => {
+            console.log(`🔍 [APP.TSX] Promotion ${index + 1}:`, {
+              id: promo.id,
+              type: promo.type,
+              enabled: promo.enabled,
+              featured: promo.featured,
+              hasVi: !!promo.vi,
+              hasEn: !!promo.en,
+              viTitle: promo.vi?.title,
+              enTitle: promo.en?.title,
+              viData: promo.vi,
+              enData: promo.en
+            });
+          });
+
           setPromotions(promotionsData);
 
           const isHomepage = window.location.pathname === "/";
@@ -121,6 +156,14 @@ export default function App() {
             const hasFeaturedPromotions =
               Array.isArray(promotionsData) &&
               promotionsData.some((p: Promotion) => p.enabled && p.featured);
+
+            console.log('🔍 [APP.TSX] Homepage modal logic:', {
+              isHomepage,
+              dismissedDate,
+              today,
+              hasFeaturedPromotions,
+              willShowModal: dismissedDate !== today && hasFeaturedPromotions
+            });
 
             if (dismissedDate !== today && hasFeaturedPromotions) {
               setTimeout(() => setShowPromotionModal(true), 500);
@@ -187,6 +230,7 @@ function AppContent({
   const routing = useRoutes([
     { path: "/", element: <HomePage /> },
     { path: "/services", element: <ServicesPage /> },
+    { path: "/services/:categoryKey", element: <ServicesPage /> },
     { path: "/promotions", element: <PromotionsPage /> },
     { path: "/membership", element: <MembershipPage /> },
     { path: "/careers", element: <CareersPage /> },
@@ -245,15 +289,26 @@ function AppContent({
       ),
     },
     {
-      path: "/admin/staff-payroll",
+      path: "/admin/staff",
       element: (
         <ProtectedAdminRoute>
           <Suspense fallback={<AdminLoadingFallback />}>
-            <AdminStaffPayroll />
+            <AdminStaffPayroll defaultTab="staff" />
           </Suspense>
         </ProtectedAdminRoute>
       ),
     },
+    {
+      path: "/admin/payroll",
+      element: (
+        <ProtectedAdminRoute>
+          <Suspense fallback={<AdminLoadingFallback />}>
+            <AdminStaffPayroll defaultTab="payroll" />
+          </Suspense>
+        </ProtectedAdminRoute>
+      ),
+    },
+    { path: "/admin/staff-payroll", element: <Navigate to="/admin/staff" replace /> },
     {
       path: "/admin/analytics",
       element: (
@@ -353,6 +408,7 @@ function AppContent({
     { path: "/admin/debug-auth", element: <DebugAuth /> },
     { path: "/admin/test-setup", element: <TestSetup /> },
     { path: "/admin/test-jwt", element: <TestJWT /> },
+    { path: "/admin/test-migration", element: <TestMigration /> },
 
     { path: "*", element: <Navigate to="/" replace /> },
   ]);

@@ -477,7 +477,7 @@ export default function PublicLayout({
                               className="focus:bg-white/10 focus:text-[#FF9800] cursor-pointer rounded-lg mb-1"
                             >
                               <Link
-                                to={`/services#${category.key}`}
+                                to={`/services/${category.key}`}
                                 className="flex items-center gap-3 py-2 px-3"
                               >
                                 <span>{category.name}</span>
@@ -598,7 +598,7 @@ export default function PublicLayout({
                                   className="focus:bg-white/10 focus:text-[#FF9800] cursor-pointer rounded-lg mb-1"
                                 >
                                   <Link
-                                    to={`/services#${category.key}`}
+                                    to={`/services/${category.key}`}
                                     onClick={() =>
                                       setMobileMenuOpen(false)
                                     }
@@ -966,13 +966,13 @@ export default function PublicLayout({
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-[#FF9800] font-bold">
-                    Sale:
+                    Cell Phone:
                   </span>
                   <span>(832) 799-3990</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-[#FF9800] font-bold">
-                    E:
+                    Email:
                   </span>
                   <span>customerbitcoinnailbar@gmail.com</span>
                 </li>
@@ -986,15 +986,6 @@ export default function PublicLayout({
                 &copy; 2026 Bitcoin Nail Bar.{" "}
                 {t("footer.rights")}
               </p>
-              <Link to="/admin">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-[10px] uppercase tracking-widest text-gray-700 hover:text-[#f7931a] hover:bg-transparent transition-colors"
-                >
-                  Admin Portal
-                </Button>
-              </Link>
             </div>
           </div>
         </div>

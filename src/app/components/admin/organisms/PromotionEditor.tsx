@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { QuillEditor } from "@/app/components/ui/quill-editor";
 import {
   GripVertical,
   Eye,
@@ -15,16 +16,10 @@ import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
 import { Textarea } from "../../ui/textarea";
-import {
-  PillTabs,
-  PillTabsContent,
-  PillTabsList,
-  PillTabsTrigger,
-} from "../../ui/pill-tabs";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { toast } from "sonner";
 
-interface PromotionLanguageData {
+interface PromotionData {
   badge?: string;
   title: string;
   subtitle?: string;
@@ -44,25 +39,28 @@ interface Promotion {
   id: string;
   type: "crypto" | "golden-hour" | "vip-royalty";
   enabled: boolean;
-  featured: boolean; // For homepage carousel popup
-  vi: PromotionLanguageData;
-  en: PromotionLanguageData;
+  featured: boolean;
+  
+  // User input data (free form - any language)
+  input: PromotionData;
+  
+  // Backend generated translations
+  vi?: PromotionData;
+  en?: PromotionData;
 }
 
 interface PromotionEditorProps {
   onSave?: (promotions: Promotion[]) => void;
 }
 
-export function PromotionEditor({
-  onSave,
-}: PromotionEditorProps) {
+export function PromotionEditor({ onSave }: PromotionEditorProps) {
   const [promotions, setPromotions] = useState<Promotion[]>([
     {
       id: "1",
       type: "crypto",
       enabled: true,
-      featured: true, // For homepage carousel popup
-      vi: {
+      featured: true,
+      input: {
         badge: "THANH TOÁN 4.0",
         title: "THANH TOÁN BẰNG",
         subtitle: "CRYPTO",
@@ -70,53 +68,30 @@ export function PromotionEditor({
         description:
           "Nhận ngay ưu đãi giảm 10% khi thanh toán bằng Bitcoin, USDT hoặc ví VLinkPay.",
         buttonText: "THANH TOÁN NGAY",
-        buttonLink:
-          "https://bitcoinnailbarnew1.tiiny.site/#contact",
-      },
-      en: {
-        badge: "PAYMENT 4.0",
-        title: "PAY WITH",
-        subtitle: "CRYPTO",
-        discount: "10% OFF",
-        description:
-          "Get an instant 10% OFF when you pay with Bitcoin, USDT or VLinkPay wallet.",
-        buttonText: "PAY NOW",
-        buttonLink:
-          "https://bitcoinnailbarnew1.tiiny.site/#contact",
+        buttonLink: "https://bitcoinnailbarnew1.tiiny.site/#contact",
       },
     },
     {
       id: "2",
       type: "golden-hour",
       enabled: true,
-      featured: true, // For homepage carousel popup
-      vi: {
+      featured: true,
+      input: {
         title: "GIỜ VÀNG",
         days: "THỨ HAI - THỨ NĂM",
         time: "12:00 PM - 3:30 PM",
         discount: "GIẢM 15%",
         description: "Ưu đãi đặc biệt trong khung giờ vàng",
         buttonText: "ĐẶT LỊCH NGAY",
-        buttonLink:
-          "https://bitcoinnailbarnew1.tiiny.site/#contact",
-      },
-      en: {
-        title: "GOLDEN HOUR",
-        days: "MONDAY - THURSDAY",
-        time: "12:00 PM - 3:30 PM",
-        discount: "15% OFF",
-        description: "Special discount during our golden hours",
-        buttonText: "BOOK APPOINTMENT",
-        buttonLink:
-          "https://bitcoinnailbarnew1.tiiny.site/#contact",
+        buttonLink: "https://bitcoinnailbarnew1.tiiny.site/#contact",
       },
     },
     {
       id: "3",
       type: "vip-royalty",
       enabled: true,
-      featured: true, // For homepage carousel popup
-      vi: {
+      featured: true,
+      input: {
         badge: "THÀNH VIÊN ĐẶC BIỆT",
         title: "VIP HOÀNG GIA",
         discount: "TẶNG $50",
@@ -125,24 +100,11 @@ export function PromotionEditor({
         buttonText: "THAM GIA NGAY",
         buttonLink: "#membership",
       },
-      en: {
-        badge: "MEMBERS ONLY",
-        title: "VIP ROYALTY",
-        discount: "$50 CREDIT",
-        description:
-          "Join our exclusive club today. Receive $50 CREDIT instantly upon registration.",
-        buttonText: "JOIN CLUB",
-        buttonLink: "#membership",
-      },
     },
   ]);
 
-  const [expandedId, setExpandedId] = useState<string | null>(
-    null,
-  );
-  const [uploadingImages, setUploadingImages] = useState<
-    Record<string, boolean>
-  >({});
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [uploadingImages, setUploadingImages] = useState<Record<string, boolean>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -156,22 +118,56 @@ export function PromotionEditor({
             headers: {
               Authorization: `Bearer ${publicAnonKey}`,
             },
-          },
+          }
         );
 
         const result = await response.json();
 
         if (result.success && result.data?.promotions) {
-          setPromotions(result.data.promotions);
-          console.log(
-            "✅ [PROMOTION EDITOR] Loaded promotions from backend",
-          );
+          // Migrate old data structure to new structure
+          const migratedPromotions = result.data.promotions.map((promo: any) => {
+            // If input doesn't exist, create it from vi data (prefer vi over en)
+            if (!promo.input) {
+              const sourceData = promo.vi || promo.en || {};
+              return {
+                ...promo,
+                input: {
+                  title: sourceData.title || "",
+                  discount: sourceData.discount || "",
+                  description: sourceData.description || "",
+                  buttonText: sourceData.buttonText || "Tìm hiểu thêm", // Default button text
+                  buttonLink: sourceData.buttonLink || "#",
+                  badge: sourceData.badge,
+                  subtitle: sourceData.subtitle,
+                  days: sourceData.days,
+                  time: sourceData.time,
+                  backgroundImage: sourceData.backgroundImage,
+                  backgroundImagePath: sourceData.backgroundImagePath,
+                  iconImage: sourceData.iconImage,
+                  iconImagePath: sourceData.iconImagePath,
+                },
+              };
+            }
+            
+            // Also fix if input exists but buttonText is missing
+            if (promo.input && !promo.input.buttonText) {
+              return {
+                ...promo,
+                input: {
+                  ...promo.input,
+                  buttonText: "Tìm hiểu thêm", // Default button text
+                },
+              };
+            }
+            
+            return promo;
+          });
+          
+          setPromotions(migratedPromotions);
+          console.log("✅ [PROMOTION EDITOR] Loaded promotions from backend");
         }
       } catch (error) {
-        console.error(
-          "❌ [PROMOTION EDITOR] Failed to fetch promotions:",
-          error,
-        );
+        console.error("❌ [PROMOTION EDITOR] Failed to fetch promotions:", error);
         toast.error("Failed to load promotions", {
           description: "Using default promotions instead.",
         });
@@ -190,48 +186,42 @@ export function PromotionEditor({
   const handleToggleEnabled = (id: string) => {
     setPromotions((prev) =>
       prev.map((promo) =>
-        promo.id === id
-          ? { ...promo, enabled: !promo.enabled }
-          : promo,
-      ),
+        promo.id === id ? { ...promo, enabled: !promo.enabled } : promo
+      )
     );
   };
 
   const handleToggleFeatured = (id: string) => {
     setPromotions((prev) =>
       prev.map((promo) =>
-        promo.id === id
-          ? { ...promo, featured: !promo.featured }
-          : promo,
-      ),
+        promo.id === id ? { ...promo, featured: !promo.featured } : promo
+      )
     );
   };
 
   const handleUpdateField = (
     id: string,
-    lang: "vi" | "en",
-    field: keyof PromotionLanguageData,
-    value: string,
+    field: keyof PromotionData,
+    value: string
   ) => {
     setPromotions((prev) =>
       prev.map((promo) =>
         promo.id === id
           ? {
               ...promo,
-              [lang]: { ...promo[lang], [field]: value },
+              input: { ...promo.input, [field]: value },
             }
-          : promo,
-      ),
+          : promo
+      )
     );
   };
 
   const handleImageUpload = async (
     promoId: string,
-    lang: "vi" | "en",
     imageType: "background" | "icon",
-    file: File,
+    file: File
   ) => {
-    const uploadKey = `${promoId}-${lang}-${imageType}`;
+    const uploadKey = `${promoId}-${imageType}`;
     setUploadingImages((prev) => ({
       ...prev,
       [uploadKey]: true,
@@ -240,7 +230,6 @@ export function PromotionEditor({
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("language", lang);
       formData.append("promotionId", promoId);
       formData.append("imageType", imageType);
 
@@ -252,7 +241,7 @@ export function PromotionEditor({
             Authorization: `Bearer ${publicAnonKey}`,
           },
           body: formData,
-        },
+        }
       );
 
       const result = await response.json();
@@ -263,36 +252,30 @@ export function PromotionEditor({
 
       // Update promotion with signed URL
       const imageField =
-        imageType === "background"
-          ? "backgroundImage"
-          : "iconImage";
+        imageType === "background" ? "backgroundImage" : "iconImage";
       const pathField =
-        imageType === "background"
-          ? "backgroundImagePath"
-          : "iconImagePath";
+        imageType === "background" ? "backgroundImagePath" : "iconImagePath";
 
       setPromotions((prev) =>
         prev.map((promo) =>
           promo.id === promoId
             ? {
                 ...promo,
-                [lang]: {
-                  ...promo[lang],
+                input: {
+                  ...promo.input,
                   [imageField]: result.data.signedUrl,
                   [pathField]: result.data.path,
                 },
               }
-            : promo,
-        ),
+            : promo
+        )
       );
 
-      console.log(
-        "✅ Image uploaded successfully:",
-        result.data.filename,
-      );
+      toast.success("Image uploaded successfully!");
+      console.log("✅ Image uploaded:", result.data.filename);
     } catch (error: any) {
       console.error("❌ Upload error:", error);
-      alert(`Upload failed: ${error.message}`);
+      toast.error(`Upload failed: ${error.message}`);
     } finally {
       setUploadingImages((prev) => ({
         ...prev,
@@ -303,17 +286,14 @@ export function PromotionEditor({
 
   const handleRemoveImage = async (
     promoId: string,
-    lang: "vi" | "en",
-    imageType: "background" | "icon",
+    imageType: "background" | "icon"
   ) => {
     const promo = promotions.find((p) => p.id === promoId);
     if (!promo) return;
 
     const pathField =
-      imageType === "background"
-        ? "backgroundImagePath"
-        : "iconImagePath";
-    const path = promo[lang][pathField];
+      imageType === "background" ? "backgroundImagePath" : "iconImagePath";
+    const path = promo.input[pathField];
 
     if (!path) return;
 
@@ -327,7 +307,7 @@ export function PromotionEditor({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ path }),
-        },
+        }
       );
 
       const result = await response.json();
@@ -338,29 +318,27 @@ export function PromotionEditor({
 
       // Remove image from promotion
       const imageField =
-        imageType === "background"
-          ? "backgroundImage"
-          : "iconImage";
+        imageType === "background" ? "backgroundImage" : "iconImage";
 
       setPromotions((prev) =>
         prev.map((p) =>
           p.id === promoId
             ? {
                 ...p,
-                [lang]: {
-                  ...p[lang],
+                input: {
+                  ...p.input,
                   [imageField]: undefined,
                   [pathField]: undefined,
                 },
               }
-            : p,
-        ),
+            : p
+        )
       );
 
-      console.log("✅ Image removed successfully");
+      toast.success("Image removed successfully!");
     } catch (error: any) {
       console.error("❌ Delete error:", error);
-      alert(`Delete failed: ${error.message}`);
+      toast.error(`Delete failed: ${error.message}`);
     }
   };
 
@@ -394,7 +372,11 @@ export function PromotionEditor({
     setIsSaving(true);
 
     try {
-      // Call backend API to save promotions
+      // Backend will auto-detect language and translate
+      // Use AbortController with 60s timeout (translations can be slow)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/settings/promotions`,
         {
@@ -404,36 +386,39 @@ export function PromotionEditor({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ promotions }),
-        },
+          signal: controller.signal,
+        }
       );
+
+      clearTimeout(timeoutId);
 
       const result = await response.json();
 
       if (!result.success) {
-        throw new Error(
-          result.error || "Failed to save promotions",
-        );
+        throw new Error(result.error || "Failed to save promotions");
       }
 
-      // Call onSave callback if provided
+      // Update with backend response (includes translations)
+      if (result.data?.promotions) {
+        setPromotions(result.data.promotions);
+      }
+
+      // Notify other components
       onSave?.(promotions);
+      window.dispatchEvent(new CustomEvent("promotions-updated"));
 
-      // Dispatch custom event to notify App.tsx to refetch promotions
-      window.dispatchEvent(
-        new CustomEvent("promotions-updated"),
-      );
-
-      // Show success toast
       toast.success("✅ Promotions saved successfully!", {
-        description:
-          "Your changes have been applied to the homepage carousel.",
+        description: "Translations have been generated and applied.",
       });
 
-      console.log("✅ Promotions saved successfully");
+      console.log("✅ Promotions saved with auto-translation");
     } catch (error: any) {
       console.error("❌ Save promotions error:", error);
-      toast.error("❌ Failed to save promotions", {
-        description: error.message || "Please try again.",
+      const isTimeout = error.name === "AbortError";
+      toast.error(isTimeout ? "⏱️ Request timed out" : "❌ Failed to save promotions", {
+        description: isTimeout
+          ? "Translation is taking too long. Try saving fewer promotions at once."
+          : error.message || "Please try again.",
       });
     } finally {
       setIsSaving(false);
@@ -441,41 +426,32 @@ export function PromotionEditor({
   };
 
   const handleAddPromotion = () => {
-    const newId = String(Date.now()); // Simple unique ID
+    const newId = String(Date.now());
     const newPromotion: Promotion = {
       id: newId,
-      type: "crypto", // Default type
+      type: "crypto",
       enabled: true,
       featured: false,
-      vi: {
+      input: {
         title: "CHƯƠNG TRÌNH MỚI",
         discount: "GIẢM 10%",
         description: "Mô tả chương trình khuyến mãi mới",
         buttonText: "XEM NGAY",
         buttonLink: "#",
       },
-      en: {
-        title: "NEW PROMOTION",
-        discount: "10% OFF",
-        description: "New promotion description",
-        buttonText: "LEARN MORE",
-        buttonLink: "#",
-      },
     };
 
     setPromotions((prev) => [...prev, newPromotion]);
-    setExpandedId(newId); // Auto-expand new promotion
-    
+    setExpandedId(newId);
+
     toast.success("✨ New promotion added!", {
-      description: "Don't forget to customize and save your changes.",
+      description: "Customize and save to generate translations.",
     });
   };
 
   const handleDeletePromotion = (id: string) => {
     if (promotions.length <= 1) {
-      toast.error("Cannot delete the last promotion", {
-        description: "You must have at least one promotion.",
-      });
+      toast.error("Cannot delete the last promotion");
       return;
     }
 
@@ -496,10 +472,10 @@ export function PromotionEditor({
         </div>
       ) : (
         <>
-          {/* Add Promotion Button */}
+          {/* Header */}
           <div className="flex justify-between items-center pb-2">
             <p className="text-sm text-gray-500">
-              Manage promotions that appear on the homepage carousel
+              Manage promotions - backend will auto-translate to Vietnamese & English
             </p>
             <Button
               onClick={handleAddPromotion}
@@ -511,8 +487,10 @@ export function PromotionEditor({
             </Button>
           </div>
 
+          {/* Promotions List */}
           {promotions.map((promo) => {
             const isExpanded = expandedId === promo.id;
+            const displayData = promo.vi || promo.input;
 
             return (
               <div
@@ -525,34 +503,39 @@ export function PromotionEditor({
               >
                 {/* Header */}
                 <div className="flex items-center gap-3 p-4 bg-gray-50/50">
-                  {/* Drag Handle */}
                   <button className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600">
                     <GripVertical className="h-5 w-5" />
                   </button>
 
-                  {/* Type Badge */}
+                  {/* Badge */}
                   <span
-                    className={`px-2 py-1 rounded text-xs font-semibold border ${getPromotionTypeColor(promo.type)}`}
+                    className={`px-2 py-1 rounded text-xs font-semibold border ${getPromotionTypeColor(
+                      promo.type
+                    )}`}
                   >
-                    {getPromotionTypeLabel(promo.type)}
+                    {displayData.badge || getPromotionTypeLabel(promo.type)}
                   </span>
 
-                  {/* Title Preview (English) */}
+                  {/* Title Preview */}
                   <div className="flex-1 flex items-center gap-2">
                     <span
-                      className={`font-semibold ${promo.enabled ? "text-gray-900" : "text-gray-400"}`}
+                      className={`font-semibold ${
+                        promo.enabled ? "text-gray-900" : "text-gray-400"
+                      }`}
                     >
-                      {promo.en.title}
-                      {promo.en.subtitle && (
+                      {displayData.title}
+                      {displayData.subtitle && (
                         <span className="text-[#F97316] ml-1">
-                          {promo.en.subtitle}
+                          {displayData.subtitle}
                         </span>
                       )}
                     </span>
                     <span
-                      className={`text-sm ${promo.enabled ? "text-gray-500" : "text-gray-400"}`}
+                      className={`text-sm ${
+                        promo.enabled ? "text-gray-500" : "text-gray-400"
+                      }`}
                     >
-                      • {promo.en.discount}
+                      • {displayData.discount}
                     </span>
                   </div>
 
@@ -561,9 +544,7 @@ export function PromotionEditor({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() =>
-                        handleToggleEnabled(promo.id)
-                      }
+                      onClick={() => handleToggleEnabled(promo.id)}
                       className="h-8 px-2 gap-1"
                     >
                       {promo.enabled ? (
@@ -586,9 +567,7 @@ export function PromotionEditor({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() =>
-                        handleToggleFeatured(promo.id)
-                      }
+                      onClick={() => handleToggleFeatured(promo.id)}
                       className="h-8 px-2 gap-1"
                     >
                       {promo.featured ? (
@@ -611,9 +590,7 @@ export function PromotionEditor({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() =>
-                        handleToggleExpand(promo.id)
-                      }
+                      onClick={() => handleToggleExpand(promo.id)}
                       className="h-8 w-8 p-0"
                     >
                       {isExpanded ? (
@@ -626,9 +603,7 @@ export function PromotionEditor({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() =>
-                        handleDeletePromotion(promo.id)
-                      }
+                      onClick={() => handleDeletePromotion(promo.id)}
                       className="h-8 w-8 p-0"
                     >
                       <X className="h-4 w-4 text-red-500" />
@@ -636,52 +611,16 @@ export function PromotionEditor({
                   </div>
                 </div>
 
-                {/* Expanded Form with Language Tabs */}
+                {/* Expanded Form - Single Input (No Tabs) */}
                 {isExpanded && (
                   <div className="p-6 border-t border-gray-100">
-                    <PillTabs
-                      defaultValue="vi"
-                      className="w-full"
-                    >
-                      <PillTabsList className="mb-6">
-                        <PillTabsTrigger value="vi">
-                          Tiếng Việt 🇻🇳
-                        </PillTabsTrigger>
-                        <PillTabsTrigger value="en">
-                          English 🇺🇸
-                        </PillTabsTrigger>
-                      </PillTabsList>
-
-                      {/* Vietnamese Tab */}
-                      <PillTabsContent
-                        value="vi"
-                        className="mt-0"
-                      >
-                        <LanguageForm
-                          promo={promo}
-                          lang="vi"
-                          onUpdateField={handleUpdateField}
-                          onImageUpload={handleImageUpload}
-                          onRemoveImage={handleRemoveImage}
-                          uploadingImages={uploadingImages}
-                        />
-                      </PillTabsContent>
-
-                      {/* English Tab */}
-                      <PillTabsContent
-                        value="en"
-                        className="mt-0"
-                      >
-                        <LanguageForm
-                          promo={promo}
-                          lang="en"
-                          onUpdateField={handleUpdateField}
-                          onImageUpload={handleImageUpload}
-                          onRemoveImage={handleRemoveImage}
-                          uploadingImages={uploadingImages}
-                        />
-                      </PillTabsContent>
-                    </PillTabs>
+                    <PromotionForm
+                      promo={promo}
+                      onUpdateField={handleUpdateField}
+                      onImageUpload={handleImageUpload}
+                      onRemoveImage={handleRemoveImage}
+                      uploadingImages={uploadingImages}
+                    />
                   </div>
                 )}
               </div>
@@ -698,7 +637,7 @@ export function PromotionEditor({
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
+                  Saving & Translating...
                 </>
               ) : (
                 <>
@@ -714,39 +653,34 @@ export function PromotionEditor({
   );
 }
 
-// Language Form Component
-interface LanguageFormProps {
+// Single Form Component (No Language Tabs)
+interface PromotionFormProps {
   promo: Promotion;
-  lang: "vi" | "en";
-  onUpdateField: (
-    id: string,
-    lang: "vi" | "en",
-    field: keyof PromotionLanguageData,
-    value: string,
-  ) => void;
+  onUpdateField: (id: string, field: keyof PromotionData, value: string) => void;
   onImageUpload: (
     promoId: string,
-    lang: "vi" | "en",
     imageType: "background" | "icon",
-    file: File,
+    file: File
   ) => void;
-  onRemoveImage: (
-    promoId: string,
-    lang: "vi" | "en",
-    imageType: "background" | "icon",
-  ) => void;
+  onRemoveImage: (promoId: string, imageType: "background" | "icon") => void;
   uploadingImages: Record<string, boolean>;
 }
 
-function LanguageForm({
+function PromotionForm({
   promo,
-  lang,
   onUpdateField,
   onImageUpload,
   onRemoveImage,
   uploadingImages,
-}: LanguageFormProps) {
-  const data = promo[lang];
+}: PromotionFormProps) {
+  // Safety check: ensure input exists
+  const data = promo.input || {
+    title: "",
+    discount: "",
+    description: "",
+    buttonText: "",
+    buttonLink: "#",
+  };
 
   return (
     <div className="space-y-6">
@@ -757,35 +691,22 @@ function LanguageForm({
           <Label>Background Image</Label>
           <ImageUploadBox
             image={data.backgroundImage}
-            uploading={
-              uploadingImages[`${promo.id}-${lang}-background`]
-            }
-            onUpload={(file) =>
-              onImageUpload(promo.id, lang, "background", file)
-            }
-            onRemove={() =>
-              onRemoveImage(promo.id, lang, "background")
-            }
+            uploading={uploadingImages[`${promo.id}-background`]}
+            onUpload={(file) => onImageUpload(promo.id, "background", file)}
+            onRemove={() => onRemoveImage(promo.id, "background")}
             label="Upload Background"
           />
         </div>
 
         {/* Icon Image (optional) */}
-        {(promo.type === "crypto" ||
-          promo.type === "vip-royalty") && (
+        {(promo.type === "crypto" || promo.type === "vip-royalty") && (
           <div className="space-y-2">
             <Label>Icon/Logo (Optional)</Label>
             <ImageUploadBox
               image={data.iconImage}
-              uploading={
-                uploadingImages[`${promo.id}-${lang}-icon`]
-              }
-              onUpload={(file) =>
-                onImageUpload(promo.id, lang, "icon", file)
-              }
-              onRemove={() =>
-                onRemoveImage(promo.id, lang, "icon")
-              }
+              uploading={uploadingImages[`${promo.id}-icon`]}
+              onUpload={(file) => onImageUpload(promo.id, "icon", file)}
+              onRemove={() => onRemoveImage(promo.id, "icon")}
               label="Upload Icon"
             />
           </div>
@@ -795,124 +716,62 @@ function LanguageForm({
       {/* Text Fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Badge */}
-        {(promo.type === "crypto" ||
-          promo.type === "vip-royalty") && (
+        {(promo.type === "crypto" || promo.type === "vip-royalty") && (
           <div className="space-y-2">
-            <Label htmlFor={`${promo.id}-${lang}-badge`}>
-              Badge Text (Optional)
-            </Label>
+            <Label htmlFor={`${promo.id}-badge`}>Badge Text (Optional)</Label>
             <Input
-              id={`${promo.id}-${lang}-badge`}
+              id={`${promo.id}-badge`}
               value={data.badge || ""}
-              onChange={(e) =>
-                onUpdateField(
-                  promo.id,
-                  lang,
-                  "badge",
-                  e.target.value,
-                )
-              }
-              placeholder={
-                lang === "vi"
-                  ? "VD: THANH TOÁN 4.0"
-                  : "e.g., PAYMENT 4.0"
-              }
+              onChange={(e) => onUpdateField(promo.id, "badge", e.target.value)}
+              placeholder="Opening"
             />
           </div>
         )}
 
         {/* Title */}
         <div className="space-y-2">
-          <Label htmlFor={`${promo.id}-${lang}-title`}>
-            Title *
-          </Label>
+          <Label htmlFor={`${promo.id}-title`}>Title *</Label>
           <Input
-            id={`${promo.id}-${lang}-title`}
+            id={`${promo.id}-title`}
             value={data.title}
-            onChange={(e) =>
-              onUpdateField(
-                promo.id,
-                lang,
-                "title",
-                e.target.value,
-              )
-            }
-            placeholder={
-              lang === "vi"
-                ? "VD: GIỜ VÀNG"
-                : "e.g., GOLDEN HOUR"
-            }
+            onChange={(e) => onUpdateField(promo.id, "title", e.target.value)}
+            placeholder="Grand Opening"
           />
         </div>
 
         {/* Subtitle (crypto only) */}
         {promo.type === "crypto" && (
           <div className="space-y-2">
-            <Label htmlFor={`${promo.id}-${lang}-subtitle`}>
-              Subtitle (Optional)
-            </Label>
+            <Label htmlFor={`${promo.id}-subtitle`}>Subtitle (Optional)</Label>
             <Input
-              id={`${promo.id}-${lang}-subtitle`}
+              id={`${promo.id}-subtitle`}
               value={data.subtitle || ""}
-              onChange={(e) =>
-                onUpdateField(
-                  promo.id,
-                  lang,
-                  "subtitle",
-                  e.target.value,
-                )
-              }
-              placeholder={
-                lang === "vi" ? "VD: CRYPTO" : "e.g., CRYPTO"
-              }
+              onChange={(e) => onUpdateField(promo.id, "subtitle", e.target.value)}
+              placeholder="VD: CRYPTO"
             />
           </div>
         )}
 
         {/* Discount */}
         <div className="space-y-2">
-          <Label htmlFor={`${promo.id}-${lang}-discount`}>
-            Discount/Offer *
-          </Label>
+          <Label htmlFor={`${promo.id}-discount`}>Discount/Offer *</Label>
           <Input
-            id={`${promo.id}-${lang}-discount`}
+            id={`${promo.id}-discount`}
             value={data.discount}
-            onChange={(e) =>
-              onUpdateField(
-                promo.id,
-                lang,
-                "discount",
-                e.target.value,
-              )
-            }
-            placeholder={
-              lang === "vi" ? "VD: GIẢM 15%" : "e.g., 15% OFF"
-            }
+            onChange={(e) => onUpdateField(promo.id, "discount", e.target.value)}
+            placeholder="Đăng ký ngay để tham gia Lucky Draw!"
           />
         </div>
 
         {/* Days (golden hour only) */}
         {promo.type === "golden-hour" && (
           <div className="space-y-2">
-            <Label htmlFor={`${promo.id}-${lang}-days`}>
-              Days *
-            </Label>
+            <Label htmlFor={`${promo.id}-days`}>Days *</Label>
             <Input
-              id={`${promo.id}-${lang}-days`}
+              id={`${promo.id}-days`}
               value={data.days || ""}
-              onChange={(e) =>
-                onUpdateField(
-                  promo.id,
-                  lang,
-                  "days",
-                  e.target.value,
-                )
-              }
-              placeholder={
-                lang === "vi"
-                  ? "VD: THỨ HAI - THỨ NĂM"
-                  : "e.g., MONDAY - THURSDAY"
-              }
+              onChange={(e) => onUpdateField(promo.id, "days", e.target.value)}
+              placeholder="THỨ HAI - THỨ NĂM"
             />
           </div>
         )}
@@ -920,20 +779,11 @@ function LanguageForm({
         {/* Time (golden hour only) */}
         {promo.type === "golden-hour" && (
           <div className="space-y-2">
-            <Label htmlFor={`${promo.id}-${lang}-time`}>
-              Time *
-            </Label>
+            <Label htmlFor={`${promo.id}-time`}>Time *</Label>
             <Input
-              id={`${promo.id}-${lang}-time`}
+              id={`${promo.id}-time`}
               value={data.time || ""}
-              onChange={(e) =>
-                onUpdateField(
-                  promo.id,
-                  lang,
-                  "time",
-                  e.target.value,
-                )
-              }
+              onChange={(e) => onUpdateField(promo.id, "time", e.target.value)}
               placeholder="12:00 PM - 3:30 PM"
             />
           </div>
@@ -941,72 +791,41 @@ function LanguageForm({
 
         {/* Button Text */}
         <div className="space-y-2">
-          <Label htmlFor={`${promo.id}-${lang}-buttonText`}>
-            Button Text *
-          </Label>
+          <Label htmlFor={`${promo.id}-buttonText`}>Button Text *</Label>
           <Input
-            id={`${promo.id}-${lang}-buttonText`}
+            id={`${promo.id}-buttonText`}
             value={data.buttonText}
-            onChange={(e) =>
-              onUpdateField(
-                promo.id,
-                lang,
-                "buttonText",
-                e.target.value,
-              )
-            }
-            placeholder={
-              lang === "vi"
-                ? "VD: ĐẶT LỊCH NGAY"
-                : "e.g., BOOK NOW"
-            }
+            onChange={(e) => onUpdateField(promo.id, "buttonText", e.target.value)}
+            placeholder="Đăng ký ngay"
           />
         </div>
 
         {/* Button Link */}
         <div className="space-y-2">
-          <Label htmlFor={`${promo.id}-${lang}-buttonLink`}>
-            Button Link *
-          </Label>
+          <Label htmlFor={`${promo.id}-buttonLink`}>Button Link *</Label>
           <Input
-            id={`${promo.id}-${lang}-buttonLink`}
+            id={`${promo.id}-buttonLink`}
             value={data.buttonLink}
-            onChange={(e) =>
-              onUpdateField(
-                promo.id,
-                lang,
-                "buttonLink",
-                e.target.value,
-              )
-            }
-            placeholder="https://example.com or #section"
+            onChange={(e) => onUpdateField(promo.id, "buttonLink", e.target.value)}
+            placeholder="https://staging-register.vlinkpay.com/event?eventCode=bitcoinnailbar-grand-opening&lang=en"
           />
         </div>
       </div>
 
-      {/* Description */}
+      {/* Description - WYSIWYG Editor */}
       <div className="space-y-2">
-        <Label htmlFor={`${promo.id}-${lang}-description`}>
-          Description *
-        </Label>
-        <Textarea
-          id={`${promo.id}-${lang}-description`}
-          value={data.description}
-          onChange={(e) =>
-            onUpdateField(
-              promo.id,
-              lang,
-              "description",
-              e.target.value,
-            )
-          }
-          placeholder={
-            lang === "vi"
-              ? "Nhập mô tả khuyến mãi"
-              : "Enter promotion description"
-          }
-          rows={3}
-        />
+        <Label htmlFor={`${promo.id}-description`}>Description *</Label>
+        <div className="border rounded-md overflow-hidden">
+          <QuillEditor
+            value={data.description}
+            onChange={(content) => onUpdateField(promo.id, "description", content)}
+            placeholder="Enter description with rich formatting..."
+            className="bg-white"
+          />
+        </div>
+        <p className="text-xs text-gray-400 italic">
+          Use the toolbar above to format text, add lists, and links
+        </p>
       </div>
     </div>
   );
@@ -1028,9 +847,7 @@ function ImageUploadBox({
   onRemove,
   label,
 }: ImageUploadBoxProps) {
-  const handleFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       onUpload(file);
@@ -1065,9 +882,7 @@ function ImageUploadBox({
           ) : (
             <>
               <Upload className="h-8 w-8 text-gray-400 mb-2" />
-              <span className="text-sm text-gray-500">
-                {label}
-              </span>
+              <span className="text-sm text-gray-500">{label}</span>
               <span className="text-xs text-gray-400 mt-1">
                 PNG, JPG, WebP (max 5MB)
               </span>

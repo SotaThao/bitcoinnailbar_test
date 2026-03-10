@@ -36,9 +36,12 @@ const formatPhoneUS = (phone: string): string => {
 
 /**
  * Check if membership is valid for booking date
+ * Updated: No longer requires membership_id (for backward compatibility with migrated data)
  */
 const isMembershipValid = (customer: any, appointmentTime: string): boolean => {
-  if (!customer.membership_id || !customer.membership_end_date) return false;
+  // Check if customer has membership data
+  if (!customer.tier || customer.tier === 'guest') return false;
+  if (!customer.membership_end_date) return false;
   if (customer.status !== 'active') return false;
   
   const expiresAt = new Date(customer.membership_end_date);

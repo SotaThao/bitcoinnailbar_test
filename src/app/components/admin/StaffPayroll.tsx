@@ -70,7 +70,11 @@ import {
 } from "../ui/dialog";
 import StaffDetail from "./StaffDetail";
 
-export default function StaffPayroll() {
+interface StaffPayrollProps {
+  defaultTab?: "staff" | "payroll";
+}
+
+export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
   const [staff, setStaff] = useState<any[]>([]);
@@ -361,7 +365,7 @@ export default function StaffPayroll() {
     <AdminLayout>
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <PillTabs
-          defaultValue="staff"
+          defaultValue={defaultTab}
           className="w-full space-y-6"
           onValueChange={(value) => {
             if (value === "payroll") {

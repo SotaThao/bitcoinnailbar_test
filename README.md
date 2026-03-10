@@ -1,7 +1,7 @@
 
-  # Nail Salon Management System (Copy)
+  # Bitcoin Nailbar
 
-  This is a code bundle for Nail Salon Management System (Copy). The original project is available at https://www.figma.com/design/mx5e0ZrIo0MDLcRVGK8gXp/Nail-Salon-Management-System--Copy-.
+  This is a code bundle for Bitcoin Nailbar. The original project is available at https://www.figma.com/design/mx5e0ZrIo0MDLcRVGK8gXp/Bitcoin-Nailbar.
 
   ## Running the code
 

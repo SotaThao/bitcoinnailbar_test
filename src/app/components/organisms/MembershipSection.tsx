@@ -85,6 +85,7 @@ export function MembershipSection({
                   tier={tier}
                   visual={visual}
                   saveText={saveText}
+                  isPopular={visual.popular}
                 />
               );
             })}
