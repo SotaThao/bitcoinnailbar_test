@@ -1,12 +1,10 @@
+import "../server/_shared_console.tsx";
+
 import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
-import { logger } from "npm:hono/logger";
 import * as kv from "../server/kv_store.tsx";
 
 const app = new Hono();
-
-// Enable logger
-app.use('*', logger(console.log));
 
 // Enable CORS for all routes and methods
 app.use(

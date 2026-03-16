@@ -1,6 +1,6 @@
 const noop = () => {};
 
-// Keep warnings and errors, but silence noisy client logs in every environment.
+// Silence non-critical runtime logs across edge functions.
 console.log = noop;
 console.info = noop;
 console.debug = noop;
