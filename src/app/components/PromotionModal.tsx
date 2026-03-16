@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router";
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { QRCodeSVG } from 'qrcode.react';
@@ -31,7 +31,7 @@ interface PromotionModalProps {
   promotions: Promotion[];
   onClose: () => void;
   language?: 'vi' | 'en';
-  onRendered?: () => void; // Callback khi modal đã render xong
+  onRendered?: () => void;
 }
 
 export function PromotionModal({ promotions, onClose, language = 'en', onRendered }: PromotionModalProps) {
@@ -39,25 +39,35 @@ export function PromotionModal({ promotions, onClose, language = 'en', onRendere
   const [currentSlide, setCurrentSlide] = useState(0);
   const [dontShowToday, setDontShowToday] = useState(false);
 
-  // Filter only featured and enabled promotions
-  const featuredPromotions = promotions.filter(p => p.enabled && p.featured);
+  // Filter only featured and enabled promotions, newest first
+  const featuredPromotions = promotions
+    .filter(p => p.enabled && p.featured)
+    .sort((a, b) => {
+      const aNum = Number(a.id);
+      const bNum = Number(b.id);
+      const aIsNumeric = !isNaN(aNum);
+      const bIsNumeric = !isNaN(bNum);
+      if (aIsNumeric && bIsNumeric) return bNum - aNum;
+      if (aIsNumeric && !bIsNumeric) return -1;
+      if (!aIsNumeric && bIsNumeric) return 1;
+      return 0;
+    });
 
   // Notify parent when modal is rendered
   useEffect(() => {
     if (onRendered && featuredPromotions.length > 0) {
-      // Small delay to ensure DOM is painted
       const timer = setTimeout(onRendered, 100);
       return () => clearTimeout(timer);
     }
   }, [onRendered]);
 
-  // Auto-slide every 6 seconds
+  // Auto-slide every 10 seconds
   useEffect(() => {
     if (featuredPromotions.length <= 1) return;
 
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % featuredPromotions.length);
-    }, 6000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [featuredPromotions.length]);
@@ -65,7 +75,7 @@ export function PromotionModal({ promotions, onClose, language = 'en', onRendere
   // Handle close with localStorage
   const handleClose = () => {
     if (dontShowToday) {
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const today = new Date().toISOString().split('T')[0];
       localStorage.setItem('promotion-dismissed-date', today);
     }
     onClose();
@@ -93,14 +103,12 @@ export function PromotionModal({ promotions, onClose, language = 'en', onRendere
 
   // Handle CTA button click
   const handleButtonClick = (link: string) => {
-    // Validate link is not empty and not just '#'
     if (!link || link === '#') {
       handleClose();
       return;
     }
     
     if (link.startsWith('#')) {
-      // Internal link - scroll to section
       try {
         const element = document.querySelector(link);
         if (element) {
@@ -112,7 +120,6 @@ export function PromotionModal({ promotions, onClose, language = 'en', onRendere
         handleClose();
       }
     } else {
-      // External link - open in new tab
       window.open(link, '_blank', 'noopener,noreferrer');
       handleClose();
     }
@@ -128,8 +135,6 @@ export function PromotionModal({ promotions, onClose, language = 'en', onRendere
   const currentPromotion = featuredPromotions[currentSlide];
   const data = currentPromotion[language];
   
-  // More robust check for background image
-  // Sometimes API might return "null", "undefined" strings or just whitespace
   const hasBackgroundImage = Boolean(
     data.backgroundImage && 
     data.backgroundImage.trim() !== '' && 
@@ -244,11 +249,11 @@ export function PromotionModal({ promotions, onClose, language = 'en', onRendere
                   alt="Promotion"
                   className="max-w-full max-h-[500px] object-contain rounded-2xl"
                   onError={(e) => {
-                    console.error('❌ Failed to load background image:', data.backgroundImage);
+                    console.error('Failed to load background image:', data.backgroundImage);
                     e.currentTarget.style.display = 'none';
                   }}
                   onLoad={() => {
-                    console.log('✅ Background image loaded successfully:', data.backgroundImage);
+                    console.log('Background image loaded successfully:', data.backgroundImage);
                   }}
                 />
               </div>
@@ -264,7 +269,7 @@ export function PromotionModal({ promotions, onClose, language = 'en', onRendere
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-[#F97316]/10 to-[#FB923C]/10 rounded-full blur-2xl animate-pulse delay-500"></div>
                 
                 {/* Glass reflection overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-50 animate-[pulse-glow_2s_ease-in-out_infinite] [animation-delay:0.5s]"
+                <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-50"
                   style={{
                     animation: 'pulse-glow 2s ease-in-out infinite, shimmer-sweep 3s ease-in-out infinite',
                   }}

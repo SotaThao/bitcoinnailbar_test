@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router';
 import { Shield, Users } from 'lucide-react';
 import { getCurrentUser } from '/utils/auth';
 import { OwnerOnlyAccess } from '@/app/components/OwnerOnlyAccess';

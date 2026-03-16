@@ -131,7 +131,7 @@ async function createAppointment(data: any) {
     console.warn("⚠️ [CREATE_APPT] Could not calculate total:", e);
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━���━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 3. NEW: Resolve Technician ID (if staffId provided)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   let technicianId = null;
@@ -563,29 +563,130 @@ app.post("/make-server-84f9c112/check-in", async (c) => {
     
     let appointment: any = null;
     
-    // Try to find by ID first
+    // Try to find by ID first (Postgres)
     if (appointmentId) {
-      console.log('🔍 [CHECK-IN] Searching by ID:', appointmentId);
-      appointment = await kv.get(appointmentId);
-      if (appointment) {
+      console.log('🔍 [CHECK-IN] Searching by ID in Postgres:', appointmentId);
+      
+      // Try direct ID match first
+      const { data: byId, error: idError } = await supabase
+        .from('appointment_info')
+        .select('*')
+        .eq('id', appointmentId)
+        .maybeSingle();
+      
+      if (idError) {
+        console.error('⚠️ [CHECK-IN] Postgres ID query error:', idError);
+      }
+      
+      if (byId) {
+        appointment = byId;
         console.log('✅ [CHECK-IN] Found by ID:', appointment.id);
       } else {
-        console.log('⚠️ [CHECK-IN] Not found by ID, trying phone fallback...');
+        // Fallback: try legacy_appointment_id for old QR codes (pre-migration)
+        console.log('⚠️ [CHECK-IN] Not found by ID, trying legacy_appointment_id...');
+        const { data: byLegacy, error: legacyError } = await supabase
+          .from('appointment_info')
+          .select('*')
+          .eq('legacy_appointment_id', appointmentId)
+          .maybeSingle();
+        
+        if (legacyError) {
+          console.error('⚠️ [CHECK-IN] Legacy ID query error:', legacyError);
+        }
+        
+        if (byLegacy) {
+          appointment = byLegacy;
+          console.log('✅ [CHECK-IN] Found by legacy ID:', appointment.id);
+        } else {
+          console.log('⚠️ [CHECK-IN] Not found by legacy ID either, trying phone fallback...');
+        }
       }
     }
     
-    // Fallback to phone search if ID search failed
+    // Fallback to phone search if ID search failed (Postgres)
     if (!appointment && phoneNumber) {
-      console.log('🔍 [CHECK-IN] Searching by phone:', phoneNumber);
-      const all = await kv.getByPrefix("appointment:");
+      console.log('🔍 [CHECK-IN] Searching by phone in Postgres:', phoneNumber);
       const searchPhone = phoneNumber.replace(/\D/g, '');
-      const valid = all.filter((a: any) => 
-        a.customerPhone?.replace(/\D/g, '').includes(searchPhone) && 
-        ["pending", "confirmed", "booked"].includes(a.status)
-      ).sort((a: any, b: any) => new Date(a.appointmentTime).getTime() - new Date(b.appointmentTime).getTime());
-      if (valid.length) {
-        appointment = valid[0];
-        console.log('✅ [CHECK-IN] Found by phone:', appointment.id);
+      
+      // Strategy 1: Look up customer_id via customer_profiles (phone stored as digits)
+      console.log('🔍 [CHECK-IN] Strategy 1: Lookup customer_profiles by normalized phone:', searchPhone);
+      const { data: customer, error: customerError } = await supabase
+        .from('customer_profiles')
+        .select('id')
+        .eq('phone', searchPhone)
+        .maybeSingle();
+      
+      if (customerError) {
+        console.error('⚠️ [CHECK-IN] Customer lookup error:', customerError);
+      }
+      
+      if (customer) {
+        console.log('✅ [CHECK-IN] Found customer_id:', customer.id);
+        const { data: byCustomerId, error: custApptError } = await supabase
+          .from('appointment_info')
+          .select('*')
+          .eq('customer_id', customer.id)
+          .in('status', ['pending', 'confirmed', 'booked'])
+          .order('appointment_time', { ascending: true })
+          .limit(1);
+        
+        if (custApptError) {
+          console.error('⚠️ [CHECK-IN] Customer appointment query error:', custApptError);
+        }
+        
+        if (byCustomerId && byCustomerId.length > 0) {
+          appointment = byCustomerId[0];
+          console.log('✅ [CHECK-IN] Found by customer_id:', appointment.id);
+        }
+      }
+      
+      // Strategy 2: Fallback - fetch recent pending appointments and match phone in JS
+      if (!appointment) {
+        console.log('🔍 [CHECK-IN] Strategy 2: Fetching pending appointments for JS phone match...');
+        const { data: pendingAppts, error: pendingError } = await supabase
+          .from('appointment_info')
+          .select('*')
+          .in('status', ['pending', 'confirmed', 'booked'])
+          .order('appointment_time', { ascending: true })
+          .limit(50);
+        
+        if (pendingError) {
+          console.error('⚠️ [CHECK-IN] Pending appointments query error:', pendingError);
+        }
+        
+        if (pendingAppts && pendingAppts.length > 0) {
+          // Normalize both sides and compare
+          const match = pendingAppts.find((appt: any) => {
+            const apptPhone = (appt.customer_phone || '').replace(/\D/g, '');
+            return apptPhone === searchPhone || apptPhone.endsWith(searchPhone) || searchPhone.endsWith(apptPhone);
+          });
+          
+          if (match) {
+            appointment = match;
+            console.log('✅ [CHECK-IN] Found by JS phone match:', appointment.id);
+          }
+        }
+      }
+      
+      // Strategy 3: Original ilike as last resort (works if phone stored as digits)
+      if (!appointment) {
+        console.log('🔍 [CHECK-IN] Strategy 3: ilike fallback...');
+        const { data: byPhone, error: phoneError } = await supabase
+          .from('appointment_info')
+          .select('*')
+          .ilike('customer_phone', `%${searchPhone}%`)
+          .in('status', ['pending', 'confirmed', 'booked'])
+          .order('appointment_time', { ascending: true })
+          .limit(1);
+        
+        if (phoneError) {
+          console.error('⚠️ [CHECK-IN] Phone ilike query error:', phoneError);
+        }
+        
+        if (byPhone && byPhone.length > 0) {
+          appointment = byPhone[0];
+          console.log('✅ [CHECK-IN] Found by ilike:', appointment.id);
+        }
       }
     }
 
@@ -594,30 +695,64 @@ app.post("/make-server-84f9c112/check-in", async (c) => {
       return c.json({ success: false, error: "Not found" }, 404);
     }
 
-    // Update status to "confirmed" after successful check-in
+    // Update status to "confirmed" after successful check-in (Postgres)
     if (!["checked-in", "completed", "cancelled"].includes(appointment.status)) {
-      appointment.status = "confirmed";
-      appointment.checkedInAt = new Date().toISOString();
-      await kv.set(appointment.id, appointment);
-      console.log('✅ [CHECK-IN] Status updated to confirmed');
+      const checkedInAt = new Date().toISOString();
       
-      // 🔔 Save notification event for real-time updates
+      const { data: updated, error: updateError } = await supabase
+        .from('appointment_info')
+        .update({
+          status: 'confirmed',
+          checked_in_at: checkedInAt,
+          updated_at: checkedInAt,
+        })
+        .eq('id', appointment.id)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.error('❌ [CHECK-IN] Failed to update status in Postgres:', updateError);
+        // Continue anyway - we still have the appointment data
+      } else {
+        appointment = updated;
+        console.log('✅ [CHECK-IN] Status updated to confirmed in Postgres');
+      }
+      
+      // 🔔 Save notification event for real-time updates (KV Admin - correct table)
       const notificationId = `notification:checkin:${Date.now()}`;
       const notificationData = {
         id: notificationId,
         type: 'checkin',
         appointmentId: appointment.id,
-        customerName: appointment.customerName,
-        customerPhone: appointment.customerPhone,
-        serviceNames: appointment.serviceNames || [],
-        appointmentTime: appointment.appointmentTime,
-        checkedInAt: appointment.checkedInAt,
+        customerName: appointment.customer_name,
+        customerPhone: appointment.customer_phone,
+        serviceNames: appointment.service_names || [],
+        appointmentTime: appointment.appointment_time,
+        checkedInAt: appointment.checked_in_at || checkedInAt,
         createdAt: new Date().toISOString(),
       };
       await kv.set(notificationId, notificationData);
       console.log('✅ [CHECK-IN] Notification event saved:', notificationId);
     }
-    return c.json({ success: true, data: appointment });
+    
+    // Map Postgres snake_case → camelCase for frontend compatibility
+    const responseData = {
+      id: appointment.id,
+      customerName: appointment.customer_name,
+      customerPhone: appointment.customer_phone,
+      customerEmail: appointment.customer_email,
+      serviceNames: appointment.service_names || [],
+      serviceIds: appointment.service_ids || [],
+      appointmentTime: appointment.appointment_time,
+      status: appointment.status,
+      checkedInAt: appointment.checked_in_at,
+      technicianId: appointment.technician_id,
+      notes: appointment.notes,
+      totalAmount: appointment.total_amount,
+      paymentStatus: appointment.payment_status,
+    };
+    
+    return c.json({ success: true, data: responseData });
   } catch (e: any) {
     console.error('❌ [CHECK-IN] Error:', e);
     return c.json({ success: false, error: e.message }, 500);

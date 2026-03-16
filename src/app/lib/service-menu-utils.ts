@@ -63,6 +63,7 @@ export function parseMaxPrice(priceStr: string | number): number {
  *   {
  *     id: "acrylic-0-0",
  *     name: "Acrylic Full Set",
+ *     description: "", // Service description
  *     category: "Acrylic Nail Services",
  *     categoryKey: "acrylic",
  *     groupName: "FULL SET",
@@ -102,10 +103,12 @@ export function flattenServiceData(
             flattened.push({
               id: `${key}-${groupIndex}-${itemIndex}`,
               name: item.name,
+              description: (item as any).description || '', // Service description
               category: categoryName,
               categoryKey: key,
               groupName: group.name,
               duration: item.duration || '45 min',
+              durationMinutes: (item as any).durationMinutes || 45,
               price: parseMaxPrice(regularRaw), // Parsed for calculations
               regular: regularRaw, // Raw value (can be string)
               memberPrice: parseMaxPrice(memberRaw), // Parsed for calculations
@@ -116,6 +119,7 @@ export function flattenServiceData(
               serviceType: (item as any).serviceType || 'regular',
               compatibleServiceIds: (item as any).compatibleServiceIds || [],
               ownerRecommended: (item as any).owner_recommended || false, // NEW: Owner recommendation flag
+              imageUrl: (item as any).imageUrl || '', // Service image URL
             });
           });
         } else {
@@ -164,12 +168,15 @@ export function updateServiceInData(
   data: ServiceMenuData,
   serviceData: {
     name: string;
+    description?: string; // Service description
     price: string | number; // Support both string and number
     memberPrice: string | number; // Support both string and number
     status?: 'active' | 'disabled';
     serviceType?: 'regular' | 'addon';
     compatibleServiceIds?: string[];
     ownerRecommended?: boolean; // NEW: Owner recommendation flag
+    durationMinutes?: number; // Duration in minutes
+    imageUrl?: string; // Service image URL
   },
   categoryKey: string,
   groupName: string,
@@ -199,6 +206,11 @@ export function updateServiceInData(
     member: serviceData.memberPrice,
   };
 
+  // Add description if provided
+  if (serviceData.description !== undefined) {
+    newItem.description = serviceData.description;
+  }
+
   // Add status if provided
   if (serviceData.status) {
     newItem.status = serviceData.status;
@@ -217,6 +229,16 @@ export function updateServiceInData(
   // Add ownerRecommended if provided (NEW)
   if (serviceData.ownerRecommended !== undefined) {
     newItem.owner_recommended = serviceData.ownerRecommended;
+  }
+
+  // Add durationMinutes if provided
+  if (serviceData.durationMinutes !== undefined && serviceData.durationMinutes > 0) {
+    newItem.durationMinutes = serviceData.durationMinutes;
+  }
+
+  // Add imageUrl if provided
+  if (serviceData.imageUrl !== undefined) {
+    newItem.imageUrl = serviceData.imageUrl;
   }
 
   let newServiceId: string | undefined;

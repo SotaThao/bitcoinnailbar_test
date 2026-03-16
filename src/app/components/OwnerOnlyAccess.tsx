@@ -1,32 +1,27 @@
-import { Lock } from "lucide-react";
+import { useNavigate } from "react-router";
+import { ShieldAlert } from "lucide-react";
 import { Button } from "./ui/button";
-import { useNavigate } from "react-router-dom";
 
 export function OwnerOnlyAccess() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-        <div className="flex justify-center mb-4">
-          <div className="rounded-full bg-red-100 p-3">
-            <Lock className="h-8 w-8 text-red-600" />
-          </div>
-        </div>
-        <h2 className="text-2xl font-serif font-bold text-gray-900 mb-2">
-          Access Denied
-        </h2>
-        <p className="text-gray-600 mb-6">
-          This page is restricted to owner accounts only. Please
-          contact the system administrator if you need access.
-        </p>
-        <Button
-          onClick={() => navigate("/admin/dashboard")}
-          className="bg-[#F97316] hover:bg-[#EA580C] text-white"
-        >
-          Go to Dashboard
-        </Button>
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
+      <div className="p-4 rounded-full bg-red-100 mb-6">
+        <ShieldAlert className="h-12 w-12 text-red-500" />
       </div>
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        Access Restricted
+      </h2>
+      <p className="text-gray-500 mb-6 max-w-md">
+        This page is only accessible to the owner. Please contact the owner if you need access.
+      </p>
+      <Button
+        onClick={() => navigate("/admin")}
+        className="bg-[#FF9800] hover:bg-[#F57C00] text-white"
+      >
+        Back to Dashboard
+      </Button>
     </div>
   );
 }

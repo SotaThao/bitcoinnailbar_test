@@ -4,7 +4,7 @@ import {
   Link,
   useLocation,
   useNavigate,
-} from "react-router-dom";
+} from "react-router";
 import bitcoinLogo from "figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png";
 import image_2de9c9413dafd548ee75321859136c9ca435bffe from "figma:asset/2de9c9413dafd548ee75321859136c9ca435bffe.png";
 import image_eb0bbc971a7468c60bd03f5a065452ed783bbdef from "figma:asset/eb0bbc971a7468c60bd03f5a065452ed783bbdef.png";
@@ -391,101 +391,74 @@ export default function PublicLayout({
             <nav className="hidden xl:flex items-center gap-1">
               {navLinks.map((link, index) =>
                 link.dropdown ? (
-                  <DropdownMenu
+                  <div
                     key={index}
-                    open={desktopServicesOpen}
-                    onOpenChange={setDesktopServicesOpen}
-                    modal={false}
+                    className="relative"
+                    onMouseEnter={() => {
+                      if (closeTimeoutRef.current) {
+                        clearTimeout(closeTimeoutRef.current);
+                        closeTimeoutRef.current = null;
+                      }
+                      setDesktopServicesOpen(true);
+                    }}
+                    onMouseLeave={() => {
+                      if (closeTimeoutRef.current) {
+                        clearTimeout(closeTimeoutRef.current);
+                      }
+                      closeTimeoutRef.current = setTimeout(
+                        () => setDesktopServicesOpen(false),
+                        150,
+                      );
+                    }}
                   >
-                    <DropdownMenuTrigger
-                      asChild
-                      onMouseEnter={() => {
-                        // Clear any pending close timeout
-                        if (closeTimeoutRef.current) {
-                          clearTimeout(closeTimeoutRef.current);
-                        }
-                        setDesktopServicesOpen(true);
-                      }}
-                      onMouseLeave={() => {
-                        if (closeTimeoutRef.current) {
-                          clearTimeout(closeTimeoutRef.current);
-                        }
-                        closeTimeoutRef.current = setTimeout(
-                          () => setDesktopServicesOpen(false),
-                          200,
-                        );
-                      }}
+                    <button
+                      type="button"
+                      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-all h-9 px-4 py-2 outline-none ${
+                        desktopServicesOpen
+                          ? "text-[#FF9800] bg-white/5"
+                          : "text-gray-300 hover:text-[#FF9800] hover:bg-white/5"
+                      }`}
                     >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                        className={`h-9 text-gray-300 hover:text-[#FF9800] hover:bg-white/5 data-[state=open]:text-[#FF9800] data-[state=open]:bg-white/5 ${
-                          location.pathname === link.path
-                            ? "text-[#FF9800] bg-white/5"
-                            : ""
-                        }`}
-                      >
-                        {link.label}{" "}
-                        <ChevronDown className="ml-1 h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      className="bg-[#0B0F19] border-white/10 text-gray-300 min-w-[260px] p-2"
-                      onMouseEnter={() => {
-                        // Clear any pending close timeout
-                        if (closeTimeoutRef.current) {
-                          clearTimeout(closeTimeoutRef.current);
-                        }
-                        setDesktopServicesOpen(true);
-                      }}
-                      onMouseLeave={() => {
-                        if (closeTimeoutRef.current) {
-                          clearTimeout(closeTimeoutRef.current);
-                        }
-                        closeTimeoutRef.current = setTimeout(
-                          () => setDesktopServicesOpen(false),
-                          200,
-                        );
-                      }}
-                    >
-                      {/* Show menu based on system settings: 'menu-flipbook' (uploaded) or 'services-list' (categories) */}
-                      {menuDisplayMode === "menu-flipbook"
-                        ? // Show uploaded menu items
-                          menuItems.map((item) => (
-                            <DropdownMenuItem
-                              key={item.id}
-                              asChild
-                              className="focus:bg-white/10 focus:text-[#FF9800] cursor-pointer rounded-lg mb-1"
-                            >
-                              <Link
-                                to={`/menu?page=${item.order}`}
-                                className="flex items-center gap-3 py-2 px-3"
-                              >
-                                <span>{item.name}</span>
-                              </Link>
-                            </DropdownMenuItem>
-                          ))
-                        : // Show service categories from backend
-                          serviceCategories.map((category) => (
-                            <DropdownMenuItem
-                              key={category.id}
-                              asChild
-                              className="focus:bg-white/10 focus:text-[#FF9800] cursor-pointer rounded-lg mb-1"
-                            >
-                              <Link
-                                to={`/services/${category.key}`}
-                                className="flex items-center gap-3 py-2 px-3"
-                              >
-                                <span>{category.name}</span>
-                              </Link>
-                            </DropdownMenuItem>
-                          ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                      {link.label}{" "}
+                      <ChevronDown className={`ml-1 h-4 w-4 transition-transform duration-200 ${desktopServicesOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {desktopServicesOpen && (
+                      <div className="absolute top-full left-0 pt-1 z-50">
+                        <div className="bg-[#0B0F19] border border-white/10 text-gray-300 min-w-[260px] p-2 rounded-lg shadow-xl">
+                          {/* Menu Bitcoin Nail Bar - Always show at top */}
+                          <Link
+                            to="/menu"
+                            className="flex items-center gap-3 py-2 px-3 font-semibold text-[#FF9800] rounded-lg hover:bg-white/10 transition-colors"
+                            onClick={() => setDesktopServicesOpen(false)}
+                          >
+                            <span>Menu Bitcoin Nail Bar</span>
+                          </Link>
+                          <div className="h-px bg-white/10 my-1" />
+                          {menuDisplayMode === "menu-flipbook"
+                            ? menuItems.map((item) => (
+                                <Link
+                                  key={item.id}
+                                  to={`/menu?page=${item.order}`}
+                                  className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-white/10 hover:text-[#FF9800] transition-colors"
+                                  onClick={() => setDesktopServicesOpen(false)}
+                                >
+                                  <span>{item.name}</span>
+                                </Link>
+                              ))
+                            : serviceCategories.map((category) => (
+                                <Link
+                                  key={category.id}
+                                  to={`/services/${category.key}`}
+                                  className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-white/10 hover:text-[#FF9800] transition-colors"
+                                  onClick={() => setDesktopServicesOpen(false)}
+                                >
+                                  <span>{category.name}</span>
+                                </Link>
+                              ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : link.highlighted ? (
                   // E-GIFT Button - Highlighted
                   <Link key={index} to={link.path}>
@@ -522,7 +495,7 @@ export default function PublicLayout({
               <Link to="/booking">
                 <PrimaryButton
                   startIcon={<Calendar className="h-4 w-4" />}
-                  className="text-white shadow-[0_0_10px_rgba(255,152,0,0.3)]"
+                  className="text-white animate-[glowring_1.5s_ease-out_infinite]"
                 >
                   {t("coming_soon.book_now")}
                 </PrimaryButton>
@@ -569,6 +542,20 @@ export default function PublicLayout({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="bg-[#0B0F19] border-white/10 text-gray-300 min-w-[260px] p-2">
+                        {/* Menu Bitcoin Nail Bar - Always show at top */}
+                        <DropdownMenuItem
+                          asChild
+                          className="focus:bg-white/10 focus:text-[#FF9800] cursor-pointer rounded-lg mb-1"
+                        >
+                          <Link
+                            to="/menu"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center gap-3 py-2 px-3 font-semibold text-[#FF9800]"
+                          >
+                            <span>Menu Bitcoin Nail Bar</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        <div className="h-px bg-white/10 my-1" />
                         {/* Show menu based on system settings: 'menu-flipbook' (uploaded) or 'services-list' (categories) */}
                         {menuDisplayMode === "menu-flipbook"
                           ? // Show uploaded menu items
@@ -974,7 +961,7 @@ export default function PublicLayout({
                   <span className="text-[#FF9800] font-bold">
                     Email:
                   </span>
-                  <span>customerbitcoinnailbar@gmail.com</span>
+                  <span>info@bitcoinnailbar.com</span>
                 </li>
               </ul>
             </div>

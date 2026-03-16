@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { motion } from "motion/react";
 import { Calendar, Sparkles } from "lucide-react";
 import { PrimaryButton } from "../PrimaryButton";

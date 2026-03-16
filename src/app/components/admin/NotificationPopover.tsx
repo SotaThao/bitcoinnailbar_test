@@ -15,7 +15,7 @@ import { Card } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { useNotifications } from "../../context/NotificationContext";
 import { format, isToday, parseISO, isValid } from "date-fns";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 export function NotificationPopover() {
   const [open, setOpen] = useState(false);

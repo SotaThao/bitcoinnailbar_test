@@ -29,6 +29,7 @@ export interface Staff {
 export interface Service {
   id: string;
   name: string;
+  description?: string; // Rich text description for the service
   price: number; // Parsed max price for calculations
   regular: number | string; // Raw value from backend (can be string like "5-10")
   member: number | string; // Raw value from backend
@@ -44,6 +45,7 @@ export interface Service {
   priceDisplay?: string; // For displaying raw price text like "5-10", "10+"
   memberPriceDisplay?: string; // For displaying raw member price
   owner_recommended?: boolean; // For chatbot priority recommendations
+  imageUrl?: string; // Service image URL (Cloudinary)
 }
 
 /**
@@ -51,9 +53,11 @@ export interface Service {
  */
 export interface ServiceMenuItem {
   name: string;
+  description?: string; // Rich text description
   regular: number;
   member: number;
   duration?: string;
+  imageUrl?: string; // Service image URL (Cloudinary)
 }
 
 /**

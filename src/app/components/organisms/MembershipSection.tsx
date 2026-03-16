@@ -1,10 +1,10 @@
+import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Loader2, Gift } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext";
 import { useMembershipTiers } from "../../hooks/useMembershipTiers";
 import { MembershipCard } from "../molecules/MembershipCard";
 import { TIER_VISUALS } from "../../lib/membership-visuals";
-import { useNavigate } from "react-router-dom";
 import { RedeemSection } from "../membership/RedeemSection";
 
 interface MembershipSectionProps {

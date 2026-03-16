@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { CheckCircle, Loader2, XCircle, Gift, Phone, Sparkles } from 'lucide-react';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { MembershipUpgradeDialog } from '@/app/components/membership/MembershipUpgradeDialog';

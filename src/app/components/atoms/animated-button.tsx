@@ -1,5 +1,4 @@
-import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { Button, ButtonProps } from "./button";
 import { cn } from "./utils";
 

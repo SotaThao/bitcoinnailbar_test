@@ -18,11 +18,14 @@ import { Button } from "../../ui/button";
 import { Switch } from "../../ui/switch";
 import { SelectItem } from "../../ui/select";
 import { SelectField } from "../../ui/select-field";
+import { Textarea } from "../../ui/textarea";
+import { RichTextEditor } from "../../ui/rich-text-editor";
 import { validateServiceForm } from "../../../lib/service-menu-utils";
 import { toast } from "sonner";
-import { Search, Plus, X, Check } from "lucide-react";
+import { Search, Plus, X, Check, Upload, Trash2, Loader2 } from "lucide-react";
 import type { Service } from "../../../lib/admin-types";
 import type { ServiceCategory } from "../../../lib/service-constants";
+import { projectId, publicAnonKey } from "@utils/supabase/info";
 
 interface ServiceFormSheetProps {
   isOpen: boolean;
@@ -33,6 +36,7 @@ interface ServiceFormSheetProps {
   onSave: (
     formData: {
       name: string;
+      description?: string; // Service description
       category: string;
       groupName: string;
       price: string;
@@ -42,6 +46,7 @@ interface ServiceFormSheetProps {
       compatibleServiceIds: string[];
       ownerRecommended?: boolean;
       durationMinutes?: number;
+      imageUrl?: string; // Service image URL
     },
     editingServiceId?: string,
   ) => Promise<boolean>;
@@ -69,6 +74,7 @@ export function ServiceFormSheet({
 }: ServiceFormSheetProps) {
   const [formData, setFormData] = useState({
     name: "",
+    description: "", // Service description
     category: defaultCategory,
     groupName: "General",
     price: "",
@@ -79,10 +85,12 @@ export function ServiceFormSheet({
     selectedAddons: [] as string[],
     ownerRecommended: false, // NEW: Owner recommendation flag
     durationMinutes: 45,
+    imageUrl: "", // Service image URL
   });
 
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // New state for adding services on the fly
   const [isAddingService, setIsAddingService] = useState(false);
@@ -108,6 +116,7 @@ export function ServiceFormSheet({
     if (isOpen && editingService) {
       setFormData({
         name: editingService.name,
+        description: editingService.description || "", // Service description
         category:
           editingService.category || getInitialCategory(),
         groupName: editingService.groupName || "General",
@@ -127,11 +136,13 @@ export function ServiceFormSheet({
         ownerRecommended:
           editingService.ownerRecommended || false, // NEW: Owner recommendation flag
         durationMinutes: editingService.durationMinutes || 45,
+        imageUrl: editingService.imageUrl || "", // Service image URL
       });
     } else if (isOpen && !editingService) {
       // New service - use defaults
       setFormData({
         name: "",
+        description: "", // Service description
         category: getInitialCategory(),
         groupName: "General",
         price: "",
@@ -142,6 +153,7 @@ export function ServiceFormSheet({
         selectedAddons: [],
         ownerRecommended: false, // NEW: Owner recommendation flag
         durationMinutes: 45,
+        imageUrl: "", // Service image URL
       });
     }
 
@@ -266,6 +278,174 @@ export function ServiceFormSheet({
               placeholder="e.g. Gel Manicure"
               disabled={isSaving}
             />
+          </div>
+
+          {/* Service Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description">
+              Service Description
+              <span className="text-xs text-gray-400 ml-2 font-normal">
+                (Shown on /services page — supports rich formatting)
+              </span>
+            </Label>
+            <RichTextEditor
+              value={formData.description}
+              onChange={(html) =>
+                setFormData({
+                  ...formData,
+                  description: html,
+                })
+              }
+              placeholder="e.g. Transform your skin's radiance with a luxurious treatment featuring bath bomb, scrub, and hot stone massage..."
+              disabled={isSaving}
+              minHeight="100px"
+            />
+          </div>
+
+          {/* Service Image Upload */}
+          <div className="space-y-2">
+            <Label>
+              Service Image
+              <span className="text-xs text-gray-400 ml-2 font-normal">
+                (Optional - shown on /services page)
+              </span>
+            </Label>
+            {formData.imageUrl ? (
+              <div className="relative group rounded-lg overflow-hidden border border-gray-200">
+                <img
+                  src={formData.imageUrl}
+                  alt="Service preview"
+                  className="w-full h-36 object-cover"
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={isSaving || isUploadingImage}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 5 * 1024 * 1024) {
+                          toast.error("Image must be under 5MB");
+                          return;
+                        }
+                        setIsUploadingImage(true);
+                        try {
+                          const uploadForm = new FormData();
+                          uploadForm.append("file", file);
+                          const res = await fetch(
+                            `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/upload`,
+                            {
+                              method: "POST",
+                              headers: { Authorization: `Bearer ${publicAnonKey}` },
+                              body: uploadForm,
+                            }
+                          );
+                          const result = await res.json();
+                          if (result.success && result.url) {
+                            setFormData((prev) => ({ ...prev, imageUrl: result.url }));
+                            toast.success("Image updated");
+                          } else {
+                            toast.error(result.error || "Upload failed");
+                          }
+                        } catch (err) {
+                          console.error("Upload error:", err);
+                          toast.error("Failed to upload image");
+                        } finally {
+                          setIsUploadingImage(false);
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="pointer-events-none h-8 gap-1"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      Replace
+                    </Button>
+                  </label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    className="h-8 gap-1"
+                    onClick={() => {
+                      setFormData((prev) => ({ ...prev, imageUrl: "" }));
+                      toast.success("Image removed");
+                    }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remove
+                  </Button>
+                </div>
+                {isUploadingImage && (
+                  <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-[#FF9800]" />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={isSaving || isUploadingImage}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 5 * 1024 * 1024) {
+                      toast.error("Image must be under 5MB");
+                      return;
+                    }
+                    setIsUploadingImage(true);
+                    try {
+                      const uploadForm = new FormData();
+                      uploadForm.append("file", file);
+                      const res = await fetch(
+                        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/upload`,
+                        {
+                          method: "POST",
+                          headers: { Authorization: `Bearer ${publicAnonKey}` },
+                          body: uploadForm,
+                        }
+                      );
+                      const result = await res.json();
+                      if (result.success && result.url) {
+                        setFormData((prev) => ({ ...prev, imageUrl: result.url }));
+                        toast.success("Image uploaded");
+                      } else {
+                        toast.error(result.error || "Upload failed");
+                      }
+                    } catch (err) {
+                      console.error("Upload error:", err);
+                      toast.error("Failed to upload image");
+                    } finally {
+                      setIsUploadingImage(false);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+                <div className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#FF9800]/50 hover:bg-orange-50/30 transition-colors">
+                  {isUploadingImage ? (
+                    <Loader2 className="h-8 w-8 animate-spin text-[#FF9800] mb-2" />
+                  ) : (
+                    <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                  )}
+                  <span className="text-sm text-gray-500 font-medium">
+                    {isUploadingImage ? "Uploading..." : "Click to upload image"}
+                  </span>
+                  <span className="text-xs text-gray-400 mt-1">
+                    PNG, JPG up to 5MB
+                  </span>
+                </div>
+              </label>
+            )}
           </div>
 
           {/* Category & Group */}

@@ -17,7 +17,7 @@ import {
   Loader2,
   ChevronLeft,
 } from "lucide-react";
-import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
+import { Link, useLocation, useParams, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import image_9b76d043322193ecba98cb79a9c58c5abe8efbf0 from "figma:asset/9b76d043322193ecba98cb79a9c58c5abe8efbf0.png";
 import { AnimatedButton } from "../ui/animated-button";
@@ -266,7 +266,7 @@ export default function ServicesPage() {
                 // Filtered view - Show "Back to All Services" button
                 <>
                   <Button
-                    onClick={() => navigate("/services")}
+                    onClick={() => navigate("/menu")}
                     variant="ghost"
                     className="mb-4 text-gray-600 hover:text-[#FF9800]"
                   >
@@ -511,7 +511,7 @@ export default function ServicesPage() {
                                   <h4 className="text-sm font-bold text-[#FF9800] uppercase tracking-wider mb-4 border-b border-[#FF9800]/20 pb-2 inline-block">
                                     {group.name}
                                   </h4>
-                                  <div className="space-y-4">
+                                  <div className="space-y-0">
                                     {sortedServices.map(
                                       (
                                         item: any,
@@ -519,35 +519,74 @@ export default function ServicesPage() {
                                       ) => (
                                         <div
                                           key={iIdx}
-                                          className="flex justify-between items-start pb-2 border-b border-gray-200/50 last:border-0 hover:bg-white/50 p-2 rounded-lg transition-colors"
+                                          className="border-b border-gray-200 last:border-0 py-5 first:pt-2"
                                         >
-                                          <div className="flex-1">
-                                            <div className="flex items-center gap-2">
-                                              <span className="font-medium text-gray-800">
+                                          {/* Service Image - only show if imageUrl exists */}
+                                          {item.imageUrl && (
+                                            <div className="mb-3 rounded-xl overflow-hidden">
+                                              <img
+                                                src={item.imageUrl}
+                                                alt={item.name}
+                                                className="w-full h-48 sm:h-56 object-cover"
+                                                loading="lazy"
+                                              />
+                                            </div>
+                                          )}
+                                          {/* Top row: Service name + Price boxes */}
+                                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
+                                            {/* Service Name */}
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                              <h5 className="text-xl md:text-2xl font-serif font-extrabold italic leading-tight text-[#ff9800]"
+                                                style={{
+                                                  fontStyle: 'italic',
+                                                  letterSpacing: '0.02em',
+                                                }}
+                                              >
                                                 {item.name}
-                                              </span>
+                                              </h5>
                                               {item.owner_recommended && (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FF9800]/10 border border-[#FF9800]/30 text-[10px] font-bold text-[#FF9800] uppercase tracking-wide">
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FF9800]/10 border border-[#FF9800]/30 text-[10px] font-bold text-[#FF9800] uppercase tracking-wide shrink-0">
                                                   <Sparkles className="h-3 w-3" />
                                                   Pick
                                                 </span>
                                               )}
                                             </div>
-                                          </div>
-                                          <div className="text-right pl-4">
-                                            <div className="font-bold text-gray-900">
-                                              $
-                                              {item.regular ||
-                                                item.price ||
-                                                0}
-                                            </div>
-                                            {item.member && (
-                                              <div className="text-xs text-[#FF9800] font-bold">
-                                                VIP: $
-                                                {item.member}
+                                            {/* Price Boxes */}
+                                            <div className="flex items-stretch gap-3 shrink-0">
+                                              <div className="flex flex-col items-center justify-center px-5 py-2 border border-gray-300 rounded-md bg-white min-w-[90px]">
+                                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider leading-none mb-1">
+                                                  Regular:
+                                                </span>
+                                                <span className="text-lg font-bold text-gray-900 leading-none">
+                                                  ${item.regular || item.price || 0}
+                                                </span>
                                               </div>
-                                            )}
+                                              {item.member && (
+                                                <div className="flex flex-col items-center justify-center px-5 py-2 rounded-md bg-white border-2 border-[#FFC107] min-w-[90px]">
+                                                  <span className="text-[10px] font-bold text-[#E8A817] uppercase tracking-wider leading-none mb-1">
+                                                    ★ Member:
+                                                  </span>
+                                                  <span className="text-lg font-bold text-[#E8A817] leading-none">
+                                                    ${item.member}
+                                                  </span>
+                                                </div>
+                                              )}
+                                            </div>
                                           </div>
+                                          {/* Description row: Duration + Description */}
+                                          <p className="text-sm text-gray-600 leading-relaxed mt-2">
+                                            {(item.durationMinutes || item.duration) && (
+                                              <span className="font-bold text-gray-800">
+                                                Duration: {item.durationMinutes ? `${item.durationMinutes} minutes` : item.duration}.{' '}
+                                              </span>
+                                            )}
+                                            {item.description && (
+                                              <span
+                                                className="text-gray-600 [&_b]:font-bold [&_i]:italic [&_u]:underline [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4"
+                                                dangerouslySetInnerHTML={{ __html: item.description }}
+                                              />
+                                            )}
+                                          </p>
                                         </div>
                                       ),
                                     )}

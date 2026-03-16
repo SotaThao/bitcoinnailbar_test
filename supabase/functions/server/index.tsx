@@ -164,16 +164,28 @@ async function seedBuiltInRoles() {
     console.log('🌱 [SEED] Checking for built-in roles...');
     
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Seed timeout after 30s')), 30000)
+      setTimeout(() => reject(new Error('Seed timeout after 10s')), 10000)
     );
     
     const seedPromise = (async () => {
       try {
-        const existingRoles = await retry(() => kv.getByPrefix('role:'), 5, 500);
+        // Quick check with minimal retries
+        let existingRoles: any[] = [];
+        try {
+          existingRoles = await retry(() => kv.getByPrefix('role:'), 2, 300);
+        } catch {
+          console.log('⚠️ [SEED] Could not fetch existing roles, will attempt to seed anyway');
+          existingRoles = [];
+        }
         
         const hasAdminRole = existingRoles.some((r: any) => r.name === 'admin' && r.is_built_in);
         const hasStaffRole = existingRoles.some((r: any) => r.name === 'staff' && r.is_built_in);
         
+        if (hasAdminRole && hasStaffRole) {
+          console.log('✅ [SEED] Built-in roles already exist, skipping...');
+          return;
+        }
+
         // Seed Admin role if not exists
         if (!hasAdminRole) {
           const adminRoleId = crypto.randomUUID();
@@ -214,10 +226,6 @@ async function seedBuiltInRoles() {
           };
           await kv.set(`role:${staffRoleId}`, staffRole);
           console.log('✅ [SEED] Created built-in role: Staff');
-        }
-        
-        if (hasAdminRole && hasStaffRole) {
-          console.log('✅ [SEED] Built-in roles already exist, skipping...');
         }
       } catch (seedError) {
         console.error('❌ [SEED] Error in seed logic:', seedError);

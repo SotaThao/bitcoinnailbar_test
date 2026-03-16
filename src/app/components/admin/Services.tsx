@@ -136,6 +136,7 @@ export default function AdminServices() {
   const handleSaveService = async (
     formData: {
       name: string;
+      description?: string; // Service description
       category: string;
       groupName: string;
       price: string;
@@ -145,6 +146,7 @@ export default function AdminServices() {
       compatibleServiceIds: string[];
       ownerRecommended?: boolean; // NEW: Owner recommendation flag
       durationMinutes?: number;
+      imageUrl?: string; // Service image URL
     },
     editingServiceId?: string,
   ): Promise<boolean> => {
@@ -168,6 +170,7 @@ export default function AdminServices() {
     const result = await saveService(
       {
         name: service.name,
+        description: service.description, // Preserve description
         category: service.category,
         groupName: service.groupName,
         price: service.price,
@@ -179,6 +182,7 @@ export default function AdminServices() {
           service.compatibleServiceIds || [],
         ownerRecommended: service.owner_recommended, // Preserve owner recommendation flag
         durationMinutes: service.durationMinutes,
+        imageUrl: service.imageUrl, // Preserve service image
       },
       service.id,
       allCategories,
@@ -293,7 +297,7 @@ export default function AdminServices() {
     const success = await deleteCategory(categoryId);
     if (success) {
       console.log(
-        `��� [Services.tsx] Category ${categoryId} deleted successfully`,
+        ` [Services.tsx] Category ${categoryId} deleted successfully`,
       );
       // Optionally switch to another tab if deleted category was active
       if (allCategories.length > 0) {

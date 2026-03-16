@@ -22,6 +22,7 @@ interface UseServiceMenuReturn {
   saveService: (
     serviceData: {
       name: string;
+      description?: string; // Service description
       category: string;
       groupName: string;
       price: string;
@@ -30,6 +31,8 @@ interface UseServiceMenuReturn {
       serviceType: 'regular' | 'addon';
       compatibleServiceIds: string[];
       ownerRecommended?: boolean; // NEW: Owner recommendation flag
+      durationMinutes?: number;
+      imageUrl?: string; // Service image URL
     },
     editingServiceId?: string,
     allCategories?: Array<{ name: string; key: string }>
@@ -94,6 +97,7 @@ export function useServiceMenu(): UseServiceMenuReturn {
   const saveService = async (
     serviceData: {
       name: string;
+      description?: string; // Service description
       category: string;
       groupName: string;
       price: string;
@@ -102,6 +106,8 @@ export function useServiceMenu(): UseServiceMenuReturn {
       serviceType: 'regular' | 'addon';
       compatibleServiceIds: string[];
       ownerRecommended?: boolean; // NEW: Owner recommendation flag
+      durationMinutes?: number;
+      imageUrl?: string; // Service image URL
     },
     editingServiceId?: string,
     allCategories?: Array<{ name: string; key: string }>
@@ -141,12 +147,15 @@ export function useServiceMenu(): UseServiceMenuReturn {
         rawData,
         {
           name: serviceData.name,
+          description: serviceData.description || '', // Service description
           price: serviceData.price,
           memberPrice: serviceData.memberPrice || '',
           status: serviceData.status,
           serviceType: serviceData.serviceType,
           compatibleServiceIds: serviceData.compatibleServiceIds,
-          ownerRecommended: serviceData.ownerRecommended // NEW: Owner recommendation flag
+          ownerRecommended: serviceData.ownerRecommended, // NEW: Owner recommendation flag
+          durationMinutes: serviceData.durationMinutes, // Duration in minutes
+          imageUrl: serviceData.imageUrl, // Service image URL
         },
         categoryKey,
         serviceData.groupName,

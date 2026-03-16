@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 import { getSession, clearSession, getCurrentUser } from '/utils/auth';
 

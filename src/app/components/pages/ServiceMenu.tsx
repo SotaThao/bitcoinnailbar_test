@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router";
 import { motion } from "motion/react";
 import PublicLayout from "../PublicLayout";
 import { SEOHead } from "../shared/SEOHead";
@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  BookOpen,
 } from "lucide-react";
 import { Card } from "../ui/card";
 import {
@@ -154,6 +155,16 @@ export function ServiceMenu() {
             {t("services_page.service_menu.subtitle")}
           </h2>
           <div className="w-24 h-1 bg-[#FF9800] mx-auto mt-6"></div>
+
+          {/* Menu Bitcoin Nail Bar CTA Button */}
+          <Link
+            to="/menu"
+            className="inline-flex items-center gap-3 mt-8 px-8 py-4 bg-gradient-to-r from-[#0B0F19] to-[#1a1f2e] text-white font-bold text-base md:text-lg rounded-full shadow-[0_4px_20px_rgba(255,152,0,0.3)] hover:shadow-[0_8px_32px_rgba(255,152,0,0.5)] border border-[#FF9800]/30 hover:border-[#FF9800] transition-all duration-300 hover:scale-105 group"
+          >
+            <BookOpen className="h-5 w-5 text-[#FF9800] group-hover:scale-110 transition-transform duration-300" />
+            <span>Menu Bitcoin Nail Bar</span>
+            <span className="text-[#FF9800] group-hover:translate-x-1 transition-transform duration-300">&rarr;</span>
+          </Link>
         </motion.div>
 
         <motion.div
@@ -480,7 +491,7 @@ function ServiceAddons({
           className="flex justify-between items-center py-1.5 px-2 bg-orange-50 rounded transition-colors group border-l-2 border-orange-300"
         >
           <span className="text-sm text-gray-600 flex items-center gap-2">
-            <span className="text-orange-500">↳</span>
+            <span className="text-orange-500">&darr;</span>
             <span className="italic">{addon.name}</span>
           </span>
           <div className="flex gap-6 text-xs">

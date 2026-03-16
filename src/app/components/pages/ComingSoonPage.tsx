@@ -2,7 +2,7 @@ import React from "react";
 import PublicLayout from "../PublicLayout";
 import { Button } from "../ui/button";
 import { AnimatedButton } from "../ui/animated-button";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useLanguage } from "../../context/LanguageContext";
 import { Clock, Sparkles } from "lucide-react";
 import bitcoinLogo from "figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png";

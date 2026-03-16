@@ -3,7 +3,7 @@ import {
   Navigate,
   useLocation,
   useRoutes,
-} from "react-router-dom";
+} from "react-router";
 import { useState, useEffect, lazy, Suspense } from "react";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -130,23 +130,21 @@ export default function App() {
         if (result.success && result.data) {
           const promotionsData = result.data.promotions || [];
           
-          // 🔍 Debug: Log each promotion's structure
-          promotionsData.forEach((promo: any, index: number) => {
-            console.log(`🔍 [APP.TSX] Promotion ${index + 1}:`, {
-              id: promo.id,
-              type: promo.type,
-              enabled: promo.enabled,
-              featured: promo.featured,
-              hasVi: !!promo.vi,
-              hasEn: !!promo.en,
-              viTitle: promo.vi?.title,
-              enTitle: promo.en?.title,
-              viData: promo.vi,
-              enData: promo.en
-            });
+          // Sort newest first: numeric IDs (Date.now()) are newer, sort descending
+          const sortedPromotions = [...promotionsData].sort((a: Promotion, b: Promotion) => {
+            const aNum = Number(a.id);
+            const bNum = Number(b.id);
+            const aIsNumeric = !isNaN(aNum);
+            const bIsNumeric = !isNaN(bNum);
+            // Both numeric: newest (higher) first
+            if (aIsNumeric && bIsNumeric) return bNum - aNum;
+            // Numeric IDs are newer than string IDs
+            if (aIsNumeric && !bIsNumeric) return -1;
+            if (!aIsNumeric && bIsNumeric) return 1;
+            return 0;
           });
 
-          setPromotions(promotionsData);
+          setPromotions(sortedPromotions);
 
           const isHomepage = window.location.pathname === "/";
           if (isHomepage) {

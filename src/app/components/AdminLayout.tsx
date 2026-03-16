@@ -2,7 +2,7 @@ import {
   Link,
   useLocation,
   useNavigate,
-} from "react-router-dom";
+} from "react-router";
 import bitcoinLogo from "figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png";
 import {
   LayoutDashboard,

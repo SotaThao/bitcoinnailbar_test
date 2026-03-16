@@ -1,6 +1,6 @@
 import image_9b76d043322193ecba98cb79a9c58c5abe8efbf0 from "figma:asset/9b76d043322193ecba98cb79a9c58c5abe8efbf0.png";
 import image_36d0ff035d3f60c47a5c81a3484dd16ff2e9a5e6 from "figma:asset/36d0ff035d3f60c47a5c81a3484dd16ff2e9a5e6.png";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { motion } from "motion/react";
 import { Check } from "lucide-react";
 import { PrimaryButton } from "../PrimaryButton";

@@ -2,7 +2,7 @@ import { Button } from "@/app/components/ui/button";
 import { Card } from "@/app/components/ui/card";
 import { toast } from "sonner";
 import { projectId, publicAnonKey } from "@utils/supabase/info";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   DndContext,
   closestCenter,
@@ -31,6 +31,9 @@ import {
   X,
   Check,
   Image,
+  Files,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { Input } from "@/app/components/ui/input";
 
@@ -44,6 +47,14 @@ interface MenuImage {
   width: number;
   height: number;
   uploadedAt: string;
+}
+
+interface PendingFile {
+  file: File;
+  name: string;
+  preview: string;
+  status: "pending" | "uploading" | "done" | "error";
+  error?: string;
 }
 
 function SortableItem({
@@ -207,7 +218,7 @@ function SortableItem({
                 {image.public_id}
               </p>
               <p className="text-xs text-gray-400">
-                {image.width} × {image.height}
+                {image.width} &times; {image.height}
               </p>
             </>
           )}
@@ -268,10 +279,13 @@ export default function MenuUploadContent() {
   const [images, setImages] = useState<MenuImage[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [menuName, setMenuName] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(
-    null,
-  );
+
+  // Multiple upload state
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -294,6 +308,13 @@ export default function MenuUploadContent() {
     fetchImages();
   }, []);
 
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      pendingFiles.forEach((pf) => URL.revokeObjectURL(pf.preview));
+    };
+  }, [pendingFiles]);
+
   const fetchImages = async () => {
     try {
       const response = await fetch(
@@ -314,65 +335,183 @@ export default function MenuUploadContent() {
     }
   };
 
-  const handleFileSelect = (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
-      return;
-    }
-
-    // Validate file size (10MB max)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("Image size must be less than 10MB");
-      return;
-    }
-
-    setSelectedFile(file);
-    setMenuName("");
+  // Generate a default name from file name
+  const generateMenuName = (fileName: string): string => {
+    // Remove file extension and replace special chars
+    const name = fileName
+      .replace(/\.[^/.]+$/, "") // remove extension
+      .replace(/[_-]+/g, " ") // replace underscores/dashes with spaces
+      .replace(/\s+/g, " ") // normalize spaces
+      .trim();
+    // Capitalize first letter of each word
+    return name
+      .split(" ")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
   };
 
-  const handleUpload = async () => {
-    if (!selectedFile || !menuName.trim()) {
-      toast.error("Please provide a menu name");
+  const handleMultipleFileSelect = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+
+    const newPending: PendingFile[] = [];
+    const errors: string[] = [];
+
+    Array.from(fileList).forEach((file) => {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        errors.push(`${file.name}: Not an image file`);
+        return;
+      }
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        errors.push(`${file.name}: File size exceeds 10MB`);
+        return;
+      }
+
+      newPending.push({
+        file,
+        name: generateMenuName(file.name),
+        preview: URL.createObjectURL(file),
+        status: "pending",
+      });
+    });
+
+    if (errors.length > 0) {
+      errors.forEach((err) => toast.error(err));
+    }
+
+    if (newPending.length > 0) {
+      setPendingFiles((prev) => [...prev, ...newPending]);
+    }
+
+    // Reset input so same files can be selected again
+    e.target.value = "";
+  };
+
+  const updatePendingName = (index: number, name: string) => {
+    setPendingFiles((prev) =>
+      prev.map((pf, i) => (i === index ? { ...pf, name } : pf)),
+    );
+  };
+
+  const removePending = (index: number) => {
+    setPendingFiles((prev) => {
+      const removed = prev[index];
+      URL.revokeObjectURL(removed.preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleUploadAll = async () => {
+    const validFiles = pendingFiles.filter(
+      (pf) => pf.name.trim() && pf.status === "pending",
+    );
+
+    if (validFiles.length === 0) {
+      toast.error("Please provide names for all files");
+      return;
+    }
+
+    // Check all have names
+    const missingNames = pendingFiles.filter(
+      (pf) => !pf.name.trim() && pf.status === "pending",
+    );
+    if (missingNames.length > 0) {
+      toast.error(
+        `${missingNames.length} file(s) missing a name`,
+      );
       return;
     }
 
     setUploading(true);
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-    formData.append("name", menuName.trim());
-    formData.append("order", images.length.toString());
+    setUploadProgress({ current: 0, total: pendingFiles.length });
 
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/menu/upload`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${publicAnonKey}` },
-          body: formData,
-        },
+    let successCount = 0;
+    let currentOrder = images.length;
+
+    for (let i = 0; i < pendingFiles.length; i++) {
+      const pf = pendingFiles[i];
+      if (pf.status !== "pending") continue;
+
+      // Mark as uploading
+      setPendingFiles((prev) =>
+        prev.map((f, idx) =>
+          idx === i ? { ...f, status: "uploading" } : f,
+        ),
       );
+      setUploadProgress({ current: i + 1, total: pendingFiles.length });
 
-      const data = await response.json();
-      if (data.success) {
-        setImages([...images, data.data]);
-        toast.success("Menu image uploaded successfully");
-        setSelectedFile(null);
-        setMenuName("");
-      } else {
-        toast.error(data.error || "Upload failed");
+      const formData = new FormData();
+      formData.append("file", pf.file);
+      formData.append("name", pf.name.trim());
+      formData.append("order", currentOrder.toString());
+
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/admin/menu/upload`,
+          {
+            method: "POST",
+            headers: { Authorization: `Bearer ${publicAnonKey}` },
+            body: formData,
+          },
+        );
+
+        const data = await response.json();
+        if (data.success) {
+          setImages((prev) => [...prev, data.data]);
+          setPendingFiles((prev) =>
+            prev.map((f, idx) =>
+              idx === i ? { ...f, status: "done" } : f,
+            ),
+          );
+          successCount++;
+          currentOrder++;
+        } else {
+          setPendingFiles((prev) =>
+            prev.map((f, idx) =>
+              idx === i
+                ? {
+                    ...f,
+                    status: "error",
+                    error: data.error || "Upload failed",
+                  }
+                : f,
+            ),
+          );
+        }
+      } catch (error) {
+        console.error("Upload error:", error);
+        setPendingFiles((prev) =>
+          prev.map((f, idx) =>
+            idx === i
+              ? { ...f, status: "error", error: "Network error" }
+              : f,
+          ),
+        );
       }
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error("Failed to upload image");
-    } finally {
-      setUploading(false);
     }
+
+    setUploading(false);
+    setUploadProgress(null);
+
+    if (successCount > 0) {
+      toast.success(
+        `${successCount} image${successCount > 1 ? "s" : ""} uploaded successfully`,
+      );
+    }
+
+    // Remove completed files after a short delay
+    setTimeout(() => {
+      setPendingFiles((prev) => {
+        prev
+          .filter((pf) => pf.status === "done")
+          .forEach((pf) => URL.revokeObjectURL(pf.preview));
+        return prev.filter((pf) => pf.status !== "done");
+      });
+    }, 1500);
   };
 
   const handleDelete = async (id: string) => {
@@ -498,73 +637,173 @@ export default function MenuUploadContent() {
     <div className="max-w-4xl">
       {/* Upload Section */}
       <Card className="p-6 mb-6">
-        {!selectedFile ? (
-          <label className="block">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              disabled={uploading}
-              className="hidden"
-            />
-            <Button
-              disabled={uploading}
-              className="w-full bg-[#FF9F1C] hover:bg-[#E68F0F] text-white"
-              onClick={(e) => {
-                e.preventDefault();
-                (
-                  e.target as HTMLButtonElement
-                ).previousElementSibling?.dispatchEvent(
-                  new MouseEvent("click"),
-                );
-              }}
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Menu Image
-            </Button>
-          </label>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <ImageIcon className="w-5 h-5 text-gray-400" />
-              <span className="text-sm text-gray-700 flex-1">
-                {selectedFile.name}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSelectedFile(null);
-                  setMenuName("");
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                Change
-              </Button>
-            </div>
+        {/* Drop Zone / File Selector */}
+        <label className="block cursor-pointer">
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleMultipleFileSelect}
+            disabled={uploading}
+            className="hidden"
+            id="menu-file-input"
+          />
+          <div
+            className="border-2 border-dashed border-gray-300 hover:border-[#FF9F1C] rounded-xl p-8 text-center transition-colors"
+            onClick={(e) => {
+              e.preventDefault();
+              document
+                .getElementById("menu-file-input")
+                ?.click();
+            }}
+          >
+            <Files className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+            <p className="text-sm font-medium text-gray-700">
+              Click to select images
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Select multiple files at once &bull; PNG, JPG, WebP
+              &bull; Max 10MB each
+            </p>
+          </div>
+        </label>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Menu Name *
-              </label>
-              <Input
-                type="text"
-                value={menuName}
-                onChange={(e) => setMenuName(e.target.value)}
-                placeholder="e.g., Acrylic Services, Pedicure Menu, Spa Treatments"
-                className="w-full"
-                disabled={uploading}
-              />
-              <p className="text-xs text-gray-500">
-                This name will appear in the homepage services
-                dropdown
+        {/* Pending Files Preview */}
+        {pendingFiles.length > 0 && (
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-gray-700">
+                {pendingFiles.length} file
+                {pendingFiles.length > 1 ? "s" : ""} selected
               </p>
+              {!uploading && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    pendingFiles.forEach((pf) =>
+                      URL.revokeObjectURL(pf.preview),
+                    );
+                    setPendingFiles([]);
+                  }}
+                  className="text-gray-500 hover:text-red-600 text-xs"
+                >
+                  Clear All
+                </Button>
+              )}
             </div>
 
+            {/* File List */}
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {pendingFiles.map((pf, index) => (
+                <div
+                  key={index}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                    pf.status === "done"
+                      ? "bg-green-50 border-green-200"
+                      : pf.status === "error"
+                        ? "bg-red-50 border-red-200"
+                        : pf.status === "uploading"
+                          ? "bg-orange-50 border-orange-200"
+                          : "bg-gray-50 border-gray-200"
+                  }`}
+                >
+                  {/* Preview Thumbnail */}
+                  <img
+                    src={pf.preview}
+                    alt={pf.name}
+                    className="w-12 h-16 object-cover rounded border border-gray-200 flex-shrink-0"
+                  />
+
+                  {/* Name Input */}
+                  <div className="flex-1 min-w-0">
+                    <Input
+                      type="text"
+                      value={pf.name}
+                      onChange={(e) =>
+                        updatePendingName(index, e.target.value)
+                      }
+                      placeholder="Menu name *"
+                      className="text-sm h-8"
+                      disabled={
+                        uploading || pf.status !== "pending"
+                      }
+                    />
+                    <p className="text-[10px] text-gray-400 mt-0.5 truncate">
+                      {pf.file.name} &bull;{" "}
+                      {(pf.file.size / 1024 / 1024).toFixed(1)}MB
+                    </p>
+                    {pf.error && (
+                      <p className="text-[10px] text-red-500 mt-0.5">
+                        {pf.error}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Status / Actions */}
+                  <div className="flex-shrink-0">
+                    {pf.status === "uploading" ? (
+                      <Loader2 className="w-5 h-5 text-[#FF9F1C] animate-spin" />
+                    ) : pf.status === "done" ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    ) : pf.status === "error" ? (
+                      <AlertCircle className="w-5 h-5 text-red-500" />
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removePending(index)}
+                        disabled={uploading}
+                        className="text-gray-400 hover:text-red-500 p-1 h-auto"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Upload Progress Bar */}
+            {uploadProgress && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>
+                    Uploading {uploadProgress.current} of{" "}
+                    {uploadProgress.total}
+                  </span>
+                  <span>
+                    {Math.round(
+                      (uploadProgress.current /
+                        uploadProgress.total) *
+                        100,
+                    )}
+                    %
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#FF9F1C] rounded-full transition-all duration-300"
+                    style={{
+                      width: `${(uploadProgress.current / uploadProgress.total) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Upload All Button */}
             <div className="flex gap-2">
               <Button
-                onClick={handleUpload}
-                disabled={uploading || !menuName.trim()}
+                onClick={handleUploadAll}
+                disabled={
+                  uploading ||
+                  pendingFiles.every((pf) => pf.status !== "pending") ||
+                  pendingFiles.some(
+                    (pf) =>
+                      pf.status === "pending" && !pf.name.trim(),
+                  )
+                }
                 className="flex-1 bg-[#FF9F1C] hover:bg-[#E68F0F] text-white"
               >
                 {uploading ? (
@@ -575,15 +814,28 @@ export default function MenuUploadContent() {
                 ) : (
                   <>
                     <Upload className="w-4 h-4 mr-2" />
-                    Upload
+                    Upload{" "}
+                    {
+                      pendingFiles.filter(
+                        (pf) => pf.status === "pending",
+                      ).length
+                    }{" "}
+                    Image
+                    {pendingFiles.filter(
+                      (pf) => pf.status === "pending",
+                    ).length > 1
+                      ? "s"
+                      : ""}
                   </>
                 )}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => {
-                  setSelectedFile(null);
-                  setMenuName("");
+                  pendingFiles.forEach((pf) =>
+                    URL.revokeObjectURL(pf.preview),
+                  );
+                  setPendingFiles([]);
                 }}
                 disabled={uploading}
                 className="border-gray-200"
@@ -594,7 +846,7 @@ export default function MenuUploadContent() {
           </div>
         )}
 
-        {!selectedFile && (
+        {pendingFiles.length === 0 && (
           <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
             <p className="text-sm text-gray-500">
               Images will be displayed in the order shown below.
@@ -621,7 +873,7 @@ export default function MenuUploadContent() {
         <div className="space-y-3">
           <p className="text-sm text-gray-600 mb-3">
             {images.length} page{images.length !== 1 ? "s" : ""}{" "}
-            • Drag to reorder
+            &bull; Drag to reorder
           </p>
           <DndContext
             sensors={sensors}

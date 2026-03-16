@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router";
 import { projectId, publicAnonKey } from "@utils/supabase/info";
 import { Button } from "../ui/button";
 import {

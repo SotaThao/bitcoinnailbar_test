@@ -24,6 +24,16 @@
   animation: scan-line 3s ease-in-out infinite;
 }
 
+/* Glow Ring Animation for CTA Buttons */
+@keyframes glowring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 0 20px rgba(255, 152, 0, 0);
+  }
+}
+
 /* React Quill Editor Custom Styling */
 .ql-toolbar.ql-snow {
   border: 1px solid #e5e7eb !important;

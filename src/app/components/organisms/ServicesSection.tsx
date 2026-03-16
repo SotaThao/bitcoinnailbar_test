@@ -3,7 +3,7 @@ import image_4c53ac85990ea0966b502d0b4c5cd5321aa1c6ed from "figma:asset/4c53ac85
 import image_e9fb9c0c13fe1065d00d86ae9ec5a02351b4726f from "figma:asset/e9fb9c0c13fe1065d00d86ae9ec5a02351b4726f.png";
 import image_ea3be441ab727782ea25f3a0f385538edfb86ce6 from "figma:asset/ea3be441ab727782ea25f3a0f385538edfb86ce6.png";
 import image_41a58bb299d35b49e46df2890074430c728972c1 from "figma:asset/41a58bb299d35b49e46df2890074430c728972c1.png";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { motion } from "motion/react";
 import { PrimaryButton } from "../PrimaryButton";
 import { ImageWithFallback } from "../figma/ImageWithFallback";

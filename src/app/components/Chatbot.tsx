@@ -60,18 +60,23 @@ export function Chatbot() {
   // Hide chatbot when payment modal is open
   const [isPaymentModalOpen, setIsPaymentModalOpen] =
     useState(false);
+  const [isMenuScrollingDown, setIsMenuScrollingDown] =
+    useState(false);
 
   useEffect(() => {
-    const checkPaymentModal = () => {
+    const checkBodyClasses = () => {
       setIsPaymentModalOpen(
         document.body.classList.contains("payment-modal-open"),
+      );
+      setIsMenuScrollingDown(
+        document.body.classList.contains("menu-scrolling-down"),
       );
     };
 
     // Check on mount and set up observer
-    checkPaymentModal();
+    checkBodyClasses();
 
-    const observer = new MutationObserver(checkPaymentModal);
+    const observer = new MutationObserver(checkBodyClasses);
     observer.observe(document.body, {
       attributes: true,
       attributeFilter: ["class"],
@@ -589,7 +594,7 @@ export function Chatbot() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {showBubble && !isOpen && !isPaymentModalOpen && (
+        {showBubble && !isOpen && !isPaymentModalOpen && !isMenuScrollingDown && (
           <motion.div
             initial={{ opacity: 0, y: 10, scale: 0.8, x: 0 }}
             animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
@@ -614,9 +619,9 @@ export function Chatbot() {
           whileTap={{ scale: 0.9 }}
           initial={{ opacity: 0, scale: 0 }}
           animate={{
-            opacity: chatbotAvatar ? 1 : 0,
-            scale: chatbotAvatar ? 1 : 0,
-            boxShadow: chatbotAvatar
+            opacity: chatbotAvatar && !isMenuScrollingDown ? 1 : 0,
+            scale: chatbotAvatar && !isMenuScrollingDown ? 1 : 0,
+            boxShadow: chatbotAvatar && !isMenuScrollingDown
               ? [
                   "0 0 0 0 rgba(255, 152, 0, 0.7)",
                   "0 0 0 20px rgba(255, 152, 0, 0)",
@@ -624,10 +629,15 @@ export function Chatbot() {
               : "0 0 0 0 rgba(255, 152, 0, 0)",
           }}
           transition={{
+            opacity: { duration: 0.3 },
+            scale: { duration: 0.3 },
             boxShadow: {
               duration: 1.5,
               repeat: Infinity,
             },
+          }}
+          style={{
+            pointerEvents: isMenuScrollingDown ? "none" : "auto",
           }}
         >
           {chatbotAvatar ? (

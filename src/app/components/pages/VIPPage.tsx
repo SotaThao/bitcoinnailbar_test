@@ -8,7 +8,7 @@ import {
   Check,
 } from "lucide-react";
 import { PrimaryButton } from "../PrimaryButton";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useLanguage } from "../../context/LanguageContext";
 
 export default function VIPPage() {

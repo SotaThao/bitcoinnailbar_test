@@ -1,7 +1,7 @@
 import PublicLayout from "../PublicLayout";
 import { MembershipSection } from "../organisms/MembershipSection";
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import { toast } from "sonner";
 
 export default function MembershipPage() {
