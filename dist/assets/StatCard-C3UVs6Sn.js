@@ -1,0 +1,6 @@
+import{k as o,q as s,z as i,A as h}from"./index-XvWzfNVq.js";/**
+ * @license lucide-react v0.487.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const l=[["path",{d:"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8",key:"v9h5vc"}],["path",{d:"M21 3v5h-5",key:"1q7to0"}],["path",{d:"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16",key:"3uifl3"}],["path",{d:"M8 16H3v5",key:"1cv678"}]],m=o("refresh-cw",l);function p({title:e,value:a,subtext:t,icon:r,iconBg:d="bg-gray-50",iconColor:c="text-gray-600",valueColor:n="text-gray-900"}){return s.jsx(i,{className:"bg-white border-none shadow-sm hover:shadow-md transition-shadow",children:s.jsxs(h,{className:"p-6",children:[s.jsxs("div",{className:"flex justify-between items-start mb-4",children:[s.jsx("span",{className:"font-semibold text-gray-700 text-sm",children:e}),s.jsx("div",{className:`p-2 rounded-lg ${d}`,children:s.jsx(r,{className:`h-4 w-4 ${c}`})})]}),s.jsxs("div",{className:"space-y-1",children:[s.jsx("h3",{className:`text-3xl font-bold ${n}`,children:a}),s.jsx("p",{className:"text-xs text-gray-500 font-medium",children:t})]})]})})}export{m as R,p as S};
