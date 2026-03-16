@@ -566,6 +566,8 @@ export default function BookingPage() {
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // STEP 2: Create Appointment
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      const resolvedStaffId = selectedStaff || staff[0]?.id;
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/appointments`,
         {
@@ -579,17 +581,7 @@ export default function BookingPage() {
             customerPhone,
             customerEmail: validEmail,
             branchId: selectedBranch || branches[0]?.id,
-            staffId: selectedStaff || staff[0]?.id, // This might use first staff if "No Preference" is kept empty,
-            // BUT backend now allows booking without staffId?
-            // Actually "No Preference" in UI sets selectedStaff = ''.
-            // When booking, we should probably assign a staff member automatically or keep it unassigned.
-            // For now, let's keep logic: if selectedStaff is empty, pick the first one available or random?
-            // The backend 'availability' logic checked availability for ANY staff.
-            // But for creating appointment, we usually need to assign someone.
-            // Let's assign random if empty for now or first one.
-            staffId: selectedStaff || staff[0]?.id, // Default to first staff if none selected (Simple fallback)
-            // Ideally we should pick the staff who was "free" in the slot we picked.
-            // But simplified logic is acceptable for now.
+            staffId: resolvedStaffId,
             serviceIds: selectedServices,
             serviceNames: selectedServices
               .map(
