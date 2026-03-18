@@ -11,22 +11,11 @@ export default defineConfig({
     tailwindcss(),
   ],
   resolve: {
-    alias: [
-      {
-        // Support Make/Figma asset imports when building in plain Vite
-        find: /^figma:asset\//,
-        replacement: `${path.resolve(__dirname, './src/assets')}/`,
-      },
-      {
-        // Alias @ to the src directory
-        find: '@',
-        replacement: path.resolve(__dirname, './src'),
-      },
-      {
-        // Alias for root-level utils folder
-        find: '@utils',
-        replacement: path.resolve(__dirname, './utils'),
-      },
-    ],
+    alias: {
+      // Alias @ to the src directory
+      '@': path.resolve(__dirname, './src'),
+      // Alias for root-level utils folder
+      '@utils': path.resolve(__dirname, './utils'),
+    },
   },
 })

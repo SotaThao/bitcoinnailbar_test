@@ -1,7 +1,6 @@
-import './_shared_console.tsx';
-
 import { Hono } from 'npm:hono@4.6.14';
 import { cors } from 'npm:hono/cors';
+import { logger } from 'npm:hono/logger';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SHARED UTILITIES (Phase 1 Refactor)
@@ -82,6 +81,7 @@ import { utilitiesApp } from './utilities.tsx'; // 7 routes: upload, menu images
 
 const app = new Hono();
 
+app.use('*', logger(console.log));
 app.use('*', cors({
   origin: '*',
   allowHeaders: ['Content-Type', 'Authorization', 'X-Session-Token'],

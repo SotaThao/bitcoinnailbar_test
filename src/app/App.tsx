@@ -8,6 +8,8 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+import "@/utils/disableConsoleLogs";
+
 import HomePage from "@/app/components/pages/HomePage";
 import ServicesPage from "@/app/components/pages/ServicesPage";
 import BookingPage from "@/app/components/pages/BookingPage";
