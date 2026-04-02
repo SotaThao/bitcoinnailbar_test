@@ -174,6 +174,12 @@ payrollApp.get("/make-server-84f9c112/analytics/revenue", async (c) => {
  * ✅ REFACTORED: Now reads staff from Postgres technician_info, appointments from Postgres appointment_info
  * Services still from KV Store (not yet migrated)
  */
+/** Prefer nick_name / nickname for UI; fall back to legal name. */
+function staffDisplayName(s: { name?: string; nick_name?: string | null; nickname?: string | null }) {
+  const nick = (s.nick_name ?? s.nickname ?? "").toString().trim();
+  return nick || (s.name ?? "");
+}
+
 payrollApp.get("/make-server-84f9c112/dashboard/stats", async (c) => {
   try {
     const supabase = getSupabaseClient();
@@ -297,7 +303,7 @@ payrollApp.get("/make-server-84f9c112/dashboard/stats", async (c) => {
           id: `#${appt.id.substring(0, 6)}`,
           client: appt.customer_name,
           service: serviceName,
-          staff: staffMember ? staffMember.name : 'Unassigned',
+          staff: staffMember ? staffDisplayName(staffMember) : 'Unassigned',
           price: `$${price.toFixed(2)}`,
           status: appt.status
         };
@@ -337,7 +343,7 @@ payrollApp.get("/make-server-84f9c112/dashboard/stats", async (c) => {
       }
       
       return {
-        name: s.name,
+        name: staffDisplayName(s),
         status: isBusy ? 'Busy' : 'Available',
         color: isBusy ? 'bg-orange-500' : 'bg-green-500',
         text: isBusy ? `Busy until ${busyUntil}` : 'Available',

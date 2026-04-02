@@ -24,6 +24,58 @@ import { getSupabaseClient } from './_shared_supabase_client.tsx';
 const app = new Hono();
 const supabase = getSupabaseClient();
 
+/** UI sends `nickname`; Postgres column is `nick_name`. */
+function nickNameToDb(body: any): string | null {
+  const raw = body.nickname ?? body.nick_name;
+  if (raw === undefined || raw === null) return null;
+  const s = String(raw).trim();
+  return s === "" ? null : s;
+}
+
+/** Postgres rejects `""` for numeric columns — treat blank / invalid as null. */
+function optionalDecimal(value: unknown): number | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value === "string" && value.trim() === "") return null;
+  const n = typeof value === "number" ? value : Number(String(value).trim());
+  return Number.isFinite(n) ? n : null;
+}
+
+function optionalInt(value: unknown): number | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value === "string" && value.trim() === "") return null;
+  const n = parseInt(String(value).trim(), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function decimalOrDefault(value: unknown, defaultVal: number): number {
+  const v = optionalDecimal(value);
+  return v === null ? defaultVal : v;
+}
+
+/** Empty date strings → null for DATE / TIMESTAMPTZ columns. */
+function optionalDate(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  const s = String(value).trim();
+  return s === "" ? null : s;
+}
+
+/** Expose camelCase fields the admin UI expects (`hireDate`, `licenseNumber`, etc.). */
+function mapStaffRow(row: any) {
+  if (!row || typeof row !== "object") return row;
+  const hourly = row.hourly_rate ?? row.hourlyRate ?? row.baseHourlyRate;
+  return {
+    ...row,
+    nickname: row.nick_name ?? row.nickname ?? null,
+    hireDate: row.hire_date ?? row.hireDate ?? "",
+    licenseNumber: row.license_number ?? row.licenseNumber ?? "",
+    baseHourlyRate:
+      hourly != null && hourly !== ""
+        ? String(hourly)
+        : row.baseHourlyRate ?? "",
+    role: row.role ?? "Nail Technician",
+  };
+}
+
 // ========== GET ALL STAFF ==========
 app.get('/make-server-84f9c112/staff', async (c) => {
   try {
@@ -38,7 +90,8 @@ app.get('/make-server-84f9c112/staff', async (c) => {
     }
     
     console.log(`✅ [GET STAFF] Returning ${staff?.length || 0} technicians from Postgres`);
-    return c.json({ success: true, data: staff || [] });
+    const rows = (staff || []).map(mapStaffRow);
+    return c.json({ success: true, data: rows });
   } catch (e) {
     console.error('❌ [GET STAFF] Error:', e);
     return c.json({ success: false, error: String(e) }, 500);
@@ -53,18 +106,31 @@ app.post('/make-server-84f9c112/staff', async (c) => {
     // Transform to Postgres schema
     const technicianData = {
       name: body.name,
+      role: body.role ?? null,
+      nick_name: nickNameToDb(body),
       phone: body.phone || null,
       email: body.email || null,
       avatar_url: body.avatar || body.avatarUrl || null,
       employment_type: body.employmentType || body.employment_type || null,
-      license_number: body.licenseNumber || body.license_number || null,
-      license_expiry: body.licenseExpiry || body.license_expiry || null,
-      commission_rate: body.commissionRate || body.commission_rate || 40.00,
-      hourly_rate: body.hourlyRate || body.hourly_rate || null,
+      license_number: body.licenseNumber ?? body.license_number ?? null,
+      license_expiry: optionalDate(
+        body.licenseExpiry ?? body.license_expiry,
+      ),
+      commission_rate: decimalOrDefault(
+        body.commissionRate ?? body.commission_rate,
+        40.0,
+      ),
+      hourly_rate: optionalDecimal(
+        body.hourlyRate ?? body.hourly_rate ?? body.baseHourlyRate,
+      ),
       specialties: Array.isArray(body.specialties) ? body.specialties : [],
-      rating: body.rating || 4.0,
-      total_income: body.totalIncome || body.total_income || 0,
-      total_appointments: body.totalAppointments || body.total_appointments || 0,
+      rating: decimalOrDefault(body.rating, 4.0),
+      total_income: decimalOrDefault(
+        body.totalIncome ?? body.total_income,
+        0,
+      ),
+      total_appointments:
+        optionalInt(body.totalAppointments ?? body.total_appointments) ?? 0,
       is_available: body.isAvailable !== false,
       unavailable_until: body.unavailableUntil || body.unavailable_until || null,
       unavailable_reason: body.unavailableReason || body.unavailable_reason || null,
@@ -76,8 +142,10 @@ app.post('/make-server-84f9c112/staff', async (c) => {
       emergency_contact_phone: body.emergencyContactPhone || body.emergency_contact_phone || null,
       emergency_contact_relationship: body.emergencyContactRelationship || body.emergency_contact_relationship || null,
       notes: body.notes || null,
-      hire_date: body.hireDate || body.hire_date || null,
-      termination_date: body.terminationDate || body.termination_date || null,
+      hire_date: optionalDate(body.hireDate ?? body.hire_date),
+      termination_date: optionalDate(
+        body.terminationDate ?? body.termination_date,
+      ),
     };
     
     const { data: newStaff, error } = await supabase
@@ -92,7 +160,7 @@ app.post('/make-server-84f9c112/staff', async (c) => {
     }
     
     console.log(`✅ [CREATE STAFF] Created: ${newStaff.id} - ${newStaff.name}`);
-    return c.json({ success: true, data: newStaff });
+    return c.json({ success: true, data: mapStaffRow(newStaff) });
   } catch (error: any) {
     console.error('❌ [CREATE STAFF] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
@@ -123,6 +191,9 @@ app.put('/make-server-84f9c112/staff/:id', async (c) => {
     };
     
     if (body.name !== undefined) updateData.name = body.name;
+    if (body.nickname !== undefined || body.nick_name !== undefined) {
+      updateData.nick_name = nickNameToDb(body);
+    }
     if (body.phone !== undefined) updateData.phone = body.phone;
     if (body.email !== undefined) updateData.email = body.email;
     if (body.avatar !== undefined || body.avatarUrl !== undefined) {
@@ -132,24 +203,43 @@ app.put('/make-server-84f9c112/staff/:id', async (c) => {
       updateData.employment_type = body.employmentType || body.employment_type;
     }
     if (body.licenseNumber !== undefined || body.license_number !== undefined) {
-      updateData.license_number = body.licenseNumber || body.license_number;
+      updateData.license_number = body.licenseNumber ?? body.license_number;
     }
     if (body.licenseExpiry !== undefined || body.license_expiry !== undefined) {
-      updateData.license_expiry = body.licenseExpiry || body.license_expiry;
+      updateData.license_expiry = optionalDate(
+        body.licenseExpiry ?? body.license_expiry,
+      );
+    }
+    if (body.role !== undefined) {
+      updateData.role = body.role;
     }
     if (body.commissionRate !== undefined || body.commission_rate !== undefined) {
-      updateData.commission_rate = body.commissionRate || body.commission_rate;
+      updateData.commission_rate =
+        optionalDecimal(body.commissionRate ?? body.commission_rate) ?? 40;
     }
-    if (body.hourlyRate !== undefined || body.hourly_rate !== undefined) {
-      updateData.hourly_rate = body.hourlyRate || body.hourly_rate;
+    if (
+      body.hourlyRate !== undefined ||
+      body.hourly_rate !== undefined ||
+      body.baseHourlyRate !== undefined
+    ) {
+      let hourlyVal: unknown = undefined;
+      if (body.hourlyRate !== undefined) hourlyVal = body.hourlyRate;
+      else if (body.hourly_rate !== undefined) hourlyVal = body.hourly_rate;
+      else hourlyVal = body.baseHourlyRate;
+      updateData.hourly_rate = optionalDecimal(hourlyVal);
     }
     if (body.specialties !== undefined) updateData.specialties = body.specialties;
-    if (body.rating !== undefined) updateData.rating = body.rating;
+    if (body.rating !== undefined) {
+      const r = optionalDecimal(body.rating);
+      updateData.rating = r === null ? 4.0 : r;
+    }
     if (body.totalIncome !== undefined || body.total_income !== undefined) {
-      updateData.total_income = body.totalIncome || body.total_income;
+      const ti = optionalDecimal(body.totalIncome ?? body.total_income);
+      updateData.total_income = ti === null ? 0 : ti;
     }
     if (body.totalAppointments !== undefined || body.total_appointments !== undefined) {
-      updateData.total_appointments = body.totalAppointments || body.total_appointments;
+      updateData.total_appointments =
+        optionalInt(body.totalAppointments ?? body.total_appointments) ?? 0;
     }
     if (body.isAvailable !== undefined || body.is_available !== undefined) {
       updateData.is_available = body.isAvailable !== undefined ? body.isAvailable : body.is_available;
@@ -177,10 +267,12 @@ app.put('/make-server-84f9c112/staff/:id', async (c) => {
     }
     if (body.notes !== undefined) updateData.notes = body.notes;
     if (body.hireDate !== undefined || body.hire_date !== undefined) {
-      updateData.hire_date = body.hireDate || body.hire_date;
+      updateData.hire_date = optionalDate(body.hireDate ?? body.hire_date);
     }
     if (body.terminationDate !== undefined || body.termination_date !== undefined) {
-      updateData.termination_date = body.terminationDate || body.termination_date;
+      updateData.termination_date = optionalDate(
+        body.terminationDate ?? body.termination_date,
+      );
     }
     
     const { data: updatedStaff, error } = await supabase
@@ -196,7 +288,7 @@ app.put('/make-server-84f9c112/staff/:id', async (c) => {
     }
     
     console.log(`✅ [UPDATE STAFF] Updated: ${id} - ${updatedStaff.name}`);
-    return c.json({ success: true, data: updatedStaff });
+    return c.json({ success: true, data: mapStaffRow(updatedStaff) });
   } catch (error: any) {
     console.error('❌ [UPDATE STAFF] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
@@ -234,7 +326,7 @@ app.post('/make-server-84f9c112/staff/seed', async (c) => {
     const seedStaff = [
       {
         name: "Jennifer Martinez",
-        nickname: "Jenny",
+        nick_name: "Jenny",
         phone: "(714) 555-0123",
         email: "jennifer.martinez@bitcoinnailbar.com",
         role: "Lead Technician",
@@ -251,7 +343,7 @@ app.post('/make-server-84f9c112/staff/seed', async (c) => {
       },
       {
         name: "Linda Nguyen",
-        nickname: "Linda",
+        nick_name: "Linda",
         phone: "(714) 555-0145",
         email: "linda.nguyen@bitcoinnailbar.com",
         role: "Senior Nail Artist",
@@ -268,7 +360,7 @@ app.post('/make-server-84f9c112/staff/seed', async (c) => {
       },
       {
         name: "Sarah Johnson",
-        nickname: "Sarah",
+        nick_name: "Sarah",
         phone: "(714) 555-0167",
         email: "sarah.johnson@bitcoinnailbar.com",
         role: "Nail Technician",
@@ -285,7 +377,7 @@ app.post('/make-server-84f9c112/staff/seed', async (c) => {
       },
       {
         name: "Mai Tran",
-        nickname: "Mai",
+        nick_name: "Mai",
         phone: "(714) 555-0189",
         email: "mai.tran@bitcoinnailbar.com",
         role: "Pedicure Specialist",
@@ -302,7 +394,7 @@ app.post('/make-server-84f9c112/staff/seed', async (c) => {
       },
       {
         name: "Jessica Lee",
-        nickname: "Jess",
+        nick_name: "Jess",
         phone: "(714) 555-0201",
         email: "jessica.lee@bitcoinnailbar.com",
         role: "Nail Technician",
@@ -319,7 +411,7 @@ app.post('/make-server-84f9c112/staff/seed', async (c) => {
       },
       {
         name: "Emily Chen",
-        nickname: "Em",
+        nick_name: "Em",
         phone: "(714) 555-0223",
         email: "emily.chen@bitcoinnailbar.com",
         role: "Apprentice",
@@ -349,7 +441,7 @@ app.post('/make-server-84f9c112/staff/seed', async (c) => {
         continue;
       }
       
-      created.push(newStaff);
+      created.push(mapStaffRow(newStaff));
       console.log(`✅ [SEED STAFF] Created: ${newStaff.name}`);
       
       // Small delay to avoid race conditions

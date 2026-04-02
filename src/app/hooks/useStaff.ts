@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { apiClient } from '../lib/api-client';
 import type { Staff } from '../lib/admin-types';
+import { normalizeStaffList } from '@/app/lib/staffNickName';
 
 export function useStaff() {
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -21,7 +22,7 @@ export function useStaff() {
       const response = await apiClient.staff.getAll();
 
       if (response.success && response.data) {
-        setStaff(response.data);
+        setStaff(normalizeStaffList(response.data) as Staff[]);
       } else {
         const errorMsg = response.error || 'Failed to load staff';
         setError(errorMsg);

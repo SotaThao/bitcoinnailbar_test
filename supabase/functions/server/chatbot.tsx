@@ -1,13 +1,15 @@
 import { Hono } from 'npm:hono@4.6.14';
 import { kvAdmin as kv } from './_shared_kv.tsx';
-import { createAppointment } from './appointments.tsx';
+
+const EXTERNAL_BOOKING_URL =
+  'https://nailsolutionplus.firebaseapp.com/?storeKey=-OiuBNzy2Knxtk0uDGmn';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // WAVE 7 - Chatbot Module
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Extracted from index.tsx (lines 1826-2312, ~486 lines)
 // POST /make-server-84f9c112/chat - DeepSeek AI Chatbot with Function Calling
-// Dependencies: createAppointment from appointments.tsx
+// Booking: directs users to Nail Solution Plus (external URL); no in-chat appointment creation.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const app = new Hono();
@@ -322,7 +324,7 @@ app.post("/make-server-84f9c112/chat", async (c) => {
     1. ALWAYS mention the grand opening when greeting customers or when they ask about the salon
     2. Enthusiastically invite customers to our Grand Opening Event program
     3. Share the event link: https://event.bitcoinnailbar.com/
-    4. If customer wants to book: Let them know they can PRE-BOOK for the grand opening days (Mar 27-28) or after
+    4. If customer wants to book: Let them know they can PRE-BOOK for the grand opening days (Mar 27-28) or after, and MUST use the online scheduler: ${EXTERNAL_BOOKING_URL}
     5. Emphasize exclusive grand opening deals and offers available at the event page
     6. When responding in Vietnamese: "Chúng tôi chính thức khai trương vào ngày 27-28 tháng 3, 2026! Xem chương trình khai trương tại: https://event.bitcoinnailbar.com/"
     7. When responding in English: "We're having our Grand Opening on March 27-28, 2026! Check out our special opening program at: https://event.bitcoinnailbar.com/"
@@ -385,15 +387,15 @@ app.post("/make-server-84f9c112/chat", async (c) => {
        - Be enthusiastic but natural: "Great timing! This service is currently on promotion."
        - If multiple promotions apply, mention the best value one first
        
-    5. 📅 APPOINTMENT BOOKING INTELLIGENCE:
-       - Ask for: Name, Phone Number, Service(s), Date/Time
-       - Optional but recommended: Email address
-       - FIRST: Show clear summary of booking details
-       - SECOND: Ask confirmation: "Should I confirm this booking for you?"
-       - THIRD: ONLY after explicit confirmation ("yes", "confirm", "ok", "đúng rồi"), use 'create_booking' tool
-       - Convert natural language time to ISO 8601 format (YYYY-MM-DDTHH:mm:ss)
-       - Handle multiple services in one booking
-       - YOU CANNOT create bookings by text alone - MUST use 'create_booking' tool
+    5. 📅 APPOINTMENT BOOKING (EXTERNAL SCHEDULER ONLY):
+       - Official appointments are booked ONLY through our online booking page (Nail Solution Plus).
+       - ALWAYS give customers this exact link when they want to book, reschedule, or check availability:
+         ${EXTERNAL_BOOKING_URL}
+       - In Vietnamese, say clearly they should open the link in a new tab to complete booking (e.g. "Vui lòng mở link sau trong tab mới để đặt lịch: ...").
+       - In English, tell them to open the link in a new tab to complete booking.
+       - When you include the URL, format it as a clickable Markdown link, e.g. [Book online](${EXTERNAL_BOOKING_URL}) or [Đặt lịch](${EXTERNAL_BOOKING_URL}) depending on language.
+       - You may still answer questions about services, prices, and preparation — but you MUST NOT claim you created or confirmed an appointment in this chat.
+       - Do NOT collect booking details for the purpose of "submitting" them here; direct them to the link above instead.
        
     6. 🧠 CONTEXT AWARENESS:
        - Track conversation history to avoid repeating information
@@ -417,29 +419,7 @@ app.post("/make-server-84f9c112/chat", async (c) => {
     🎯 GOAL: Make every customer feel valued, informed, and excited to visit Bitcoin Nail Bar.
     `;
 
-    const tools = [
-      {
-        type: "function",
-        function: {
-          name: "create_booking",
-          description: "Book an appointment when user provides all details",
-          parameters: {
-            type: "object",
-            properties: {
-              customerName: { type: "string" },
-              customerPhone: { type: "string" },
-              customerEmail: { type: "string" },
-              serviceNames: { type: "string", description: "Comma separated service names" },
-              appointmentTime: { type: "string", description: "ISO 8601 date string (YYYY-MM-DDTHH:mm:ss)" },
-              notes: { type: "string" }
-            },
-            required: ["customerName", "customerPhone", "serviceNames", "appointmentTime"]
-          }
-        }
-      }
-    ];
-
-    // 1. Call DeepSeek with Tools
+    // 1. Call DeepSeek (no function calling — booking is only via external scheduler URL)
     const response = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
       headers: {
@@ -449,7 +429,6 @@ app.post("/make-server-84f9c112/chat", async (c) => {
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: [{ role: "system", content: systemPrompt }, ...messages],
-        tools: tools,
         temperature: 0 // Deterministic output - no creativity, no hallucination
       })
     });
@@ -459,64 +438,6 @@ app.post("/make-server-84f9c112/chat", async (c) => {
     
     const choice = data.choices[0];
     const message = choice.message;
-
-    // 2. Handle Tool Call
-    if (message.tool_calls && message.tool_calls.length > 0) {
-      const toolCall = message.tool_calls[0];
-      if (toolCall.function.name === "create_booking") {
-        const bookingArgs = JSON.parse(toolCall.function.arguments);
-        
-        // Execute booking logic
-        console.log("🤖 Chatbot creating booking:", bookingArgs);
-        const bookingResult = await createAppointment(bookingArgs);
-        
-        // 3. Send result back to LLM for final confirmation
-        const toolOutputMessage = {
-          role: "tool",
-          tool_call_id: toolCall.id,
-          content: JSON.stringify({ 
-            success: true, 
-            appointmentId: bookingResult.appointment.id,
-            status: "Booked successfully. Email sent." 
-          })
-        };
-
-        const finalResponse = await fetch("https://api.deepseek.com/chat/completions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: "deepseek-chat",
-            messages: [
-              { role: "system", content: systemPrompt },
-              ...messages,
-              message, // The assistant message with tool_calls
-              toolOutputMessage // The result of the tool
-            ]
-          })
-        });
-        
-        const finalData = await finalResponse.json();
-        
-        console.log("🎫 [CHATBOT] Booking completed, returning ticketData with qrCodeUrl:", bookingResult.qrCodeUrl ? "✅ Has URL" : "⚠️ No URL (will use fallback)");
-        
-        // Return with ticket data for frontend to display
-        return c.json({ 
-          success: true, 
-          message: finalData.choices[0].message.content,
-          ticketData: {
-            id: bookingResult.appointment.id,
-            customerName: bookingResult.appointment.customerName,
-            customerPhone: bookingResult.appointment.customerPhone,
-            appointmentTime: bookingResult.appointment.appointmentTime,
-            serviceNames: Array.isArray(bookingResult.appointment.serviceNames) 
-              ? bookingResult.appointment.serviceNames.join(', ') 
-              : bookingResult.appointment.serviceNames || 'Services',
-            branchName: "Bitcoin Nail Bar - Houston, TX",
-            qrCodeUrl: bookingResult.qrCodeUrl
-          }
-        });
-      }
-    }
 
     return c.json({ success: true, message: message.content });
 

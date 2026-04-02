@@ -239,9 +239,14 @@ export default function StaffDetail({
   const [isEditing, setIsEditing] = useState(isCreating);
   const [formData, setFormData] = useState({
     ...staff,
-    commissionRate: staff.commissionRate
-      ? (staff.commissionRate * 100).toString()
-      : "60", // Display as 0-100
+    commissionRate: (() => {
+      const raw = staff.commissionRate ?? staff.commission_rate;
+      if (raw === undefined || raw === null || raw === "") return "60";
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return "60";
+      if (n > 0 && n <= 1) return String(n * 100);
+      return String(n);
+    })(),
     rating: staff.rating || "",
     skillLevel: staff.skillLevel || "senior",
     specialties: staff.specialties || [],

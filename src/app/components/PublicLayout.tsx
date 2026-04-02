@@ -53,6 +53,7 @@ import { BrandLogo } from "./BrandLogo";
 import { useLanguage } from "../context/LanguageContext";
 import { useLoadingState } from "../context/LoadingContext";
 import { useSequentialLoad } from "../hooks/useSequentialLoad";
+import { openExternalBookingInNewTab } from "../lib/external-booking";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 
 interface PublicLayoutProps {
@@ -492,14 +493,25 @@ export default function PublicLayout({
             {/* CTA Button (Desktop) */}
             <div className="hidden xl:flex items-center gap-2">
               <LanguageSwitcher align="end" />
-              <Link to="/booking">
+              {isHomePage ? (
                 <PrimaryButton
+                  type="button"
+                  onClick={openExternalBookingInNewTab}
                   startIcon={<Calendar className="h-4 w-4" />}
                   className="text-white animate-[glowring_1.5s_ease-out_infinite]"
                 >
                   {t("coming_soon.book_now")}
                 </PrimaryButton>
-              </Link>
+              ) : (
+                <Link to="/booking">
+                  <PrimaryButton
+                    startIcon={<Calendar className="h-4 w-4" />}
+                    className="text-white animate-[glowring_1.5s_ease-out_infinite]"
+                  >
+                    {t("coming_soon.book_now")}
+                  </PrimaryButton>
+                </Link>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -639,16 +651,30 @@ export default function PublicLayout({
                     </Link>
                   ),
                 )}
-                <Link
-                  to="/booking"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full"
-                >
-                  <PrimaryButton className="w-full gap-2 bg-[#FF9800] text-[#0B0F19]">
+                {isHomePage ? (
+                  <PrimaryButton
+                    type="button"
+                    className="w-full gap-2 bg-[#FF9800] text-[#0B0F19]"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      openExternalBookingInNewTab();
+                    }}
+                  >
                     <Calendar className="h-4 w-4" />
                     {t("nav.booking")}
                   </PrimaryButton>
-                </Link>
+                ) : (
+                  <Link
+                    to="/booking"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full"
+                  >
+                    <PrimaryButton className="w-full gap-2 bg-[#FF9800] text-[#0B0F19]">
+                      <Calendar className="h-4 w-4" />
+                      {t("nav.booking")}
+                    </PrimaryButton>
+                  </Link>
+                )}
               </nav>
             </div>
           )}

@@ -35,6 +35,7 @@ CREATE TABLE technician_info (
   
   -- Basic Information
   name VARCHAR(255) NOT NULL,
+  nick_name VARCHAR(255),
   phone VARCHAR(20),
   email VARCHAR(255),
   avatar_url TEXT,

@@ -35,6 +35,10 @@ import { useServiceMenu } from "../../hooks/useServiceMenu";
 import { MEMBERSHIP_TIERS } from "../../config/membership-tiers";
 import { GrandOpeningDialog } from "../GrandOpeningDialog";
 import { isBeforeGrandOpening } from "../../lib/grand-opening";
+import {
+  getStaffDisplayName,
+  normalizeStaffList,
+} from "@/app/lib/staffNickName";
 
 // Helper function to normalize tier names for matching
 const normalizeTier = (tier: string): string => {
@@ -315,8 +319,8 @@ export default function BookingPage() {
         },
       );
       const data = await response.json();
-      if (data.success) {
-        setStaff(data.data);
+      if (data.success && Array.isArray(data.data)) {
+        setStaff(normalizeStaffList(data.data));
       }
     } catch (error) {
       console.error("Error loading staff:", error);
@@ -784,7 +788,7 @@ export default function BookingPage() {
                             {member.avatar ? (
                               <img
                                 src={member.avatar}
-                                alt={member.name}
+                                alt={getStaffDisplayName(member)}
                                 className="w-14 h-14 rounded-full object-cover border-2 border-[#FF9800]/20"
                               />
                             ) : (
@@ -806,7 +810,7 @@ export default function BookingPage() {
                               <h3
                                 className={`font-serif font-bold text-lg ${selectedStaff === member.id ? "text-[#FF9800]" : "text-white"}`}
                               >
-                                {member.name}
+                                {getStaffDisplayName(member)}
                               </h3>
                               <div className="flex items-center gap-1 bg-[#FF9800]/10 px-2 py-0.5 rounded-full border border-[#FF9800]/20">
                                 <Star className="w-3 h-3 text-[#FF9800] fill-[#FF9800]" />
@@ -814,7 +818,9 @@ export default function BookingPage() {
                                   {member.rating ||
                                     (
                                       4.5 +
-                                      (member.name.length % 5) /
+                                      (getStaffDisplayName(member)
+                                        .length %
+                                        5) /
                                         10
                                     ).toFixed(1)}
                                 </span>
@@ -831,7 +837,9 @@ export default function BookingPage() {
                             <p className="text-xs text-gray-500 mt-1">
                               {member.reviewCount ||
                                 50 +
-                                  member.name.length * 5}{" "}
+                                  getStaffDisplayName(member)
+                                    .length *
+                                    5}{" "}
                               reviews
                             </p>
                           </div>
@@ -869,11 +877,12 @@ export default function BookingPage() {
                   {selectedStaff && (
                     <p className="text-sm text-[#FF9800] mt-2 font-medium">
                       Showing services available for{" "}
-                      {
-                        staff.find(
-                          (s) => s.id === selectedStaff,
-                        )?.name
-                      }
+                      {(() => {
+                        const s = staff.find(
+                          (x) => x.id === selectedStaff,
+                        );
+                        return s ? getStaffDisplayName(s) : "";
+                      })()}
                     </p>
                   )}
                 </CardHeader>
@@ -1586,11 +1595,14 @@ export default function BookingPage() {
                                   )}
                             </span>
                             <span className="font-medium text-white">
-                              {
-                                staff.find(
-                                  (s) => s.id === selectedStaff,
-                                )?.name
-                              }
+                              {(() => {
+                                const s = staff.find(
+                                  (x) => x.id === selectedStaff,
+                                );
+                                return s
+                                  ? getStaffDisplayName(s)
+                                  : "";
+                              })()}
                             </span>
                           </div>
                         )}

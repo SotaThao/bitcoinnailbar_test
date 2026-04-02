@@ -69,6 +69,30 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import StaffDetail from "./StaffDetail";
+import {
+  getStaffAdminTitle,
+  getStaffAdminTitleParts,
+  getStaffDisplayName,
+  normalizeStaffList,
+} from "@/app/lib/staffNickName";
+
+/** Nickname (tên thật in nghiêng, font-weight 400). */
+function StaffAdminTitleLabel({ staff }: { staff: any }) {
+  const { nickname, legalName } = getStaffAdminTitleParts(staff);
+  if (nickname && legalName) {
+    return (
+      <>
+        {nickname}{" "}
+        (
+        <span className="italic font-normal">{legalName}</span>)
+      </>
+    );
+  }
+  if (legalName) {
+    return <span className="italic font-normal">{legalName}</span>;
+  }
+  return <>{nickname}</>;
+}
 
 interface StaffPayrollProps {
   defaultTab?: "staff" | "payroll";
@@ -102,7 +126,9 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
     );
     if (cachedStaff) {
       try {
-        const parsedStaff = JSON.parse(cachedStaff);
+        const parsedStaff = normalizeStaffList(
+          JSON.parse(cachedStaff),
+        );
         setStaff(parsedStaff);
         setFilteredStaff(parsedStaff);
         if (parsedStaff.length > 0)
@@ -124,11 +150,17 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
     // Filter by Search Query (Name)
     if (searchQuery.trim() !== "") {
       const lowerQuery = searchQuery.toLowerCase();
-      result = result.filter(
-        (member) =>
-          member.name.toLowerCase().includes(lowerQuery) ||
-          member.phone.includes(lowerQuery),
-      );
+      result = result.filter((member) => {
+        const display = getStaffDisplayName(member).toLowerCase();
+        const legal = String(member.name ?? "").toLowerCase();
+        const adminTitle = getStaffAdminTitle(member).toLowerCase();
+        return (
+          display.includes(lowerQuery) ||
+          legal.includes(lowerQuery) ||
+          adminTitle.includes(lowerQuery) ||
+          String(member.phone ?? "").includes(lowerQuery)
+        );
+      });
     }
 
     // Filter by Role
@@ -142,9 +174,13 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
     result.sort((a, b) => {
       switch (sortOrder) {
         case "name-asc":
-          return a.name.localeCompare(b.name);
+          return getStaffAdminTitle(a).localeCompare(
+            getStaffAdminTitle(b),
+          );
         case "name-desc":
-          return b.name.localeCompare(a.name);
+          return getStaffAdminTitle(b).localeCompare(
+            getStaffAdminTitle(a),
+          );
         case "role-asc":
           return a.role.localeCompare(b.role);
         case "role-desc":
@@ -178,12 +214,13 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
       );
       const data = await response.json();
       if (data.success && data.data.length > 0) {
-        setStaff(data.data);
+        const rows = normalizeStaffList(data.data);
+        setStaff(rows);
         localStorage.setItem(
           "bitcoin_staff_data",
-          JSON.stringify(data.data),
+          JSON.stringify(rows),
         );
-        if (!selectedStaff) setSelectedStaff(data.data[0].id);
+        if (!selectedStaff) setSelectedStaff(rows[0].id);
       }
     } catch (error) {
       console.error("Error loading staff:", error);
@@ -226,11 +263,13 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
 
   const handleSaveStaff = async (staffData: any) => {
     try {
-      // Normalize commission rate: Input "60" -> 0.60
+      // DB stores commission as percent (e.g. 60 = 60%), not 0–1
+      const cr = parseFloat(
+        String(staffData.commissionRate ?? "").trim(),
+      );
       const normalizedData = {
         ...staffData,
-        commissionRate:
-          parseFloat(staffData.commissionRate) / 100,
+        commissionRate: Number.isFinite(cr) ? cr : 40,
       };
 
       const url = staffData.id
@@ -546,7 +585,9 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
 
                               <CardHeader>
                                 <CardTitle className="text-gray-900 pr-6">
-                                  {member.name}
+                                  <StaffAdminTitleLabel
+                                    staff={member}
+                                  />
                                 </CardTitle>
                                 <CardDescription className="text-gray-500">
                                   {member.role}
@@ -558,10 +599,17 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
                                     <strong>
                                       Commission Rate:
                                     </strong>{" "}
-                                    {(
-                                      member.commissionRate *
-                                      100
-                                    ).toFixed(0)}
+                                    {(() => {
+                                      const n = Number(
+                                        member.commissionRate,
+                                      );
+                                      if (!Number.isFinite(n)) {
+                                        return "—";
+                                      }
+                                      const pct =
+                                        n <= 1 ? n * 100 : n;
+                                      return `${Math.round(pct)}`;
+                                    })()}
                                     %
                                   </p>
                                   <p>
@@ -694,7 +742,9 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
                             key={member.id}
                             value={member.id}
                           >
-                            {member.name}
+                            <StaffAdminTitleLabel
+                              staff={member}
+                            />
                           </SelectItem>
                         ))}
                       </SelectContent>

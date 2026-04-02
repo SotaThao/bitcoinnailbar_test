@@ -23,6 +23,10 @@ import {
 import { Textarea } from "@/app/components/ui/textarea";
 import { LoadingSpinner } from "../atoms/LoadingSpinner";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
+import {
+  getStaffDisplayName,
+  normalizeStaffList,
+} from "@/app/lib/staffNickName";
 
 interface TechnicianAssignModalProps {
   open: boolean;
@@ -35,6 +39,8 @@ interface TechnicianAssignModalProps {
 interface Technician {
   id: string;
   name: string;
+  nickname?: string;
+  nick_name?: string | null;
   is_available: boolean; // Changed from is_active to match backend
 }
 
@@ -109,8 +115,9 @@ export function TechnicianAssignModal({
       });
 
       if (techData.success) {
+        const techs = normalizeStaffList(techData.data || []);
         // Filter only active technicians
-        const activeTechs = techData.data.filter((t: Technician) => t.is_available);
+        const activeTechs = techs.filter((t: Technician) => t.is_available);
         console.log('✅ [MODAL] Setting technicians state:', activeTechs);
         setTechnicians(activeTechs);
       } else {
@@ -237,7 +244,7 @@ export function TechnicianAssignModal({
                 <SelectContent>
                   {technicians.map((tech) => (
                     <SelectItem key={tech.id} value={tech.id}>
-                      {tech.name}
+                      {getStaffDisplayName(tech)}
                       {tech.id === currentTechnicianId && " (Current)"}
                     </SelectItem>
                   ))}

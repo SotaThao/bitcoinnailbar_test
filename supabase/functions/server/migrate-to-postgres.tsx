@@ -83,6 +83,11 @@ app.post('/migrate-technicians', requireAuth, async (c) => {
         // Transform data
         const technicianData = {
           name: staff.name,
+          nick_name:
+            staff.nickname != null &&
+            String(staff.nickname).trim() !== ""
+              ? String(staff.nickname).trim()
+              : null,
           phone: staff.phone || null,
           email: staff.email || null,
           avatar_url: staff.avatar || staff.avatarUrl || null,

@@ -6,7 +6,9 @@
 export interface Staff {
   id: string;
   name: string;
+  /** API mirrors Postgres `nick_name`. */
   nickname?: string;
+  nick_name?: string | null;
   role: string;
   phone: string;
   email: string;

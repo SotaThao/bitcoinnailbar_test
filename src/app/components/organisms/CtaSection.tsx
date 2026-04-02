@@ -4,6 +4,7 @@ import { Calendar, Sparkles } from "lucide-react";
 import { PrimaryButton } from "../PrimaryButton";
 import { SecondaryButton } from "../SecondaryButton";
 import { useLanguage } from "../../context/LanguageContext";
+import { openExternalBookingInNewTab } from "../../lib/external-booking";
 
 export function CtaSection() {
   const { t } = useLanguage();
@@ -32,12 +33,14 @@ export function CtaSection() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="flex flex-col sm:flex-row gap-4 justify-center"
         >
-          <Link to="/booking">
-            <PrimaryButton size="lg">
-              <Calendar className="h-5 w-5" />
-              {t("ready_cta.btn_book")}
-            </PrimaryButton>
-          </Link>
+          <PrimaryButton
+            type="button"
+            size="lg"
+            onClick={openExternalBookingInNewTab}
+          >
+            <Calendar className="h-5 w-5" />
+            {t("ready_cta.btn_book")}
+          </PrimaryButton>
           <Link to="/menu">
             <SecondaryButton size="lg" variant="outline">
               <Sparkles className="h-5 w-5" />

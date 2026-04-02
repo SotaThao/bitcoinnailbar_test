@@ -27,6 +27,7 @@ import { cn } from "../ui/utils";
 import { useAppointments } from "../../hooks/useAppointments";
 import { useServices } from "../../hooks/useServices";
 import { useStaff } from "../../hooks/useStaff";
+import { getStaffDisplayName } from "@/app/lib/staffNickName";
 import { LoadingSpinner } from "./atoms/LoadingSpinner";
 import { EmptyState } from "./atoms/EmptyState";
 import { AppointmentStatsGrid } from "./molecules/AppointmentStatsGrid";
@@ -209,7 +210,11 @@ export default function AdminAppointments() {
                   key={appointment.id}
                   appointment={appointment}
                   services={displayServices}
-                  staffName={staffMember?.name}
+                  staffName={
+                    staffMember
+                      ? getStaffDisplayName(staffMember)
+                      : undefined
+                  }
                   totalAmount={totalAmount}
                   onUpdateStatus={updateStatus}
                   onAssignmentChanged={refetch}
