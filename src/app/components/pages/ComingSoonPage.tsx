@@ -5,7 +5,7 @@ import { AnimatedButton } from "../ui/animated-button";
 import { Link } from "react-router";
 import { useLanguage } from "../../context/LanguageContext";
 import { Clock, Sparkles } from "lucide-react";
-import bitcoinLogo from "figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png";
+import { ASSETS } from "../../config/assets";
 
 export default function ComingSoonPage() {
   const { t } = useLanguage();
@@ -69,7 +69,7 @@ export default function ComingSoonPage() {
           {/* Footer decoration */}
           <div className="mt-20 flex items-center justify-center gap-8 opacity-30 grayscale hover:grayscale-0 transition-all duration-500">
             <img
-              src={bitcoinLogo}
+              src={ASSETS.bitcoinLogo}
               alt="Bitcoin"
               className="h-12 w-12 opacity-50"
             />

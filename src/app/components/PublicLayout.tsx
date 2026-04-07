@@ -1,16 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import image_806e712a7137dc26b6a45d29177a47853f6cc4d2 from "figma:asset/806e712a7137dc26b6a45d29177a47853f6cc4d2.png";
 import {
   Link,
   useLocation,
   useNavigate,
 } from "react-router";
-import bitcoinLogo from "figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png";
-import image_2de9c9413dafd548ee75321859136c9ca435bffe from "figma:asset/2de9c9413dafd548ee75321859136c9ca435bffe.png";
-import image_eb0bbc971a7468c60bd03f5a065452ed783bbdef from "figma:asset/eb0bbc971a7468c60bd03f5a065452ed783bbdef.png";
-import image_5eb8a93cb1061aa87f464278bcfce42201277b32 from "figma:asset/5eb8a93cb1061aa87f464278bcfce42201277b32.png";
-import image_9d0366157187675ee300a22d7203dd76c667cce9 from "figma:asset/9d0366157187675ee300a22d7203dd76c667cce9.png";
-import bitcoinIcon from "figma:asset/8504cf526757125a74c4095fde998e4033127268.png";
 import {
   Sparkles,
   Calendar,
@@ -55,6 +48,7 @@ import { useLoadingState } from "../context/LoadingContext";
 import { useSequentialLoad } from "../hooks/useSequentialLoad";
 import { openExternalBookingInNewTab } from "../lib/external-booking";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
+import { ASSETS } from "../config/assets";
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -776,9 +770,7 @@ export default function PublicLayout({
                     title="USDC"
                   >
                     <img
-                      src={
-                        image_5eb8a93cb1061aa87f464278bcfce42201277b32
-                      }
+                      src={ASSETS.layoutFeature3}
                       alt="USDT/USDC"
                       className="w-full h-full object-contain"
                     />

@@ -3,7 +3,7 @@ import {
   useLocation,
   useNavigate,
 } from "react-router";
-import bitcoinLogo from "figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png";
+import { ASSETS } from "../config/assets";
 import {
   LayoutDashboard,
   Calendar,
@@ -175,7 +175,7 @@ export default function AdminLayout({
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full shadow-[0_0_15px_rgba(255,152,0,0.5)]">
               <img
-                src={bitcoinLogo}
+                src={ASSETS.bitcoinLogo}
                 alt="Bitcoin"
                 className="h-10 w-10 object-contain"
               />

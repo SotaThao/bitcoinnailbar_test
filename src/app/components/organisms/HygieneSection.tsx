@@ -1,11 +1,10 @@
-import image_9b76d043322193ecba98cb79a9c58c5abe8efbf0 from "figma:asset/9b76d043322193ecba98cb79a9c58c5abe8efbf0.png";
-import image_36d0ff035d3f60c47a5c81a3484dd16ff2e9a5e6 from "figma:asset/36d0ff035d3f60c47a5c81a3484dd16ff2e9a5e6.png";
 import { Link } from "react-router";
 import { motion } from "motion/react";
 import { Check } from "lucide-react";
 import { PrimaryButton } from "../PrimaryButton";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { useLanguage } from "../../context/LanguageContext";
+import { ASSETS } from "../../config/assets";
 
 export function HygieneSection() {
   const { t } = useLanguage();
@@ -56,9 +55,7 @@ export function HygieneSection() {
           >
             <div className="rounded-2xl overflow-hidden shadow-xl">
               <ImageWithFallback
-                src={
-                  image_36d0ff035d3f60c47a5c81a3484dd16ff2e9a5e6
-                }
+                src={ASSETS.hygieneStandards}
                 alt="Hygiene Standards"
                 className="w-full h-[500px] object-cover"
               />
@@ -77,9 +74,7 @@ export function HygieneSection() {
           >
             <div className="rounded-2xl overflow-hidden shadow-xl">
               <ImageWithFallback
-                src={
-                  image_9b76d043322193ecba98cb79a9c58c5abe8efbf0
-                }
+                src={ASSETS.hygieneLuxuryTreatments}
                 alt="Luxury Treatments"
                 className="w-full h-[500px] object-cover"
               />

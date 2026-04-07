@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import bitcoinLogo from "figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png";
+import { ASSETS } from "../config/assets";
 
 interface BrandLogoProps {
   className?: string;
@@ -30,7 +30,7 @@ export function BrandLogo({
     <>
       <div className="flex items-center justify-center rounded-full transition-transform group-hover:scale-110 shadow-[0_0_15px_rgba(255,152,0,0.5)]">
         <img
-          src={bitcoinLogo}
+          src={ASSETS.bitcoinLogo}
           alt="Bitcoin Nail Bar Logo"
           className={`${sizeClasses[size]} object-contain flex-shrink-0`}
           style={{ maxWidth: "100%", height: "auto" }}
