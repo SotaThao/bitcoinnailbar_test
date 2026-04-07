@@ -132,7 +132,7 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
         setStaff(parsedStaff);
         setFilteredStaff(parsedStaff);
         if (parsedStaff.length > 0)
-          setSelectedStaff(parsedStaff[0].id);
+          setSelectedStaff(String(parsedStaff[0].id));
         setIsLoadingStaff(false);
       } catch (e) {
         console.error("Error parsing cached staff:", e);
@@ -220,7 +220,7 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
           "bitcoin_staff_data",
           JSON.stringify(rows),
         );
-        if (!selectedStaff) setSelectedStaff(rows[0].id);
+        if (!selectedStaff) setSelectedStaff(String(rows[0].id));
       }
     } catch (error) {
       console.error("Error loading staff:", error);
@@ -245,6 +245,10 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
       tipSplit: "100",
       specialties: [],
       workingDays: [],
+      workingHours: {
+        start: "09:00",
+        end: "18:00",
+      },
       emergencyContactName: "",
       emergencyContactPhone: "",
     });
@@ -918,7 +922,7 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
                               tickLine={false}
                             />
                             <YAxis
-                              prefix="$"
+                              tickFormatter={(v) => `$${v}`}
                               axisLine={false}
                               tickLine={false}
                             />

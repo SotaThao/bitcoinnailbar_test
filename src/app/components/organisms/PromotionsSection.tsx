@@ -9,9 +9,8 @@ import {
   CreditCard,
   Calendar,
 } from "lucide-react";
-import imgPattern from "figma:asset/f84ad6d75c01f5865641dba32416e817dee06ff5.png";
-import bitcoinIcon from "figma:asset/8504cf526757125a74c4095fde998e4033127268.png";
 import { useLanguage } from "../../context/LanguageContext";
+import { ASSETS } from "../../config/assets";
 
 export function PromotionsSection() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -124,7 +123,7 @@ function CryptoSlide() {
       <div
         className="absolute inset-0 opacity-20 bg-repeat"
         style={{
-          backgroundImage: `url('${imgPattern}')`,
+          backgroundImage: `url('${ASSETS.vipCardPattern}')`,
           backgroundSize: "24px 24px",
         }}
       />
@@ -178,7 +177,7 @@ function CryptoSlide() {
           {/* Glowing Shadow */}
           <div className="absolute inset-0 bg-[#f7931a] blur-[60px] opacity-40 rounded-full" />
           <motion.img
-            src={bitcoinIcon}
+            src={ASSETS.bitcoinIconOrange}
             alt="Bitcoin"
             animate={{ y: [0, -20, 0] }}
             transition={{

@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import bitcoinLogo from "figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png";
+import { ASSETS } from "../../config/assets";
 
 export function BitcoinCard() {
   return (
@@ -50,7 +50,7 @@ export function BitcoinCard() {
         <div className="flex justify-between items-start mb-8 md:mb-12">
           <div className="flex items-center gap-2">
             <img
-              src={bitcoinLogo}
+              src={ASSETS.bitcoinLogo}
               alt="Bitcoin"
               className="h-8 w-8 md:h-10 md:w-10"
             />

@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation, useParams, useNavigate } from "react-router";
 import { motion } from "motion/react";
-import image_9b76d043322193ecba98cb79a9c58c5abe8efbf0 from "figma:asset/9b76d043322193ecba98cb79a9c58c5abe8efbf0.png";
+import { ASSETS } from "../../config/assets";
 import { AnimatedButton } from "../ui/animated-button";
 import { useServiceCategories } from "../../hooks/useServiceCategories";
 import { projectId, publicAnonKey } from "@utils/supabase/info";
@@ -188,9 +188,7 @@ export default function ServicesPage() {
                   <div className="absolute inset-0 bg-black/5 rounded-3xl transform rotate-3 transition-transform group-hover:rotate-6 duration-500"></div>
                   <div className="relative rounded-3xl overflow-hidden shadow-2xl">
                     <ImageWithFallback
-                      src={
-                        image_9b76d043322193ecba98cb79a9c58c5abe8efbf0
-                      }
+                      src={ASSETS.hygieneLuxuryTreatments}
                       alt="Luxury Manicure"
                       className="w-full h-[600px] object-cover"
                     />
