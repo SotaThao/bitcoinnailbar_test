@@ -54,6 +54,7 @@ import {
   PillTabsTrigger,
 } from "../ui/pill-tabs";
 import { Skeleton } from "../ui/skeleton";
+import { Badge } from "../ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,6 +69,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
+import { Switch } from "../ui/switch";
 import StaffDetail from "./StaffDetail";
 import {
   getStaffAdminTitle,
@@ -345,6 +347,39 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
     }
   };
 
+  const handleToggleStaffStatus = async (
+    staffId: string,
+    newStatus: boolean,
+  ) => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-84f9c112/staff/${staffId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${publicAnonKey}`,
+          },
+          body: JSON.stringify({ isActive: newStatus }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(
+          `Staff member ${newStatus ? "activated" : "deactivated"} successfully`,
+        );
+        loadStaff();
+      } else {
+        toast.error("Failed to update staff status");
+      }
+    } catch (error) {
+      console.error("Error toggling staff status:", error);
+      toast.error("An error occurred while updating status");
+    }
+  };
+
   const calculatePayroll = async () => {
     if (!selectedStaff) {
       toast.error("Please select a staff member");
@@ -536,11 +571,20 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
                           .map((member) => (
                             <Card
                               key={member.id}
-                              className={`bg-white border backdrop-blur-sm cursor-pointer transition-all relative ${selectedStaff === member.id ? "border-orange-500 shadow-md" : "border-gray-200 hover:border-orange-300"}`}
+                              className={`bg-white border backdrop-blur-sm cursor-pointer transition-all relative ${
+                                selectedStaff === member.id
+                                  ? "border-orange-500 shadow-md"
+                                  : "border-gray-200 hover:border-orange-300"
+                              } ${
+                                !(member.isActive ?? true)
+                                  ? "opacity-60 grayscale"
+                                  : ""
+                              }`}
                               onClick={() =>
                                 handleOpenDetail(member)
                               }
                             >
+                              {/* Menu Dropdown - Top Right */}
                               <div className="absolute top-2 right-2 z-10">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
@@ -587,8 +631,8 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
                                 </DropdownMenu>
                               </div>
 
-                              <CardHeader>
-                                <CardTitle className="text-gray-900 pr-6">
+                              <CardHeader className="pr-12">
+                                <CardTitle className="text-gray-900">
                                   <StaffAdminTitleLabel
                                     staff={member}
                                   />
@@ -596,6 +640,27 @@ export default function StaffPayroll({ defaultTab = "staff" }: StaffPayrollProps
                                 <CardDescription className="text-gray-500">
                                   {member.role}
                                 </CardDescription>
+                                {/* Status Toggle - Below Role */}
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Switch
+                                    checked={member.isActive ?? true}
+                                    onCheckedChange={(checked) => {
+                                      handleToggleStaffStatus(member.id, checked);
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className={(member.isActive ?? true) ? "data-[state=checked]:bg-green-500" : ""}
+                                  />
+                                  <Badge
+                                    variant={(member.isActive ?? true) ? "default" : "secondary"}
+                                    className={`text-xs px-2 py-0.5 ${
+                                      member.isActive ?? true
+                                        ? "bg-green-100 text-green-700 hover:bg-green-100"
+                                        : "bg-gray-100 text-gray-600 hover:bg-gray-100"
+                                    }`}
+                                  >
+                                    {member.isActive ?? true ? "Active" : "Inactive"}
+                                  </Badge>
+                                </div>
                               </CardHeader>
                               <CardContent>
                                 <div className="space-y-2 text-sm text-gray-600">

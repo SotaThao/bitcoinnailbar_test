@@ -32,6 +32,7 @@ import {
   AvatarImage,
 } from "../ui/avatar";
 import { Badge } from "../ui/badge";
+import { Switch } from "../ui/switch";
 import { Separator } from "../ui/separator";
 import { toast } from "sonner";
 import {
@@ -332,9 +333,21 @@ export default function StaffDetail({
   onDelete,
 }: StaffDetailProps) {
   const [isEditing, setIsEditing] = useState(isCreating);
-  const [formData, setFormData] = useState(() =>
-    buildFormData(staff, isCreating),
-  );
+  const [formData, setFormData] = useState({
+    ...staff,
+    commissionRate: (() => {
+      const raw = staff.commissionRate ?? staff.commission_rate;
+      if (raw === undefined || raw === null || raw === "") return "60";
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return "60";
+      if (n > 0 && n <= 1) return String(n * 100);
+      return String(n);
+    })(),
+    rating: staff.rating || "",
+    skillLevel: staff.skillLevel || "senior",
+    specialties: staff.specialties || [],
+    workingDays: staff.workingDays || [],
+  });
   const [loading, setLoading] = useState(false);
 
   // Focus name on create
@@ -385,6 +398,7 @@ export default function StaffDetail({
     try {
       const dataToSave = {
         ...formData,
+        isActive,
         commissionRate: formData.commissionRate, // Pass the value (e.g. "60") directly
         licenseNumber: String(formData.licenseNumber ?? "").trim(),
         workingDays: formData.workingDays ?? [],
@@ -561,6 +575,28 @@ export default function StaffDetail({
                         {formData.role || "Role"}
                       </p>
                     )}
+                  </div>
+
+                  {/* Status Toggle - Below Role */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                      <Switch
+                        checked={isActive}
+                        onCheckedChange={setIsActive}
+                        id="staff-detail-status-toggle"
+                        className={isActive ? "data-[state=checked]:bg-green-500" : ""}
+                      />
+                      <Badge
+                        variant={isActive ? "default" : "secondary"}
+                        className={`text-xs px-2 py-0.5 ${
+                          isActive
+                            ? "bg-green-100 text-green-700 hover:bg-green-100"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        {isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
                   </div>
 
                   <div className="space-y-1">

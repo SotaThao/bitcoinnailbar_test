@@ -635,6 +635,7 @@ settingsApp.post("/make-server-84f9c112/admin/settings/promotions", async (c) =>
             enData.backgroundImagePath = input.backgroundImagePath;
             enData.iconImage = input.iconImage;
             enData.iconImagePath = input.iconImagePath;
+            enData.videoUrl = input.videoUrl;
             
             console.log(`✅ [TRANSLATE] Promotion "${promo.id}" VI→EN completed`);
             
@@ -674,6 +675,7 @@ settingsApp.post("/make-server-84f9c112/admin/settings/promotions", async (c) =>
             viData.backgroundImagePath = input.backgroundImagePath;
             viData.iconImage = input.iconImage;
             viData.iconImagePath = input.iconImagePath;
+            viData.videoUrl = input.videoUrl;
             
             console.log(`✅ [TRANSLATE] Promotion "${promo.id}" EN→VI completed`);
             

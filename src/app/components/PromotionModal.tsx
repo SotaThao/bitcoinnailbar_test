@@ -16,6 +16,7 @@ interface PromotionLanguageData {
   buttonLink: string;
   backgroundImage?: string;
   iconImage?: string;
+  videoUrl?: string;
 }
 
 interface Promotion {
@@ -136,11 +137,53 @@ export function PromotionModal({ promotions, onClose, language = 'en', onRendere
   const data = currentPromotion[language];
   
   const hasBackgroundImage = Boolean(
-    data.backgroundImage && 
-    data.backgroundImage.trim() !== '' && 
-    data.backgroundImage !== 'null' && 
+    data.backgroundImage &&
+    data.backgroundImage.trim() !== '' &&
+    data.backgroundImage !== 'null' &&
     data.backgroundImage !== 'undefined'
   );
+
+  // Helper function to convert video URLs to embed format
+  const getVideoEmbedUrl = (url: string): string | null => {
+    if (!url) return null;
+
+    // YouTube watch URL
+    const ytMatch = url.match(/^(?:(https?):\/\/)?(?:(?:www|m)\.)?youtube\.com\/watch.*v=([a-zA-Z0-9_-]+)/);
+    if (ytMatch) {
+      return `${ytMatch[1] || "https"}://www.youtube.com/embed/${ytMatch[2]}?autoplay=1&mute=1&loop=1&playlist=${ytMatch[2]}&showinfo=0&controls=0`;
+    }
+
+    // YouTube short URL
+    const ytShortMatch = url.match(/^(?:(https?):\/\/)?(?:(?:www|m)\.)?youtu\.be\/([a-zA-Z0-9_-]+)/);
+    if (ytShortMatch) {
+      return `${ytShortMatch[1] || "https"}://www.youtube.com/embed/${ytShortMatch[2]}?autoplay=1&mute=1&loop=1&playlist=${ytShortMatch[2]}&showinfo=0&controls=0`;
+    }
+
+    // Vimeo URL
+    const vimeoMatch = url.match(/^(?:(https?):\/\/)?(?:www\.)?vimeo\.com\/(\d+)/);
+    if (vimeoMatch) {
+      return `${vimeoMatch[1] || "https"}://player.vimeo.com/video/${vimeoMatch[2]}?autoplay=1&mute=1&loop=1&background=1`;
+    }
+
+    // Direct video URL (.mp4, .webm)
+    if (url.match(/\.(mp4|webm)(\?.*)?$/i)) {
+      return url;
+    }
+
+    // Already an embed URL
+    if (url.includes('/embed/') || url.includes('/video/')) {
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}autoplay=1&mute=1&loop=1&controls=0`;
+    }
+
+    return null;
+  };
+
+  const videoEmbedUrl = data.videoUrl ? getVideoEmbedUrl(data.videoUrl) : null;
+  const hasVideo = Boolean(videoEmbedUrl);
+  const isDirectVideo = data.videoUrl?.match(/\.(mp4|webm)(\?.*)?$/i);
+
+  const hasBackground = hasBackgroundImage || hasVideo;
 
   console.log('🔍 Promotion Modal Render:', {
     promotionId: currentPromotion.id,
@@ -148,9 +191,12 @@ export function PromotionModal({ promotions, onClose, language = 'en', onRendere
     language,
     title: data.title,
     backgroundImage: data.backgroundImage,
+    videoUrl: data.videoUrl,
     backgroundImagePath: (currentPromotion[language] as any).backgroundImagePath,
     hasBackgroundImage,
-    mode: hasBackgroundImage ? 'WITH_BACKGROUND' : 'NO_BACKGROUND'
+    hasVideo,
+    hasBackground,
+    mode: hasBackground ? 'WITH_BACKGROUND' : 'NO_BACKGROUND'
   });
 
   return (
@@ -237,25 +283,47 @@ export function PromotionModal({ promotions, onClose, language = 'en', onRendere
 
           {/* Carousel Container - Scrollable */}
           <div className="relative overflow-y-auto flex-1">
-            {/* WITH Background Image - Only show image, no text */}
-            {hasBackgroundImage ? (
-              <div 
-                className="relative min-h-[400px] md:min-h-[500px] flex items-center justify-center cursor-pointer"
+            {/* WITH Background Image or Video - Only show media, no text */}
+            {hasBackground ? (
+              <div
+                className="relative min-h-[400px] md:min-h-[500px] flex items-center justify-center cursor-pointer bg-transparent"
                 onClick={() => handleButtonClick(data.buttonLink)}
               >
-                {/* Background Image - Full Display */}
-                <img
-                  src={data.backgroundImage}
-                  alt="Promotion"
-                  className="max-w-full max-h-[500px] object-contain rounded-2xl"
-                  onError={(e) => {
-                    console.error('Failed to load background image:', data.backgroundImage);
-                    e.currentTarget.style.display = 'none';
-                  }}
-                  onLoad={() => {
-                    console.log('Background image loaded successfully:', data.backgroundImage);
-                  }}
-                />
+                {/* Background Video */}
+                {hasVideo ? (
+                  isDirectVideo ? (
+                    <video
+                      src={videoEmbedUrl!}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      className="max-w-full max-h-[500px] object-contain rounded-2xl"
+                    />
+                  ) : (
+                    <iframe
+                      src={videoEmbedUrl!}
+                      className="w-full h-[500px] rounded-2xl pointer-events-none"
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen={false}
+                      tabIndex={-1}
+                    />
+                  )
+                ) : (
+                  /* Background Image */
+                  <img
+                    src={data.backgroundImage}
+                    alt="Promotion"
+                    className="max-w-full max-h-[500px] object-contain rounded-2xl"
+                    onError={(e) => {
+                      console.error('Failed to load background image:', data.backgroundImage);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                    onLoad={() => {
+                      console.log('Background image loaded successfully:', data.backgroundImage);
+                    }}
+                  />
+                )}
               </div>
             ) : (
               /* WITHOUT Background Image - Dark Theme (Homepage Style) */
@@ -499,7 +567,7 @@ export function PromotionModal({ promotions, onClose, language = 'en', onRendere
                 <button
                   onClick={handlePrevious}
                   className={`absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full transition-colors backdrop-blur-sm ${
-                    hasBackgroundImage
+                    hasBackground
                       ? 'bg-white/20 hover:bg-white/40 text-white'
                       : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
                   }`}
@@ -510,7 +578,7 @@ export function PromotionModal({ promotions, onClose, language = 'en', onRendere
                 <button
                   onClick={handleNext}
                   className={`absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full transition-colors backdrop-blur-sm ${
-                    hasBackgroundImage
+                    hasBackground
                       ? 'bg-white/20 hover:bg-white/40 text-white'
                       : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
                   }`}

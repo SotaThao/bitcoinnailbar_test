@@ -12,7 +12,6 @@ import "@/utils/disableConsoleLogs";
 
 import HomePage from "@/app/components/pages/HomePage";
 import ServicesPage from "@/app/components/pages/ServicesPage";
-import BookingPage from "@/app/components/pages/BookingPage";
 import PromotionsPage from "@/app/components/pages/PromotionsPage";
 import MembershipPage from "@/app/components/pages/MembershipPage";
 import CareersPage from "@/app/components/pages/CareersPage";
@@ -234,7 +233,7 @@ function AppContent({
     { path: "/careers", element: <CareersPage /> },
     { path: "/gallery", element: <GalleryPage /> },
     { path: "/egift", element: <EGiftPage /> },
-    { path: "/booking", element: <BookingPage /> },
+    { path: "/booking", element: <ExternalRedirect url="https://nailsolutionplus.firebaseapp.com/?storeKey=-OiuBNzy2Knxtk0uDGmn" /> },
     { path: "/locations", element: <LocationsPage /> },
     { path: "/reviews", element: <ReviewsPage /> },
     { path: "/vip", element: <VIPPage /> },
@@ -436,4 +435,13 @@ function AdminLoadingFallback() {
       <Loader2 className="w-8 h-8 animate-spin text-[#FF9800]" />
     </div>
   );
+}
+
+// Component để redirect sang external URL
+function ExternalRedirect({ url }: { url: string }) {
+  useEffect(() => {
+    window.location.href = url;
+  }, [url]);
+
+  return null;
 }
