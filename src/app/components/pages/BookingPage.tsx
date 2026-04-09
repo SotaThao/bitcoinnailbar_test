@@ -320,7 +320,11 @@ export default function BookingPage() {
       );
       const data = await response.json();
       if (data.success && Array.isArray(data.data)) {
-        setStaff(normalizeStaffList(data.data));
+        // Filter to only active staff for booking
+        const activeStaff = normalizeStaffList(data.data).filter(
+          (s: any) => s.isActive !== false
+        );
+        setStaff(activeStaff);
       }
     } catch (error) {
       console.error("Error loading staff:", error);

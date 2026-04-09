@@ -52,6 +52,27 @@ async function createAppointment(data: any) {
   
   console.log("🚀 [CREATE_APPT] Starting creation for:", customerName);
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // 0. VALIDATE: Check if staff is active (if staffId provided)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if (staffId) {
+    try {
+      const allStaff = await kv.getByPrefix("staff:");
+      const requestedStaff = allStaff.find((s: any) => s.id === staffId);
+      
+      if (requestedStaff && requestedStaff.isActive === false) {
+        console.error(`❌ [CREATE_APPT] Cannot book inactive staff: ${staffId}`);
+        throw new Error("This staff member is currently unavailable for booking");
+      }
+    } catch (e: any) {
+      if (e.message === "This staff member is currently unavailable for booking") {
+        throw e;
+      }
+      console.warn("⚠️ [CREATE_APPT] Could not validate staff status:", e);
+      // Continue even if validation fails (graceful degradation)
+    }
+  }
+
   // 1. Resolve Service IDs if only names provided (for Chatbot)
   let finalServiceIds = serviceIds || [];
   
@@ -776,6 +797,9 @@ app.post("/make-server-84f9c112/appointments/availability", async (c) => {
        kv.getByPrefix("appointment:")
     ]);
 
+    // Filter to only active staff
+    const activeStaff = allStaff.filter((s: any) => s.isActive !== false);
+
     const serviceMap = new Map(allServices.map((s: any) => [s.id, s]));
 
     // 1. Calculate Requested Duration
@@ -834,10 +858,16 @@ app.post("/make-server-84f9c112/appointments/availability", async (c) => {
         // Determine Candidate Staff
         let candidateStaffIds: string[] = [];
         if (staffId) {
+            // Check if requested staff is active
+            const requestedStaff = activeStaff.find((s: any) => s.id === staffId);
+            if (!requestedStaff) {
+                console.warn(`⚠️ [AVAILABILITY] Staff ${staffId} is inactive or not found`);
+                continue; // Skip this slot if staff is inactive
+            }
             candidateStaffIds = [staffId];
         } else {
-            // "No Preference" -> Check all staff
-            candidateStaffIds = allStaff.map((s: any) => s.id);
+            // "No Preference" -> Check all active staff
+            candidateStaffIds = activeStaff.map((s: any) => s.id);
         }
         
         // Check Availability
