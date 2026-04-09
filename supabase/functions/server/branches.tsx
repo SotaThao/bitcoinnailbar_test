@@ -25,7 +25,6 @@ app.get('/make-server-84f9c112/branches', async (c) => {
     const branches = await kv.getByPrefix('branch:');
     return c.json({ success: true, data: branches });
   } catch (e) {
-    console.error('❌ [GET BRANCHES] Error:', e);
     return c.json({ success: false, error: String(e) }, 500);
   }
 });
@@ -42,11 +41,9 @@ app.post('/make-server-84f9c112/branches', async (c) => {
     };
     
     await kv.set(id, branch);
-    console.log(`✅ [CREATE BRANCH] Created: ${id}`);
-    
+
     return c.json({ success: true, data: branch });
   } catch (error: any) {
-    console.error('❌ [CREATE BRANCH] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -55,20 +52,16 @@ app.post('/make-server-84f9c112/branches', async (c) => {
 app.delete('/make-server-84f9c112/branches/:id', async (c) => {
   try {
     const id = c.req.param('id');
-    console.log(`🗑️  [DELETE BRANCH] Deleting branch: ${id}`);
-    
+
     // Delete from KV store using direct Supabase delete
     const { error } = await supabase.from(KV_TABLE_ADMIN).delete().eq('key', id);
     
     if (error) {
-      console.error('❌ [DELETE BRANCH] Error:', error);
       return c.json({ success: false, error: error.message }, 500);
     }
-    
-    console.log(`✅ [DELETE BRANCH] Successfully deleted: ${id}`);
+
     return c.json({ success: true, message: 'Branch deleted successfully' });
   } catch (error: any) {
-    console.error('❌ [DELETE BRANCH] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

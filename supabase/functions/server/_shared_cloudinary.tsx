@@ -24,14 +24,12 @@ export const parseCloudinaryUrl = (): CloudinaryConfig | null => {
   const cloudinaryUrl = getEnv("CLOUDINARY_URL");
   
   if (!cloudinaryUrl) {
-    console.warn("⚠️ [CLOUDINARY] CLOUDINARY_URL not configured");
     return null;
   }
 
   const matches = cloudinaryUrl.match(/cloudinary:\/\/([^:]+):([^@]+)@(.+)/);
   
   if (!matches) {
-    console.error("❌ [CLOUDINARY] Invalid CLOUDINARY_URL format");
     return null;
   }
 
@@ -127,21 +125,17 @@ export const uploadImage = async (
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("❌ [CLOUDINARY UPLOAD] Error:", errorText);
       return { success: false, error: errorText };
     }
 
     const result = await response.json();
-    
-    console.log("✅ [CLOUDINARY UPLOAD] Success:", result.secure_url);
-    
+
     return {
       success: true,
       secure_url: result.secure_url,
       public_id: result.public_id,
     };
   } catch (error: any) {
-    console.error("❌ [CLOUDINARY UPLOAD] Exception:", error);
     return { success: false, error: error.message || String(error) };
   }
 };
@@ -190,15 +184,11 @@ export const deleteImage = async (publicId: string): Promise<CloudinaryDeleteRes
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("❌ [CLOUDINARY DELETE] Error:", errorText);
       return { success: false, error: errorText };
     }
 
-    console.log("✅ [CLOUDINARY DELETE] Success:", publicId);
-    
     return { success: true };
   } catch (error: any) {
-    console.error("❌ [CLOUDINARY DELETE] Exception:", error);
     return { success: false, error: error.message || String(error) };
   }
 };
@@ -227,7 +217,6 @@ export const uploadBase64Image = async (
     
     return await uploadImage(file, options);
   } catch (error: any) {
-    console.error("❌ [CLOUDINARY BASE64 UPLOAD] Exception:", error);
     return { success: false, error: error.message || String(error) };
   }
 };

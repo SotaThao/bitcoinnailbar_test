@@ -22,7 +22,6 @@ app.get('/', async (c) => {
 
     return c.json({ logo });
   } catch (error) {
-    console.error('Error fetching gallery logo:', error);
     return c.json(
       { error: 'Failed to fetch gallery logo', details: String(error) },
       500
@@ -61,13 +60,11 @@ app.post('/', async (c) => {
 
     await kv.set(GALLERY_LOGO_KEY, logo);
 
-    console.log('Gallery logo updated successfully:', logo);
     return c.json({ 
       success: true, 
       logo 
     });
   } catch (error) {
-    console.error('Error updating gallery logo:', error);
     return c.json(
       { error: 'Failed to update gallery logo', details: String(error) },
       500
@@ -80,11 +77,9 @@ app.post('/', async (c) => {
 app.delete('/', async (c) => {
   try {
     await kv.del(GALLERY_LOGO_KEY);
-    
-    console.log('Gallery logo deleted successfully');
+
     return c.json({ success: true });
   } catch (error) {
-    console.error('Error deleting gallery logo:', error);
     return c.json(
       { error: 'Failed to delete gallery logo', details: String(error) },
       500

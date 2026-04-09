@@ -23,7 +23,6 @@ app.get('/make-server-84f9c112/reviews', async (c) => {
     const reviews = await kv.getByPrefix('review:');
     return c.json({ success: true, data: reviews });
   } catch (e) {
-    console.error('❌ [GET REVIEWS] Error:', e);
     return c.json({ success: false, error: String(e) }, 500);
   }
 });
@@ -38,13 +37,11 @@ app.post('/make-server-84f9c112/reviews', async (c) => {
       ...body,
       createdAt: new Date().toISOString()
     };
-    
+
     await kv.set(id, review);
-    console.log(`✅ [CREATE REVIEW] Created: ${id}`);
-    
+
     return c.json({ success: true, data: review });
   } catch (error: any) {
-    console.error('❌ [CREATE REVIEW] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

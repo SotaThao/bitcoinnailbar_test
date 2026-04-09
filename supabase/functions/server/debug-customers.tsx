@@ -14,14 +14,9 @@ const app = new Hono();
  */
 app.get('/make-server-84f9c112/debug-customers/all', async (c) => {
   try {
-    console.log('🔍 [DEBUG CUSTOMERS] Fetching all customers...');
-    
     const customers = await customerKV.getAll(100, 0);
     const count = await customerKV.countAll();
-    
-    console.log(`✅ [DEBUG CUSTOMERS] Found ${count} total customers`);
-    console.log(`✅ [DEBUG CUSTOMERS] Returning ${customers.length} customers`);
-    
+
     return c.json({
       success: true,
       total_count: count,
@@ -40,7 +35,6 @@ app.get('/make-server-84f9c112/debug-customers/all', async (c) => {
       }))
     });
   } catch (error: any) {
-    console.error('❌ [DEBUG CUSTOMERS] Error:', error);
     return c.json({
       success: false,
       error: error.message
@@ -55,8 +49,7 @@ app.get('/make-server-84f9c112/debug-customers/all', async (c) => {
 app.get('/make-server-84f9c112/debug-customers/search/:identifier', async (c) => {
   try {
     const identifier = c.req.param('identifier');
-    console.log('🔍 [DEBUG CUSTOMERS] Searching for:', identifier);
-    
+
     const isEmail = identifier.includes('@');
     let customer;
     
@@ -75,8 +68,6 @@ app.get('/make-server-84f9c112/debug-customers/search/:identifier', async (c) =>
       });
     }
     
-    console.log('✅ [DEBUG CUSTOMERS] Found customer:', customer.id);
-    
     return c.json({
       success: true,
       found: true,
@@ -86,7 +77,6 @@ app.get('/make-server-84f9c112/debug-customers/search/:identifier', async (c) =>
       }
     });
   } catch (error: any) {
-    console.error('❌ [DEBUG CUSTOMERS] Error:', error);
     return c.json({
       success: false,
       error: error.message

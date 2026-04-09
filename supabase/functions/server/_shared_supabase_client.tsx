@@ -34,8 +34,6 @@ export const getSupabaseClient = (): SupabaseClient => {
         detectSessionInUrl: false,
       }
     });
-
-    console.log("✅ Supabase client initialized");
   }
 
   return supabaseInstance;

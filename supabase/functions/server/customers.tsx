@@ -94,9 +94,7 @@ app.get('/make-server-84f9c112/customers', requireAuth, requirePermission('can_m
     const page = parseInt(c.req.query('page') || '1');
     const limit = parseInt(c.req.query('limit') || '50');
     const membershipFilter = c.req.query('membership_id'); // Optional filter by membership
-    
-    console.log(`📋 [GET CUSTOMERS] Page: ${page}, Limit: ${limit}`);
-    
+
     const allCustomers = await kv.getByPrefix('customer:');
     
     // Filter out deleted customers
@@ -116,9 +114,7 @@ app.get('/make-server-84f9c112/customers', requireAuth, requirePermission('can_m
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
     const paginatedCustomers = activeCustomers.slice(startIndex, endIndex);
-    
-    console.log(`✅ [GET CUSTOMERS] Retrieved ${paginatedCustomers.length}/${activeCustomers.length} customers`);
-    
+
     return c.json({
       success: true,
       data: {
@@ -132,7 +128,6 @@ app.get('/make-server-84f9c112/customers', requireAuth, requirePermission('can_m
       },
     });
   } catch (error: any) {
-    console.error('❌ [GET CUSTOMERS] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -146,9 +141,7 @@ app.post('/make-server-84f9c112/customers', requireAuth, requirePermission('can_
   try {
     const currentUser = c.get('user');
     const { phone, full_name, email, date_of_birth, gender, address, notes } = await c.req.json();
-    
-    console.log(`➕ [CREATE CUSTOMER] Request from: ${currentUser.email}`);
-    
+
     // Validate required fields
     if (!phone || !full_name) {
       return c.json({ success: false, error: 'Missing required fields: phone, full_name' }, 400);
@@ -165,7 +158,6 @@ app.post('/make-server-84f9c112/customers', requireAuth, requirePermission('can_
     if (existingCustomerKey) {
       const existingCustomer = await kv.get(existingCustomerKey);
       if (existingCustomer && !existingCustomer.is_deleted) {
-        console.log(`❌ [CREATE CUSTOMER] Phone already exists: ${normalizedPhone}`);
         return c.json({ 
           success: false, 
           error: 'Phone number already registered',
@@ -204,15 +196,12 @@ app.post('/make-server-84f9c112/customers', requireAuth, requirePermission('can_
     if (email) {
       await kv.set(`customer_email:${email.toLowerCase()}`, `customer:${customerId}`);
     }
-    
-    console.log(`✅ [CREATE CUSTOMER] Created: ${customerId} (${full_name}, ${normalizedPhone})`);
-    
+
     return c.json({
       success: true,
       data: newCustomer,
     });
   } catch (error: any) {
-    console.error('❌ [CREATE CUSTOMER] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -225,24 +214,18 @@ app.post('/make-server-84f9c112/customers', requireAuth, requirePermission('can_
 app.get('/make-server-84f9c112/customers/:id', requireAuth, async (c) => {
   try {
     const customerId = c.req.param('id');
-    
-    console.log(`🔍 [GET CUSTOMER] Fetching: ${customerId}`);
-    
+
     const customer = await kv.get(`customer:${customerId}`);
-    
+
     if (!customer || customer.is_deleted) {
-      console.log(`❌ [GET CUSTOMER] Not found or deleted: ${customerId}`);
       return c.json({ success: false, error: 'Customer not found' }, 404);
     }
-    
-    console.log(`✅ [GET CUSTOMER] Found: ${customer.full_name}`);
-    
+
     return c.json({
       success: true,
       data: customer,
     });
   } catch (error: any) {
-    console.error('❌ [GET CUSTOMER] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -257,14 +240,11 @@ app.put('/make-server-84f9c112/customers/:id', requireAuth, requirePermission('c
     const currentUser = c.get('user');
     const customerId = c.req.param('id');
     const updates = await c.req.json();
-    
-    console.log(`✏️ [UPDATE CUSTOMER] Request for: ${customerId}`);
-    
+
     // Get existing customer
     const customer = await kv.get(`customer:${customerId}`);
     
     if (!customer || customer.is_deleted) {
-      console.log(`❌ [UPDATE CUSTOMER] Not found: ${customerId}`);
       return c.json({ success: false, error: 'Customer not found' }, 404);
     }
     
@@ -322,15 +302,12 @@ app.put('/make-server-84f9c112/customers/:id', requireAuth, requirePermission('c
     };
     
     await kv.set(`customer:${customerId}`, updatedCustomer);
-    
-    console.log(`✅ [UPDATE CUSTOMER] Updated: ${customerId}`);
-    
+
     return c.json({
       success: true,
       data: updatedCustomer,
     });
   } catch (error: any) {
-    console.error('❌ [UPDATE CUSTOMER] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -344,9 +321,7 @@ app.delete('/make-server-84f9c112/customers/:id', requireAuth, async (c) => {
   try {
     const currentUser = c.get('user');
     const customerId = c.req.param('id');
-    
-    console.log(`🗑️ [DELETE CUSTOMER] Request for: ${customerId}`);
-    
+
     // Only owner can delete customers
     if (currentUser.role !== 'owner') {
       return c.json({ success: false, error: 'Only owner can delete customers' }, 403);
@@ -356,7 +331,6 @@ app.delete('/make-server-84f9c112/customers/:id', requireAuth, async (c) => {
     const customer = await kv.get(`customer:${customerId}`);
     
     if (!customer) {
-      console.log(`❌ [DELETE CUSTOMER] Not found: ${customerId}`);
       return c.json({ success: false, error: 'Customer not found' }, 404);
     }
     
@@ -368,15 +342,12 @@ app.delete('/make-server-84f9c112/customers/:id', requireAuth, async (c) => {
     };
     
     await kv.set(`customer:${customerId}`, deletedCustomer);
-    
-    console.log(`✅ [DELETE CUSTOMER] Soft deleted: ${customerId}`);
-    
+
     return c.json({
       success: true,
       message: 'Customer deleted successfully',
     });
   } catch (error: any) {
-    console.error('❌ [DELETE CUSTOMER] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -389,19 +360,14 @@ app.delete('/make-server-84f9c112/customers/:id', requireAuth, async (c) => {
 app.post('/make-server-84f9c112/customers/search', requireAuth, requirePermission('can_manage_appointments'), async (c) => {
   try {
     const { query, limit } = await c.req.json();
-    
-    console.log(`🔍 [SEARCH CUSTOMERS] Query: "${query}"`);
-    
+
     const results = await searchCustomers(query, limit || 20);
-    
-    console.log(`✅ [SEARCH CUSTOMERS] Found ${results.length} results`);
-    
+
     return c.json({
       success: true,
       data: results,
     });
   } catch (error: any) {
-    console.error('❌ [SEARCH CUSTOMERS] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -417,13 +383,10 @@ app.post('/make-server-84f9c112/customers/search', requireAuth, requirePermissio
 app.get('/make-server-84f9c112/customers/:id/history', requireAuth, requirePermission('can_manage_appointments'), async (c) => {
   try {
     const customerId = c.req.param('id');
-    
-    console.log(`📜 [CUSTOMER HISTORY] Fetching for: ${customerId}`);
-    
+
     const customer = await kv.get(`customer:${customerId}`);
-    
+
     if (!customer || customer.is_deleted) {
-      console.log(`❌ [CUSTOMER HISTORY] Not found: ${customerId}`);
       return c.json({ success: false, error: 'Customer not found' }, 404);
     }
     
@@ -445,15 +408,12 @@ app.get('/make-server-84f9c112/customers/:id/history', requireAuth, requirePermi
       appointments: [],
       transactions: [],
     };
-    
-    console.log(`✅ [CUSTOMER HISTORY] Retrieved for: ${customer.full_name}`);
-    
+
     return c.json({
       success: true,
       data: history,
     });
   } catch (error: any) {
-    console.error('❌ [CUSTOMER HISTORY] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -471,9 +431,7 @@ app.get('/make-server-84f9c112/customers/:id/history', requireAuth, requirePermi
 app.post('/make-server-84f9c112/customers/check-in', async (c) => {
   try {
     const { phone } = await c.req.json();
-    
-    console.log(`📍 [CHECK-IN] Request for phone: ${phone}`);
-    
+
     if (!phone) {
       return c.json({ success: false, error: 'Phone number required' }, 400);
     }
@@ -484,14 +442,12 @@ app.post('/make-server-84f9c112/customers/check-in', async (c) => {
     const customerKey = await kv.get(`customer_phone:${normalizedPhone}`);
     
     if (!customerKey) {
-      console.log(`❌ [CHECK-IN] Customer not found: ${normalizedPhone}`);
       return c.json({ success: false, error: 'Customer not found' }, 404);
     }
-    
+
     const customer = await kv.get(customerKey);
-    
+
     if (!customer || customer.is_deleted) {
-      console.log(`❌ [CHECK-IN] Customer deleted: ${normalizedPhone}`);
       return c.json({ success: false, error: 'Customer not found' }, 404);
     }
     
@@ -504,9 +460,7 @@ app.post('/make-server-84f9c112/customers/check-in', async (c) => {
     };
     
     await kv.set(customerKey, updatedCustomer);
-    
-    console.log(`✅ [CHECK-IN] Success: ${customer.full_name} (Visit #${updatedCustomer.total_visits})`);
-    
+
     return c.json({
       success: true,
       data: {
@@ -516,7 +470,6 @@ app.post('/make-server-84f9c112/customers/check-in', async (c) => {
       },
     });
   } catch (error: any) {
-    console.error('❌ [CHECK-IN] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -535,15 +488,12 @@ app.get('/make-server-84f9c112/customers/profile', requireAuth, async (c) => {
     
     // TODO: Implement customer authentication
     // For now, this endpoint requires staff auth
-    
-    console.log(`👤 [CUSTOMER PROFILE] Request from: ${currentUser.email}`);
-    
+
     return c.json({
       success: false,
       error: 'Customer authentication not yet implemented',
     }, 501);
   } catch (error: any) {
-    console.error('❌ [CUSTOMER PROFILE] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

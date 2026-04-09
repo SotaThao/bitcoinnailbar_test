@@ -17,7 +17,6 @@ const safeParse = (value: any) => {
   try {
     return JSON.parse(value);
   } catch (e) {
-    console.error('Failed to parse JSON:', e);
     return null;
   }
 };
@@ -43,12 +42,10 @@ async function getVLinkPaySettings() {
     .maybeSingle();
 
   if (error) {
-    console.error('Failed to fetch VLinkPay settings:', error);
     return null;
   }
-  
+
   if (!data) {
-    console.log('⚠️ VLinkPay settings not configured yet');
     return null;
   }
 
@@ -58,7 +55,6 @@ async function getVLinkPaySettings() {
     try {
       return JSON.parse(value);
     } catch (e) {
-      console.error('Failed to parse JSON:', e);
       return null;
     }
   };
@@ -66,7 +62,6 @@ async function getVLinkPaySettings() {
   try {
     return safeParse(data.value);
   } catch (e) {
-    console.error('Failed to parse VLinkPay settings:', e);
     return null;
   }
 }
@@ -88,9 +83,7 @@ const getEncryptionKey = async (): Promise<CryptoKey> => {
   const keyData = encoder.encode(keyString);
   const hashBuffer = await crypto.subtle.digest('SHA-256', keyData);
   const hashedKey = new Uint8Array(hashBuffer);
-  
-  console.log('🔑 [ENCRYPTION] Key normalized to', hashedKey.length, 'bytes via SHA-256');
-  
+
   // Import the hashed key for AES-GCM encryption
   return await crypto.subtle.importKey(
     'raw',
@@ -131,7 +124,6 @@ const decryptApiKey = async (encryptedText: string): Promise<string> => {
     const decoder = new TextDecoder();
     return decoder.decode(decryptedBuffer);
   } catch (error: any) {
-    console.error('❌ [DECRYPTION] Failed to decrypt secret key:', error);
     throw new Error(`Decryption failed: ${error.message}`);
   }
 };
@@ -159,8 +151,7 @@ app.post('/membership/redeem', async (c) => {
     }
 
     // ========== STEP 1: LOOKUP REDEEM CODE IN DATABASE ==========
-    console.log('🔍 [REDEEM] Looking up redeem code:', redeemCode);
-    
+
     const { data: redeemData, error: redeemLookupError } = await supabase
       .from('kv_store_89edbd69')
       .select('value')
@@ -168,7 +159,6 @@ app.post('/membership/redeem', async (c) => {
       .maybeSingle();
 
     if (redeemLookupError || !redeemData) {
-      console.error('❌ [REDEEM] Code not found in database:', redeemCode);
       return c.json({
         success: false,
         message: 'Invalid redeem code. Please check your code and try again.',
@@ -179,7 +169,6 @@ app.post('/membership/redeem', async (c) => {
     
     // Check if code is already used
     if (redemptionInfo.status === 'used' || redemptionInfo.redeemedAt) {
-      console.error('❌ [REDEEM] Code already used:', redeemCode);
       return c.json({
         success: false,
         message: 'This redeem code has already been used.',
@@ -188,7 +177,6 @@ app.post('/membership/redeem', async (c) => {
 
     // Check if code is expired
     if (new Date(redemptionInfo.expiresAt) < new Date()) {
-      console.error('❌ [REDEEM] Code expired:', redeemCode);
       return c.json({
         success: false,
         message: 'This redeem code has expired.',
@@ -197,13 +185,6 @@ app.post('/membership/redeem', async (c) => {
 
     const merchantOrderCode = redemptionInfo.merchantOrderCode;
     const tierName = redemptionInfo.membershipTier;
-    
-    console.log('✅ [REDEEM] Code found:', {
-      code: redeemCode,
-      merchantOrderCode,
-      tier: tierName,
-      status: redemptionInfo.status
-    });
 
     // ========== STEP 2: FETCH VLINKPAY SETTINGS ==========
     const vlinkpaySettings = await getVLinkPaySettings();
@@ -215,26 +196,13 @@ app.post('/membership/redeem', async (c) => {
     }
 
     // Decrypt secret key
-    console.log('🔐 [REDEEM] Decrypting secret key...');
     const VLINKPAY_SECRET_KEY = await decryptApiKey(vlinkpaySettings.secretKey);
-    console.log('✅ [REDEEM] Secret key decrypted successfully');
 
     const VLINKPAY_ENDPOINT = vlinkpaySettings.sandboxMode 
       ? 'https://sandbox.vlinkpay.com' 
       : 'https://api.vlinkpay.com';
 
     // ========== STEP 3: CALL VLINKPAY REDEEM API ==========
-    console.log('📞 [REDEEM] Calling VLinkPay redeem API:', {
-      endpoint: VLINKPAY_ENDPOINT,
-      redeemCode,
-      merchantOrderCode,
-    });
-    
-    // Log headers (masked)
-    console.log('🛡️ [REDEEM] Headers:', {
-      'Content-Type': 'application/json',
-      'Api-key': VLINKPAY_SECRET_KEY ? `${VLINKPAY_SECRET_KEY.substring(0, 4)}...${VLINKPAY_SECRET_KEY.substring(VLINKPAY_SECRET_KEY.length - 4)}` : 'MISSING'
-    });
 
     const vlinkpayResponse = await fetch(
       `${VLINKPAY_ENDPOINT}/gifthubs/public/merchant/redeem`,
@@ -253,18 +221,8 @@ app.post('/membership/redeem', async (c) => {
 
     const vlinkpayData = await vlinkpayResponse.json();
 
-    console.log('📊 [REDEEM] VLinkPay Response:', {
-      status: vlinkpayResponse.status,
-      statusText: vlinkpayResponse.statusText,
-      data: vlinkpayData
-    });
-
     // Check VLinkPay response
     if (vlinkpayResponse.status !== 200 || !vlinkpayData.success) {
-      console.error('❌ [REDEEM] VLinkPay redeem failed:', {
-        status: vlinkpayResponse.status,
-        response: vlinkpayData
-      });
       
       // Provide user-friendly error messages based on VLinkPay error
       let errorMessage = 'Redeem không thành công. ';
@@ -294,8 +252,6 @@ app.post('/membership/redeem', async (c) => {
       }, 400);
     }
 
-    console.log('✅ [REDEEM] VLinkPay redeem successful:', vlinkpayData);
-
     // ========== STEP 4: FETCH MEMBERSHIP TIER DETAILS ==========
     const { data: tierData, error: tierError } = await supabase
       .from('kv_store_89edbd69')
@@ -304,7 +260,6 @@ app.post('/membership/redeem', async (c) => {
       .single();
 
     if (tierError || !tierData) {
-      console.error('Failed to fetch membership tiers:', tierError);
       return c.json({
         success: false,
         message: 'Failed to retrieve membership details',
@@ -317,7 +272,6 @@ app.post('/membership/redeem', async (c) => {
     );
 
     if (!tier) {
-      console.error('Tier not found:', tierName);
       return c.json({
         success: false,
         message: 'Invalid membership tier',
@@ -346,20 +300,8 @@ app.post('/membership/redeem', async (c) => {
         
         const upgradeType = getUpgradeType(currentTier, newTier);
 
-        console.log('🔍 [TIER CHECK]', {
-          current: currentTier,
-          new: newTier,
-          currentPriority: getTierPriority(currentTier),
-          newPriority: getTierPriority(newTier),
-          upgradeType,
-        });
-
         // ❌ PREVENT DOWNGRADE
         if (upgradeType === 'downgrade') {
-          console.error('❌ [REDEEM] Downgrade attempt blocked:', {
-            from: currentTier,
-            to: newTier,
-          });
           return c.json({
             success: false,
             message: `Cannot downgrade from ${getTierDisplayName(currentTier)} to ${getTierDisplayName(newTier)}. You can only redeem the same tier or upgrade to a higher tier.`,
@@ -370,24 +312,12 @@ app.post('/membership/redeem', async (c) => {
         if (upgradeType === 'extension') {
           isExtension = true;
           expiresAt = calculateNewExpiry(existing.expiresAt, 'extension', 365);
-          
-          console.log('➕ [EXTEND] Same tier extension:', {
-            tier: newTier,
-            currentExpiry: existing.expiresAt,
-            newExpiry: expiresAt.toISOString(),
-          });
         }
-        
+
         // ⬆️ HIGHER TIER → UPGRADE & REPLACE
         if (upgradeType === 'upgrade') {
           isUpgrade = true;
           expiresAt = calculateNewExpiry(existing.expiresAt, 'upgrade', 365);
-          
-          console.log('⬆️ [UPGRADE] Tier upgrade:', {
-            from: currentTier,
-            to: newTier,
-            newExpiry: expiresAt.toISOString(),
-          });
         }
       } else {
         // Existing membership is expired or inactive - treat as new
@@ -420,7 +350,6 @@ app.post('/membership/redeem', async (c) => {
       });
 
     if (insertError) {
-      console.error('Failed to store membership:', insertError);
       return c.json({
         success: false,
         message: 'Failed to activate membership',
@@ -428,8 +357,7 @@ app.post('/membership/redeem', async (c) => {
     }
 
     // ========== STEP 7: MARK REDEEM CODE AS USED ==========
-    console.log('🔒 [REDEEM] Marking code as used...');
-    
+
     const { error: updateCodeError } = await supabase
       .from('kv_store_89edbd69')
       .update({
@@ -443,10 +371,7 @@ app.post('/membership/redeem', async (c) => {
       .eq('key', `redeem_code:${redeemCode.toUpperCase().trim()}`);
 
     if (updateCodeError) {
-      console.warn('⚠️ [REDEEM] Failed to mark code as used:', updateCodeError);
       // Don't fail the whole operation, membership is already created
-    } else {
-      console.log('✅ [REDEEM] Code marked as used');
     }
 
     // ========== STEP 8: LOG REDEMPTION HISTORY ==========
@@ -464,11 +389,10 @@ app.post('/membership/redeem', async (c) => {
       });
 
     if (historyError) {
-      console.warn('Failed to log redemption history:', historyError);
+      // Silently ignore history logging errors
     }
 
     // Success response
-    console.log('🎉 [REDEEM] Membership activated successfully!');
     // Generate appropriate success message based on action type
     let successMessage = '';
     if (isExtension) {
@@ -490,7 +414,6 @@ app.post('/membership/redeem', async (c) => {
     });
 
   } catch (error) {
-    console.error('❌ [REDEEM] Error:', error);
     return c.json({
       success: false,
       message: 'An error occurred while processing your request',
@@ -548,7 +471,6 @@ app.get('/membership/check/:phone', async (c) => {
     });
 
   } catch (error) {
-    console.error('Check membership error:', error);
     return c.json({
       success: false,
       message: 'Error checking membership status',

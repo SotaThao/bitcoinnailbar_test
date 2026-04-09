@@ -128,18 +128,15 @@ async function migrateSingleEntity(
   try {
     // Skip if already has metadata
     if (hasMetadata(value)) {
-      console.log(`⏭️ [MIGRATE] Skipping (already migrated): ${key}`);
       return { success: true, key };
     }
-    
+
     // Infer entity type from key
     const entityType = inferEntityType(key);
-    
+
     // Infer status from data
     const status = inferStatus(value, entityType);
-    
-    console.log(`🔄 [MIGRATE] Migrating ${key} → Type: ${entityType}, Status: ${status}`);
-    
+
     // Create migrated entity
     const migrated = migrateEntity(value, entityType, () => status);
     
@@ -150,15 +147,12 @@ async function migrateSingleEntity(
       .eq('key', key);
     
     if (error) {
-      console.error(`❌ [MIGRATE] Failed to update ${key}:`, error);
       return { success: false, key, error: error.message };
     }
-    
-    console.log(`✅ [MIGRATE] Success: ${key}`);
+
     return { success: true, key };
-    
+
   } catch (err: any) {
-    console.error(`❌ [MIGRATE] Exception for ${key}:`, err);
     return { success: false, key, error: err.message };
   }
 }
@@ -175,10 +169,7 @@ export async function migrateByPrefix(
   failed: number;
   errors: Array<{ key: string; error: string }>;
 }> {
-  console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  console.log(`🚀 [MIGRATE] Starting migration for prefix: ${prefix}`);
-  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-  
+
   try {
     // Fetch all entities with prefix
     const { data, error } = await supabase
@@ -187,17 +178,13 @@ export async function migrateByPrefix(
       .like('key', `${prefix}%`);
     
     if (error) {
-      console.error(`❌ [MIGRATE] Failed to fetch entities:`, error);
       throw error;
     }
-    
+
     if (!data || data.length === 0) {
-      console.log(`ℹ️ [MIGRATE] No entities found with prefix: ${prefix}`);
       return { total: 0, migrated: 0, skipped: 0, failed: 0, errors: [] };
     }
-    
-    console.log(`📊 [MIGRATE] Found ${data.length} entities to process\n`);
-    
+
     const results = {
       total: data.length,
       migrated: 0,
@@ -228,34 +215,14 @@ export async function migrateByPrefix(
           }
         }
       } catch (err: any) {
-        console.error(`❌ [MIGRATE] Failed to process ${row.key}:`, err);
         results.failed++;
         results.errors.push({ key: row.key, error: err.message });
       }
     }
-    
-    // Print summary
-    console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`📊 [MIGRATE] Migration Summary for "${prefix}"`);
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`Total:    ${results.total}`);
-    console.log(`Migrated: ${results.migrated} ✅`);
-    console.log(`Skipped:  ${results.skipped} ⏭️`);
-    console.log(`Failed:   ${results.failed} ❌`);
-    
-    if (results.errors.length > 0) {
-      console.log(`\n❌ Errors:`);
-      results.errors.forEach(({ key, error }) => {
-        console.log(`   - ${key}: ${error}`);
-      });
-    }
-    
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-    
+
     return results;
-    
+
   } catch (err: any) {
-    console.error(`❌ [MIGRATE] Migration failed:`, err);
     throw err;
   }
 }
@@ -270,10 +237,7 @@ export async function migrateAll(): Promise<{
   failed: number;
   errors: Array<{ key: string; error: string }>;
 }> {
-  console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  console.log(`🚀 [MIGRATE ALL] Starting full KV store migration`);
-  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-  
+
   try {
     // Fetch ALL entities
     const { data, error } = await supabase
@@ -281,17 +245,13 @@ export async function migrateAll(): Promise<{
       .select('key, value');
     
     if (error) {
-      console.error(`❌ [MIGRATE ALL] Failed to fetch entities:`, error);
       throw error;
     }
-    
+
     if (!data || data.length === 0) {
-      console.log(`ℹ️ [MIGRATE ALL] No entities found in KV store`);
       return { total: 0, migrated: 0, skipped: 0, failed: 0, errors: [] };
     }
-    
-    console.log(`📊 [MIGRATE ALL] Found ${data.length} entities to process\n`);
-    
+
     const results = {
       total: data.length,
       migrated: 0,
@@ -322,37 +282,14 @@ export async function migrateAll(): Promise<{
           }
         }
       } catch (err: any) {
-        console.error(`❌ [MIGRATE ALL] Failed to process ${row.key}:`, err);
         results.failed++;
         results.errors.push({ key: row.key, error: err.message });
       }
     }
-    
-    // Print summary
-    console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`📊 [MIGRATE ALL] Migration Complete`);
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`Total:    ${results.total}`);
-    console.log(`Migrated: ${results.migrated} ✅`);
-    console.log(`Skipped:  ${results.skipped} ⏭️`);
-    console.log(`Failed:   ${results.failed} ❌`);
-    
-    if (results.errors.length > 0) {
-      console.log(`\n❌ Errors:`);
-      results.errors.slice(0, 10).forEach(({ key, error }) => {
-        console.log(`   - ${key}: ${error}`);
-      });
-      if (results.errors.length > 10) {
-        console.log(`   ... and ${results.errors.length - 10} more errors`);
-      }
-    }
-    
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-    
+
     return results;
-    
+
   } catch (err: any) {
-    console.error(`❌ [MIGRATE ALL] Migration failed:`, err);
     throw err;
   }
 }

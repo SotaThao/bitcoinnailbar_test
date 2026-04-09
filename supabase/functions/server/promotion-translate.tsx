@@ -49,8 +49,6 @@ Respond with JSON in this exact format (no additional text):
 }`;
 
   try {
-    console.log("🤖 Calling DeepSeek API for translation...");
-
     const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -76,12 +74,10 @@ Respond with JSON in this exact format (no additional text):
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("❌ DeepSeek API error:", errorText);
       throw new Error(`DeepSeek API failed: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
-    console.log("✅ DeepSeek API response:", JSON.stringify(result, null, 2));
 
     const translatedText = result.choices?.[0]?.message?.content;
 
@@ -100,8 +96,6 @@ Respond with JSON in this exact format (no additional text):
 
       translatedData = JSON.parse(cleanedText);
     } catch (parseError) {
-      console.error("❌ JSON parse error:", parseError);
-      console.error("Raw response:", translatedText);
       throw new Error("Failed to parse translation response as JSON");
     }
 
@@ -123,11 +117,8 @@ Respond with JSON in this exact format (no additional text):
       delete enData.days;
     }
 
-    console.log("✅ Final translated data:", JSON.stringify(enData, null, 2));
-
     return enData;
   } catch (error: any) {
-    console.error("❌ Translation error:", error);
     throw new Error(`Translation failed: ${error.message}`);
   }
 }
@@ -156,7 +147,6 @@ export function registerPromotionTranslateRoutes(app: any) {
         enData,
       });
     } catch (error: any) {
-      console.error("❌ Translation endpoint error:", error);
       return c.json(
         {
           success: false,

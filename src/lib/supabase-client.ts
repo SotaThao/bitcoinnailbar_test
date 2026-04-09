@@ -25,10 +25,8 @@ export function getSupabaseClient(): SupabaseClient {
         },
       }
     );
-    
-    console.log('✅ [SUPABASE] Client initialized');
   }
-  
+
   return supabaseInstance;
 }
 

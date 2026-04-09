@@ -25,42 +25,41 @@ const initBucket = async () => {
     const bucketExists = buckets?.some(bucket => bucket.name === BUCKET_NAME);
     
     if (!bucketExists) {
-      console.log('📦 [PROMOTIONS] Creating storage bucket...');
       const { error } = await supabase.storage.createBucket(BUCKET_NAME, {
         public: true, // Public bucket for promotion images and chatbot avatars
         fileSizeLimit: 5242880, // 5MB
         allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
       });
-      
+
       if (error) {
         // Ignore "already exists" error (race condition)
         if (error.statusCode === '409' || error.message?.includes('already exists')) {
-          console.log('✅ [PROMOTIONS] Bucket already exists');
+          // Bucket already exists
         } else {
-          console.error('❌ [PROMOTIONS] Bucket creation failed:', error);
+          // Bucket creation failed
         }
       } else {
-        console.log('✅ [PROMOTIONS] Bucket created successfully');
+        // Bucket created successfully
       }
     } else {
-      console.log('✅ [PROMOTIONS] Bucket already exists');
-      
+      // Bucket already exists
+
       // Update bucket to public if it's not already
       try {
         const { error: updateError } = await supabase.storage.updateBucket(BUCKET_NAME, {
           public: true,
         });
         if (updateError) {
-          console.warn('⚠️  [PROMOTIONS] Could not update bucket to public:', updateError);
+          // Could not update bucket to public
         } else {
-          console.log('✅ [PROMOTIONS] Bucket updated to public');
+          // Bucket updated to public
         }
       } catch (e) {
-        console.warn('⚠️  [PROMOTIONS] Bucket update skipped:', e);
+        // Bucket update skipped
       }
     }
   } catch (error) {
-    console.error('❌ [PROMOTIONS] Bucket initialization error:', error);
+    // Bucket initialization error
   }
 };
 
@@ -112,7 +111,6 @@ app.post('/make-server-84f9c112/promotions/upload-image', async (c) => {
       });
 
     if (error) {
-      console.error('❌ [PROMOTIONS] Upload error:', error);
       return c.json({ success: false, error: error.message }, 500);
     }
 
@@ -120,8 +118,6 @@ app.post('/make-server-84f9c112/promotions/upload-image', async (c) => {
     const { data: publicUrlData } = supabase.storage
       .from(BUCKET_NAME)
       .getPublicUrl(filename);
-
-    console.log('✅ [PROMOTIONS] Image uploaded:', filename);
 
     return c.json({
       success: true,
@@ -133,10 +129,9 @@ app.post('/make-server-84f9c112/promotions/upload-image', async (c) => {
     });
 
   } catch (error: any) {
-    console.error('❌ [PROMOTIONS] Upload error:', error);
-    return c.json({ 
-      success: false, 
-      error: error.message || 'Upload failed' 
+    return c.json({
+      success: false,
+      error: error.message || 'Upload failed'
     }, 500);
   }
 });
@@ -155,19 +150,15 @@ app.delete('/make-server-84f9c112/promotions/delete-image', async (c) => {
       .remove([path]);
 
     if (error) {
-      console.error('❌ [PROMOTIONS] Delete error:', error);
       return c.json({ success: false, error: error.message }, 500);
     }
-
-    console.log('✅ [PROMOTIONS] Image deleted:', path);
 
     return c.json({ success: true });
 
   } catch (error: any) {
-    console.error('❌ [PROMOTIONS] Delete error:', error);
-    return c.json({ 
-      success: false, 
-      error: error.message || 'Delete failed' 
+    return c.json({
+      success: false,
+      error: error.message || 'Delete failed'
     }, 500);
   }
 });

@@ -113,9 +113,7 @@ app.get('/make-server-84f9c112/customers', requireAuth, requirePermission('can_m
     const page = parseInt(c.req.query('page') || '1');
     const limit = parseInt(c.req.query('limit') || '20');
     const offset = (page - 1) * limit;
-    
-    console.log(`📋 [GET CUSTOMERS] Page: ${page}, Limit: ${limit}`);
-    
+
     // Count total (for pagination)
     const { count, error: countError } = await supabase
       .from('customer_profiles')
@@ -123,7 +121,6 @@ app.get('/make-server-84f9c112/customers', requireAuth, requirePermission('can_m
       .neq('status', 'suspended'); // Exclude suspended (soft delete)
     
     if (countError) {
-      console.error('❌ [GET CUSTOMERS] Count error:', countError);
       throw countError;
     }
     
@@ -136,15 +133,12 @@ app.get('/make-server-84f9c112/customers', requireAuth, requirePermission('can_m
       .range(offset, offset + limit - 1);
     
     if (error) {
-      console.error('❌ [GET CUSTOMERS] Fetch error:', error);
       throw error;
     }
     
     // Transform for frontend
     const transformedCustomers = customers.map(transformCustomerResponse);
-    
-    console.log(`✅ [GET CUSTOMERS] Retrieved ${customers.length}/${count} customers`);
-    
+
     return c.json({
       success: true,
       data: {
@@ -158,7 +152,6 @@ app.get('/make-server-84f9c112/customers', requireAuth, requirePermission('can_m
       }
     });
   } catch (error: any) {
-    console.error('❌ [GET CUSTOMERS] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to fetch customers'
@@ -204,7 +197,6 @@ app.post('/make-server-84f9c112/customers', requireAuth, requirePermission('can_
       .maybeSingle();
     
     if (checkError) {
-      console.error('❌ [CREATE CUSTOMER] Check error:', checkError);
       throw checkError;
     }
     
@@ -240,18 +232,14 @@ app.post('/make-server-84f9c112/customers', requireAuth, requirePermission('can_
       .single();
     
     if (error) {
-      console.error('❌ [CREATE CUSTOMER] Insert error:', error);
       throw error;
     }
-    
-    console.log(`✅ [CREATE CUSTOMER] Created: ${customer.id} (${full_name}, ${normalizedPhone})`);
-    
+
     return c.json({
       success: true,
       data: transformCustomerResponse(customer)
     });
   } catch (error: any) {
-    console.error('❌ [CREATE CUSTOMER] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to create customer'
@@ -275,7 +263,6 @@ app.get('/make-server-84f9c112/customers/:id', requireAuth, async (c) => {
       .single();
     
     if (error || !customer) {
-      console.error('❌ [GET CUSTOMER] Not found:', customerId);
       return c.json({
         success: false,
         error: 'Customer not found'
@@ -287,7 +274,6 @@ app.get('/make-server-84f9c112/customers/:id', requireAuth, async (c) => {
       data: transformCustomerResponse(customer)
     });
   } catch (error: any) {
-    console.error('❌ [GET CUSTOMER] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to fetch customer'
@@ -336,18 +322,14 @@ app.put('/make-server-84f9c112/customers/:id', requireAuth, requirePermission('c
       .single();
     
     if (error) {
-      console.error('❌ [UPDATE CUSTOMER] Error:', error);
       throw error;
     }
-    
-    console.log(`✅ [UPDATE CUSTOMER] Updated: ${customerId}`);
-    
+
     return c.json({
       success: true,
       data: transformCustomerResponse(customer)
     });
   } catch (error: any) {
-    console.error('❌ [UPDATE CUSTOMER] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to update customer'
@@ -380,18 +362,14 @@ app.delete('/make-server-84f9c112/customers/:id', requireAuth, async (c) => {
       .eq('id', customerId);
     
     if (error) {
-      console.error('❌ [DELETE CUSTOMER] Error:', error);
       throw error;
     }
-    
-    console.log(`✅ [DELETE CUSTOMER] Soft deleted: ${customerId}`);
-    
+
     return c.json({
       success: true,
       message: 'Customer deleted successfully'
     });
   } catch (error: any) {
-    console.error('❌ [DELETE CUSTOMER] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to delete customer'
@@ -425,18 +403,14 @@ app.post('/make-server-84f9c112/customers/search', requireAuth, requirePermissio
       .limit(searchLimit);
     
     if (error) {
-      console.error('❌ [SEARCH CUSTOMERS] Error:', error);
       throw error;
     }
-    
-    console.log(`✅ [SEARCH CUSTOMERS] Found ${customers.length} results for: "${query}"`);
-    
+
     return c.json({
       success: true,
       data: customers.map(transformCustomerResponse)
     });
   } catch (error: any) {
-    console.error('❌ [SEARCH CUSTOMERS] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to search customers'

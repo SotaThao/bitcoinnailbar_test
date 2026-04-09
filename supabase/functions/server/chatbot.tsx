@@ -31,7 +31,6 @@ app.post("/make-server-84f9c112/chat", async (c) => {
     const serviceMenuData = await kv.get("settings:service-menu");
     
     if (!serviceMenuData) {
-      console.warn("⚠️ [CHAT] No service menu data found");
       return c.json({ 
         success: true, 
         message: language === 'vi' 
@@ -59,7 +58,6 @@ app.post("/make-server-84f9c112/chat", async (c) => {
         // ⚠️ FILTER: Skip inactive categories
         const categoryInfo = categoryMapping[categoryKey];
         if (!categoryInfo || categoryInfo.status !== 'active') {
-          console.log(`🚫 [CHAT] Skipping inactive category: ${categoryKey}`);
           return; // Skip this category entirely
         }
         
@@ -116,11 +114,6 @@ app.post("/make-server-84f9c112/chat", async (c) => {
 
     const allServices = flattenServices(serviceMenuData);
 
-    // 🔍 DEBUG: Log actual service names to verify data source
-    console.log("📊 [CHAT DEBUG] Total services loaded:", allServices.length);
-    console.log("📋 [CHAT DEBUG] First 10 service names:", allServices.slice(0, 10).map((s: any) => s.name));
-    console.log("🔥 [CHAT DEBUG] Service menu keys:", Object.keys(serviceMenuData));
-
     // Calculate booking count per service
     const allAppointments = await kv.getByPrefix("appointment:");
     const serviceBookingCount: Record<string, number> = {};
@@ -148,12 +141,9 @@ app.post("/make-server-84f9c112/chat", async (c) => {
     
     // ⚠️ STRICT VALIDATION: Only show hot services if we have REAL booking data
     const totalBookings = allAppointments.length;
-    const hotServices = totalBookings > 0 
+    const hotServices = totalBookings > 0
       ? servicesWithStats.filter((s: any) => s.bookingCount > 0).slice(0, 5)
       : [];
-    
-    console.log("🔥 [CHAT DEBUG] Total bookings:", totalBookings);
-    console.log("🔥 [CHAT DEBUG] Hot services count:", hotServices.length);
 
     // ========== FETCH MEMBERSHIP DATA ==========
     const membershipTiers = await kv.get('membership:tiers') || [];
@@ -442,7 +432,6 @@ app.post("/make-server-84f9c112/chat", async (c) => {
     return c.json({ success: true, message: message.content });
 
   } catch (error: any) {
-    console.log("Error in chat:", error);
     return c.json({ success: false, error: String(error) }, 500);
   }
 });

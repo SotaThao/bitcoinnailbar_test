@@ -6,6 +6,7 @@ export default function DebugAuth() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const listAllUsers = async () => {
     setLoading(true);
@@ -111,11 +112,11 @@ export default function DebugAuth() {
 
   const clearAllSessions = async () => {
     if (!confirm('Clear all sessions? This will log out everyone.')) return;
-    
+
     setLoading(true);
     try {
       // This is a debug function - would need backend support
-      alert('Need to implement backend endpoint to clear sessions');
+      setError('Need to implement backend endpoint to clear sessions');
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -269,7 +270,25 @@ export default function DebugAuth() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold">Debug Authentication</h1>
-        
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+            <svg className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1">
+              <h4 className="font-semibold text-red-900">Error</h4>
+              <p className="text-sm text-red-700 mt-1 whitespace-pre-line">{error}</p>
+            </div>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         <div className="bg-white rounded-lg border p-6 space-y-4">
           <h2 className="text-xl font-semibold">Actions</h2>
           

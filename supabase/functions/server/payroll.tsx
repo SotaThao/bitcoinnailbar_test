@@ -191,11 +191,9 @@ payrollApp.get("/make-server-84f9c112/dashboard/stats", async (c) => {
     ]);
 
     if (appointmentsResult.error) {
-      console.error('❌ [DASHBOARD] Postgres appointment_info error:', appointmentsResult.error);
       throw appointmentsResult.error;
     }
     if (staffResult.error) {
-      console.error('❌ [DASHBOARD] Postgres technician_info error:', staffResult.error);
       throw staffResult.error;
     }
 
@@ -204,13 +202,7 @@ payrollApp.get("/make-server-84f9c112/dashboard/stats", async (c) => {
 
     // Services still from KV Store (not yet migrated)
     const services = await kv.getByPrefix("service:");
-    
-    // 🔍 DEBUG LOGGING
-    console.log("📊 [DASHBOARD] Total records:");
-    console.log("   - Appointments (Postgres):", appointments.length);
-    console.log("   - Staff (Postgres):", staff.length);
-    console.log("   - Services (KV):", services.length);
-    
+
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterday = new Date(today);
@@ -379,7 +371,6 @@ payrollApp.get("/make-server-84f9c112/dashboard/stats", async (c) => {
       }
     });
   } catch (error: any) {
-    console.error('Dashboard stats error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

@@ -158,9 +158,7 @@ app.get('/make-server-84f9c112/customers', requireAuth, requirePermission('can_m
   try {
     const page = parseInt(c.req.query('page') || '1');
     const limit = parseInt(c.req.query('limit') || '20');
-    
-    console.log(`📋 [GET CUSTOMERS] Page: ${page}, Limit: ${limit} (US market only)`);
-    
+
     // Calculate offset
     const offset = (page - 1) * limit;
     
@@ -168,9 +166,7 @@ app.get('/make-server-84f9c112/customers', requireAuth, requirePermission('can_m
     const customers = await customerKV.getAll(limit, offset);
     const totalCount = await customerKV.countAll();
     const totalPages = Math.ceil(totalCount / limit);
-    
-    console.log(`✅ [GET CUSTOMERS] Retrieved ${customers.length}/${totalCount} customers`);
-    
+
     return c.json({
       success: true,
       data: {
@@ -184,7 +180,6 @@ app.get('/make-server-84f9c112/customers', requireAuth, requirePermission('can_m
       }
     });
   } catch (error: any) {
-    console.error('❌ [GET CUSTOMERS] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to fetch customers'
@@ -278,15 +273,12 @@ app.post('/make-server-84f9c112/customers', requireAuth, requirePermission('can_
     
     // Save to DB
     await customerKV.set(key, customer);
-    
-    console.log(`✅ [CREATE CUSTOMER] Created ${customerRegion} customer: ${key}`);
-    
+
     return c.json({
       success: true,
       data: customer
     });
   } catch (error: any) {
-    console.error('❌ [CREATE CUSTOMER] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to create customer'
@@ -316,7 +308,6 @@ app.get('/make-server-84f9c112/customers/:id', requireAuth, async (c) => {
       data: customer
     });
   } catch (error: any) {
-    console.error('❌ [GET CUSTOMER] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to fetch customer'
@@ -359,15 +350,12 @@ app.put('/make-server-84f9c112/customers/:id', requireAuth, requirePermission('c
     
     // Save
     await customerKV.set(customerId, updatedCustomer);
-    
-    console.log(`✅ [UPDATE CUSTOMER] Updated: ${customerId}`);
-    
+
     return c.json({
       success: true,
       data: updatedCustomer
     });
   } catch (error: any) {
-    console.error('❌ [UPDATE CUSTOMER] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to update customer'
@@ -407,15 +395,12 @@ app.delete('/make-server-84f9c112/customers/:id', requireAuth, async (c) => {
     customer.updated_at = new Date().toISOString();
     
     await customerKV.set(customerId, customer);
-    
-    console.log(`✅ [DELETE CUSTOMER] Soft deleted: ${customerId}`);
-    
+
     return c.json({
       success: true,
       message: 'Customer deleted successfully'
     });
   } catch (error: any) {
-    console.error('❌ [DELETE CUSTOMER] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to delete customer'
@@ -439,15 +424,12 @@ app.post('/make-server-84f9c112/customers/search', requireAuth, requirePermissio
     }
     
     const results = await customerKV.search(query, region, limit || 20);
-    
-    console.log(`✅ [SEARCH CUSTOMERS] Found ${results.length} results for: "${query}"`);
-    
+
     return c.json({
       success: true,
       data: results
     });
   } catch (error: any) {
-    console.error('❌ [SEARCH CUSTOMERS] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to search customers'

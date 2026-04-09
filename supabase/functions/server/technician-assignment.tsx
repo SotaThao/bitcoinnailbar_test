@@ -39,7 +39,6 @@ async function hasTimeConflict(
       .in('status', ['confirmed', 'pending']);
     
     if (error) {
-      console.error('❌ [TIME CONFLICT CHECK] Postgres error:', error);
       return false; // Assume no conflict on error
     }
     
@@ -65,7 +64,6 @@ async function hasTimeConflict(
     
     return false;
   } catch (error) {
-    console.error('❌ [TIME CONFLICT CHECK] Error:', error);
     return false; // Assume no conflict on error
   }
 }
@@ -97,7 +95,6 @@ async function getServiceDetails(serviceIds: string[]): Promise<any[]> {
       .map(id => services.find(s => s.id === id || s.name === id))
       .filter(s => s !== undefined);
   } catch (error) {
-    console.error('❌ [GET SERVICE DETAILS] Error:', error);
     return [];
   }
 }
@@ -120,7 +117,6 @@ async function calculateTechnicianScore(
   
   // Check working days
   if (!technician.working_days || !technician.working_days.includes(appointmentDay)) {
-    console.log(`⏸️ [SCORE] ${technician.name}: Not working on ${appointmentDay}`);
     return 0; // Cannot assign - not working this day
   }
   
@@ -131,7 +127,6 @@ async function calculateTechnicianScore(
       : null;
     
     if (!unavailableUntil || unavailableUntil > new Date(appointment.appointment_time)) {
-      console.log(`⏸️ [SCORE] ${technician.name}: Currently unavailable`);
       return 0; // Cannot assign - unavailable
     }
   }
@@ -145,13 +140,11 @@ async function calculateTechnicianScore(
   );
   
   if (hasConflict) {
-    console.log(`⏸️ [SCORE] ${technician.name}: Time conflict detected`);
     return 0; // Cannot assign - already booked
   }
-  
+
   // Availability passed: +40 base points
   score += 40;
-  console.log(`✅ [SCORE] ${technician.name}: Available (+40) = ${score}`);
   
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 2. SKILL MATCH (0-30 points)
@@ -175,8 +168,6 @@ async function calculateTechnicianScore(
       : 0;
     const skillPoints = Math.round(skillMatchRatio * 30);
     score += skillPoints;
-    
-    console.log(`🎯 [SCORE] ${technician.name}: Skill match ${matchCount}/${servicesNeeded.length} (+${skillPoints}) = ${score}`);
   }
   
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -185,8 +176,6 @@ async function calculateTechnicianScore(
   const rating = technician.rating || 4.0; // Default to 4.0 if not set
   const ratingPoints = Math.round((rating / 5) * 15);
   score += ratingPoints;
-  
-  console.log(`⭐ [SCORE] ${technician.name}: Rating ${rating}/5 (+${ratingPoints}) = ${score}`);
   
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 4. INCOME BALANCE (0-15 points)
@@ -203,8 +192,6 @@ async function calculateTechnicianScore(
     const incomeRatio = incomeDiff / avgIncome;
     const incomePoints = Math.min(Math.round(incomeRatio * 15), 15);
     score += incomePoints;
-    
-    console.log(`💰 [SCORE] ${technician.name}: Income balance (+${incomePoints}) = ${score}`);
   }
   
   return Math.round(score);
@@ -232,15 +219,12 @@ app.post('/:appointmentId/auto-assign', requireAuth, async (c) => {
       .maybeSingle();
     
     if (apptError) {
-      console.error('❌ [AUTO-ASSIGN] Postgres error:', apptError);
       throw apptError;
     }
-    
+
     if (!appointment) {
       return c.json({ success: false, error: 'Appointment not found' }, 404);
     }
-    
-    console.log(`🤖 [AUTO-ASSIGN] Starting for appointment ${appointmentId}`);
     
     // Get all technicians from Postgres
     const { data: allTechnicians, error: techError } = await supabase
@@ -248,7 +232,6 @@ app.post('/:appointmentId/auto-assign', requireAuth, async (c) => {
       .select('*');
     
     if (techError) {
-      console.error('❌ [AUTO-ASSIGN] Postgres error:', techError);
       throw techError;
     }
     
@@ -258,9 +241,7 @@ app.post('/:appointmentId/auto-assign', requireAuth, async (c) => {
         error: 'No technicians available in the system' 
       }, 400);
     }
-    
-    console.log(`🤖 [AUTO-ASSIGN] Evaluating ${allTechnicians.length} technicians...`);
-    
+
     // Calculate scores for all technicians
     const scoringPromises = allTechnicians.map(async (tech: any) => ({
       technician: tech,
@@ -282,9 +263,7 @@ app.post('/:appointmentId/auto-assign', requireAuth, async (c) => {
     }
     
     const bestMatch = availableTechnicians[0];
-    
-    console.log(`🏆 [AUTO-ASSIGN] Best match: ${bestMatch.technician.name} (Score: ${bestMatch.score})`);
-    
+
     // Store previous assignment for log
     const previousTechnicianId = appointment.technician_id || null;
     
@@ -315,7 +294,6 @@ app.post('/:appointmentId/auto-assign', requireAuth, async (c) => {
       .single();
     
     if (updateError) {
-      console.error('❌ [AUTO-ASSIGN] Update error:', updateError);
       throw updateError;
     }
     
@@ -336,9 +314,7 @@ app.post('/:appointmentId/auto-assign', requireAuth, async (c) => {
       ipAddress: c.req.header('x-forwarded-for') || c.req.header('x-real-ip'),
       userAgent: c.req.header('user-agent'),
     });
-    
-    console.log(`✅ [AUTO-ASSIGN] Successfully assigned ${bestMatch.technician.name} to appointment ${appointmentId}`);
-    
+
     return c.json({
       success: true,
       data: {
@@ -349,7 +325,6 @@ app.post('/:appointmentId/auto-assign', requireAuth, async (c) => {
       },
     });
   } catch (error: any) {
-    console.error('❌ [AUTO-ASSIGN] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to auto-assign technician',
@@ -380,9 +355,7 @@ app.get('/:appointmentId/available-technicians', requireAuth, async (c) => {
       .select('*');
     
     if (techError) throw techError;
-    
-    console.log(`📋 [AVAILABLE TECHS] Scoring ${allTechnicians?.length || 0} technicians for appointment ${appointmentId}`);
-    
+
     // Calculate scores for all
     const scoringPromises = (allTechnicians || []).map(async (tech: any) => {
       const score = await calculateTechnicianScore(tech, appointment, allTechnicians || []);
@@ -428,15 +401,12 @@ app.get('/:appointmentId/available-technicians', requireAuth, async (c) => {
     
     // Sort by score descending
     const sortedTechnicians = scoredTechnicians.sort((a, b) => b.score - a.score);
-    
-    console.log(`✅ [AVAILABLE TECHS] Returning ${sortedTechnicians.length} technicians with scores`);
-    
+
     return c.json({
       success: true,
       data: sortedTechnicians,
     });
   } catch (error: any) {
-    console.error('❌ [AVAILABLE TECHS] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to fetch available technicians',
@@ -495,9 +465,7 @@ app.put('/:appointmentId/assign-technician', requireAuth, async (c) => {
     if (!technician) {
       return c.json({ success: false, error: 'Technician not found' }, 404);
     }
-    
-    console.log(`👤 [MANUAL ASSIGN] Assigning ${technician.name} to appointment ${appointmentId}`);
-    
+
     // Check for conflicts (unless override)
     if (!overrideConflict) {
       const duration = appointment.estimated_duration || 60;
@@ -585,10 +553,7 @@ app.put('/:appointmentId/assign-technician', requireAuth, async (c) => {
       ipAddress: c.req.header('x-forwarded-for') || c.req.header('x-real-ip'),
       userAgent: c.req.header('user-agent'),
     });
-    
-    console.log(`✅ [MANUAL ASSIGN] Successfully assigned ${technician.name} to appointment ${appointmentId}`);
-    console.log(`📝 [MANUAL ASSIGN] Reason: ${reasonText}`);
-    
+
     return c.json({
       success: true,
       data: {
@@ -597,14 +562,11 @@ app.put('/:appointmentId/assign-technician', requireAuth, async (c) => {
       },
     });
   } catch (error: any) {
-    console.error('❌ [MANUAL ASSIGN] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to assign technician',
     }, 500);
   }
 });
-
-console.log('✅ Technician Assignment module initialized');
 
 export default app;

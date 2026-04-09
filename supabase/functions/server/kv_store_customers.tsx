@@ -29,7 +29,6 @@ const safeParse = (value: any) => {
   try {
     return JSON.parse(value);
   } catch (e) {
-    console.error('Failed to parse JSON:', e);
     return null;
   }
 };
@@ -50,10 +49,9 @@ export const customerKV = {
       .maybeSingle();
     
     if (error) {
-      console.error(`[KV CUSTOMERS GET] Error:`, error);
       throw error;
     }
-    
+
     return data ? safeParse(data.value) : null;
   },
 
@@ -63,13 +61,12 @@ export const customerKV = {
   async set(key: string, value: any) {
     const { error } = await supabase
       .from(TABLE_NAME)
-      .upsert({ 
-        key, 
-        value: typeof value === 'string' ? value : JSON.stringify(value) 
+      .upsert({
+        key,
+        value: typeof value === 'string' ? value : JSON.stringify(value)
       });
-    
+
     if (error) {
-      console.error(`[KV CUSTOMERS SET] Error:`, error);
       throw error;
     }
   },
@@ -82,9 +79,8 @@ export const customerKV = {
       .from(TABLE_NAME)
       .delete()
       .eq('key', key);
-    
+
     if (error) {
-      console.error(`[KV CUSTOMERS DELETE] Error:`, error);
       throw error;
     }
   },
@@ -97,12 +93,11 @@ export const customerKV = {
       .from(TABLE_NAME)
       .select('key, value')
       .in('key', keys);
-    
+
     if (error) {
-      console.error(`[KV CUSTOMERS MGET] Error:`, error);
       throw error;
     }
-    
+
     return data.map(row => safeParse(row.value));
   },
 
@@ -115,12 +110,11 @@ export const customerKV = {
       .select('key, value')
       .like('key', `${prefix}%`)
       .order('created_at', { ascending: false });
-    
+
     if (error) {
-      console.error(`[KV CUSTOMERS GET_BY_PREFIX] Error:`, error);
       throw error;
     }
-    
+
     return data.map(row => safeParse(row.value));
   },
 
@@ -133,12 +127,11 @@ export const customerKV = {
       .select('value')
       .eq('value->>phone', phone)
       .maybeSingle();
-    
+
     if (error) {
-      console.error(`[KV CUSTOMERS SEARCH_PHONE] Error:`, error);
       throw error;
     }
-    
+
     return data ? safeParse(data.value) : null;
   },
 
@@ -151,12 +144,11 @@ export const customerKV = {
       .select('value')
       .ilike('value->>full_name', `%${query}%`)
       .limit(limit);
-    
+
     if (error) {
-      console.error(`[KV CUSTOMERS SEARCH_NAME] Error:`, error);
       throw error;
     }
-    
+
     return data.map(row => safeParse(row.value));
   },
 
@@ -169,12 +161,11 @@ export const customerKV = {
       .select('value')
       .eq('value->>email', email)
       .maybeSingle();
-    
+
     if (error) {
-      console.error(`[KV CUSTOMERS SEARCH_EMAIL] Error:`, error);
       throw error;
     }
-    
+
     return data ? safeParse(data.value) : null;
   },
 
@@ -182,8 +173,6 @@ export const customerKV = {
    * Get ALL customers (no region filter - US market only)
    */
   async getAll(limit: number = 50, offset: number = 0) {
-    console.log(`[KV CUSTOMERS GET_ALL] Fetching customers, limit=${limit}, offset=${offset}`);
-    
     const { data, error } = await supabase
       .from(TABLE_NAME)
       .select('value')
@@ -191,15 +180,9 @@ export const customerKV = {
       .range(offset, offset + limit - 1);
     
     if (error) {
-      console.error(`[KV CUSTOMERS GET_ALL] Error:`, error);
       throw error;
     }
-    
-    console.log(`[KV CUSTOMERS GET_ALL] Query returned ${data?.length || 0} rows`);
-    if (data && data.length > 0) {
-      console.log(`[KV CUSTOMERS GET_ALL] Sample customer:`, safeParse(data[0].value));
-    }
-    
+
     return data.map(row => safeParse(row.value));
   },
 
@@ -210,12 +193,11 @@ export const customerKV = {
     const { count, error } = await supabase
       .from(TABLE_NAME)
       .select('*', { count: 'exact', head: true });
-    
+
     if (error) {
-      console.error(`[KV CUSTOMERS COUNT] Error:`, error);
       throw error;
     }
-    
+
     return count || 0;
   },
 
@@ -227,25 +209,24 @@ export const customerKV = {
       .from(TABLE_NAME)
       .select('value')
       .eq('value->>is_deleted', 'false');
-    
+
     // Add region filter if specified
     if (region) {
       supabaseQuery = supabaseQuery.eq('value->>region', region);
     }
-    
+
     // Search in name, email, or phone
     const lowerQuery = query.toLowerCase();
     supabaseQuery = supabaseQuery.or(
       `value->>full_name.ilike.%${lowerQuery}%,value->>email.ilike.%${lowerQuery}%,value->>phone.like.%${lowerQuery}%`
     );
-    
+
     const { data, error } = await supabaseQuery.limit(limit);
-    
+
     if (error) {
-      console.error(`[KV CUSTOMERS SEARCH] Error:`, error);
       throw error;
     }
-    
+
     return data.map(row => safeParse(row.value));
   }
 };

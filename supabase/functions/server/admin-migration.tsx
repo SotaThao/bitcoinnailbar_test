@@ -54,8 +54,6 @@ app.post('/admin/migrate/all', requireAuth, async (c) => {
       }, 403);
     }
     
-    console.log(`🚀 [ADMIN MIGRATE] Starting full migration by ${currentUser.email}`);
-    
     const result = await migrateAll();
     
     return c.json({
@@ -65,7 +63,6 @@ app.post('/admin/migrate/all', requireAuth, async (c) => {
     });
     
   } catch (error: any) {
-    console.error('❌ [ADMIN MIGRATE] Error:', error);
     return c.json({
       success: false,
       error: `Migration failed: ${error.message}`,
@@ -101,8 +98,6 @@ app.post('/admin/migrate/prefix', requireAuth, async (c) => {
       }, 400);
     }
     
-    console.log(`🚀 [ADMIN MIGRATE] Starting migration for prefix "${prefix}" by ${currentUser.email}`);
-    
     const result = await migrateByPrefix(prefix);
     
     return c.json({
@@ -112,7 +107,6 @@ app.post('/admin/migrate/prefix', requireAuth, async (c) => {
     });
     
   } catch (error: any) {
-    console.error('❌ [ADMIN MIGRATE] Error:', error);
     return c.json({
       success: false,
       error: `Migration failed: ${error.message}`,
@@ -136,8 +130,6 @@ app.get('/admin/migrate/status', requireAuth, async (c) => {
         error: 'Only owner can check migration status',
       }, 403);
     }
-    
-    console.log(`📊 [ADMIN MIGRATE] Checking migration status by ${currentUser.email}`);
     
     // Fetch all entities
     const { data, error } = await supabase
@@ -179,20 +171,17 @@ app.get('/admin/migrate/status', requireAuth, async (c) => {
           withoutMetadata++;
         }
       } catch (err) {
-        console.warn(`⚠️ Failed to parse ${row.key}:`, err);
         withoutMetadata++;
       }
     }
     
     const percentage = Math.round((withMetadata / data.length) * 100);
-    
+
     // Get entity stats
-    const stats = entitiesWithMetadata.length > 0 
+    const stats = entitiesWithMetadata.length > 0
       ? getEntityStats(entitiesWithMetadata)
       : null;
-    
-    console.log(`✅ [ADMIN MIGRATE] Status: ${withMetadata}/${data.length} (${percentage}%) migrated`);
-    
+
     return c.json({
       success: true,
       data: {
@@ -206,7 +195,6 @@ app.get('/admin/migrate/status', requireAuth, async (c) => {
     });
     
   } catch (error: any) {
-    console.error('❌ [ADMIN MIGRATE] Error:', error);
     return c.json({
       success: false,
       error: `Failed to check migration status: ${error.message}`,
@@ -230,8 +218,6 @@ app.get('/admin/migrate/prefixes', requireAuth, async (c) => {
         error: 'Only owner can check prefixes',
       }, 403);
     }
-    
-    console.log(`📋 [ADMIN MIGRATE] Listing key prefixes by ${currentUser.email}`);
     
     // Fetch all keys
     const { data, error } = await supabase
@@ -266,15 +252,12 @@ app.get('/admin/migrate/prefixes', requireAuth, async (c) => {
       .map(([prefix, count]) => ({ prefix, count }))
       .sort((a, b) => b.count - a.count);
     
-    console.log(`✅ [ADMIN MIGRATE] Found ${prefixes.length} unique prefixes`);
-    
     return c.json({
       success: true,
       data: prefixes,
     });
     
   } catch (error: any) {
-    console.error('❌ [ADMIN MIGRATE] Error:', error);
     return c.json({
       success: false,
       error: `Failed to list prefixes: ${error.message}`,

@@ -75,11 +75,9 @@ export const retry = async <T>(fn: () => Promise<T>, retries = 3, delay = 200): 
   } catch (error: any) {
     // Retry on network/connection errors
     if (retries > 0 && (String(error).includes("connection error") || String(error).includes("connection reset") || String(error).includes("TypeError"))) {
-      console.warn(`⚠️ Request failed, retrying... (${retries} left). Error: ${error.message || error}`);
       await new Promise(r => setTimeout(r, delay));
       return retry(fn, retries - 1, delay * 2);
     }
-    console.error(`❌ [RETRY] All retries exhausted. Final error:`, error);
     throw error;
   }
 };
@@ -213,12 +211,8 @@ export const verifyJWT = async (token: string): Promise<any> => {
 
     try {
       const { data: { user }, error: sbError } = await supabase.auth.getUser(token);
-      
+
       if (sbError || !user) {
-        // Only log if it's not a signature verification error (which is expected)
-        if (!isSignatureError) {
-          console.warn('⚠️ [JWT] Verification failed:', customError.message);
-        }
         return null;
       }
       

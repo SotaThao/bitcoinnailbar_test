@@ -12,12 +12,8 @@ const supabase = getSupabaseClient();
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const sendEmail = async (to: string, subject: string, html: string) => {
   const apiKey = Deno.env.get("RESEND_API_KEY");
-  
-  console.log("📧 [sendEmail] Starting...");
-  console.log("   - To:", to);
-  
+
   if (!apiKey) {
-    console.error("❌ Missing RESEND_API_KEY");
     throw new Error("RESEND_API_KEY not configured");
   }
 
@@ -49,8 +45,6 @@ const sendEmail = async (to: string, subject: string, html: string) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function createAppointment(data: any) {
   const { customerName, customerPhone, customerEmail, branchId, staffId, serviceIds, serviceNames, appointmentTime, notes } = data;
-  
-  console.log("🚀 [CREATE_APPT] Starting creation for:", customerName);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 0. VALIDATE: Check if staff is active (if staffId provided)
@@ -61,14 +55,12 @@ async function createAppointment(data: any) {
       const requestedStaff = allStaff.find((s: any) => s.id === staffId);
       
       if (requestedStaff && requestedStaff.isActive === false) {
-        console.error(`❌ [CREATE_APPT] Cannot book inactive staff: ${staffId}`);
         throw new Error("This staff member is currently unavailable for booking");
       }
     } catch (e: any) {
       if (e.message === "This staff member is currently unavailable for booking") {
         throw e;
       }
-      console.warn("⚠️ [CREATE_APPT] Could not validate staff status:", e);
       // Continue even if validation fails (graceful degradation)
     }
   }
@@ -91,12 +83,8 @@ async function createAppointment(data: any) {
         const normalizedNames = serviceNamesArray.map(n => n.toLowerCase());
         const found = allServices.filter((s: any) => normalizedNames.some((n: string) => s.name.toLowerCase().includes(n)));
         finalServiceIds = found.map((s: any) => s.id);
-        console.log("🔍 [CREATE_APPT] Resolved service IDs from names:", finalServiceIds);
-      } else {
-         console.log("⚠️ [CREATE_APPT] No services found in DB, proceeding with names only");
       }
     } catch (e) {
-      console.warn("⚠️ [CREATE_APPT] Failed to resolve service IDs:", e);
       // Proceed even if service ID resolution fails
     }
   }
@@ -149,7 +137,6 @@ async function createAppointment(data: any) {
       }, 0);
     }
   } catch (e) {
-    console.warn("⚠️ [CREATE_APPT] Could not calculate total:", e);
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -167,12 +154,9 @@ async function createAppointment(data: any) {
       
       if (technician) {
         technicianId = technician.id;
-        console.log(`✅ [CREATE_APPT] Resolved technician: ${staffId} → ${technicianId}`);
       } else {
-        console.warn(`⚠️ [CREATE_APPT] Technician not found for staffId: ${staffId}`);
       }
     } catch (e) {
-      console.warn("⚠️ [CREATE_APPT] Failed to resolve technician ID:", e);
     }
   }
 
@@ -180,7 +164,6 @@ async function createAppointment(data: any) {
   // 4. NEW: Create/Update Customer Record (POSTGRES)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   let customerId = null;
-  console.log("📝 [CREATE_APPT] Creating/updating customer record in Postgres...");
   try {
     // Normalize phone
     const normalizedPhone = customerPhone.replace(/\D/g, '');
@@ -194,13 +177,11 @@ async function createAppointment(data: any) {
       .maybeSingle();
     
     if (searchError && searchError.code !== 'PGRST116') {
-      console.error('❌ [CREATE_APPT] Postgres search error:', searchError);
       throw searchError;
     }
-    
+
     if (existingCustomer) {
       // ✅ UPDATE EXISTING CUSTOMER
-      console.log('📝 [CREATE_APPT] Updating existing customer:', existingCustomer.id);
       
       const { error: updateError } = await supabase
         .from('customer_profiles')
@@ -213,18 +194,15 @@ async function createAppointment(data: any) {
           updated_at: new Date().toISOString()
         })
         .eq('id', existingCustomer.id);
-      
+
       if (updateError) {
-        console.error('❌ [CREATE_APPT] Postgres update error:', updateError);
         throw updateError;
       }
-      
+
       customerId = existingCustomer.id;
-      console.log('✅ [CREATE_APPT] Customer updated in Postgres:', existingCustomer.id);
       
     } else {
       // ✅ CREATE NEW CUSTOMER
-      console.log('🆕 [CREATE_APPT] Creating new customer in Postgres...');
       
       // Postgres will auto-generate UUID via DEFAULT gen_random_uuid()
       const { data: newCustomer, error: insertError } = await supabase
@@ -246,20 +224,16 @@ async function createAppointment(data: any) {
         })
         .select()
         .single();
-      
+
       if (insertError) {
-        console.error('❌ [CREATE_APPT] Postgres insert error:', insertError);
         throw insertError;
       }
-      
+
       customerId = newCustomer?.id;
-      console.log('✅ [CREATE_APPT] New customer created in Postgres:', newCustomer?.id);
     }
     
   } catch (customerIntegrationError) {
-    console.error('❌ [CREATE_APPT] Customer integration error:', customerIntegrationError);
     // Don't fail the whole booking process if customer creation fails
-    console.warn('⚠️ [CREATE_APPT] Continuing despite customer integration error');
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -288,17 +262,14 @@ async function createAppointment(data: any) {
       .insert(appointmentData)
       .select()
       .single();
-    
+
     if (insertError) {
-      console.error('❌ [CREATE_APPT] Failed to save appointment to Postgres:', insertError);
       throw insertError;
     }
-    
+
     appointment = insertedAppointment;
-    console.log("✅ [CREATE_APPT] Saved to Postgres:", appointment.id);
     
   } catch (dbError) {
-    console.error('❌ [CREATE_APPT] Database error:', dbError);
     throw dbError;
   }
 
@@ -320,7 +291,6 @@ async function createAppointment(data: any) {
       const displayServices = Array.isArray(appointment.service_names) ? appointment.service_names.join(", ") : 'Selected services';
       
       // QR Generation
-      console.log("🎫 [CREATE_APPT] Generating QR code for appointment:", appointment.id);
       const qrData = JSON.stringify({
         id: appointment.id,
         phone: customerPhone,
@@ -332,12 +302,10 @@ async function createAppointment(data: any) {
         width: 300, margin: 2,
         color: { dark: '#000000', light: '#FFFFFF' }
       });
-      console.log("✅ [CREATE_APPT] QR code generated successfully");
-      
+
       // Cloudinary Upload
       const cloudinaryUrl = Deno.env.get("CLOUDINARY_URL");
       if (cloudinaryUrl) {
-        console.log("☁️ [CREATE_APPT] Attempting Cloudinary upload...");
         const matches = cloudinaryUrl.match(/cloudinary:\/\/([^:]+):([^@]+)@(.+)/);
         if (matches) {
           const [, apiKey, apiSecret, cloudName] = matches;
@@ -372,16 +340,12 @@ async function createAppointment(data: any) {
           if (uploadResponse.ok) {
             const uploadResult = await uploadResponse.json();
             qrCodeUrl = uploadResult.secure_url;
-            console.log("✅ [CREATE_APPT] QR uploaded to Cloudinary:", qrCodeUrl);
           } else {
-            const errorText = await uploadResponse.text();
-            console.error("❌ [CREATE_APPT] Cloudinary upload failed:", uploadResponse.status, errorText);
+            await uploadResponse.text();
           }
         } else {
-          console.warn("⚠️ [CREATE_APPT] Could not parse CLOUDINARY_URL");
         }
       } else {
-        console.warn("⚠️ [CREATE_APPT] CLOUDINARY_URL not configured, QR will fallback to client-side generation");
       }
 
       // Generate Email Template
@@ -399,7 +363,6 @@ async function createAppointment(data: any) {
       emailSent = true;
       
     } catch (err: any) {
-      console.error("❌ [CREATE_APPT] Email/QR error:", err);
       emailError = err.message;
     }
   }
@@ -408,8 +371,6 @@ async function createAppointment(data: any) {
   // 7. Broadcast Realtime Notification to Admin
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   try {
-    console.log("📡 [CREATE_APPT] Broadcasting realtime notification...");
-    
     // Send realtime event to 'appointments' channel
     await supabase.channel('appointments').send({
       type: 'broadcast',
@@ -424,10 +385,7 @@ async function createAppointment(data: any) {
         createdAt: appointment.created_at
       }
     });
-    
-    console.log("✅ [CREATE_APPT] Realtime notification sent successfully");
   } catch (broadcastError) {
-    console.error("❌ [CREATE_APPT] Realtime broadcast error:", broadcastError);
     // Don't fail the whole booking if notification fails
   }
 
@@ -435,26 +393,21 @@ async function createAppointment(data: any) {
   // 8. NEW: Trigger Auto-Assign if no technician assigned
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (!technicianId) {
-    console.log("🤖 [CREATE_APPT] No technician assigned, triggering auto-assign...");
     try {
       // Import auto-assign module
       const { autoAssignTechnician } = await import('./technician-assignment.tsx');
-      
+
       const assignResult = await autoAssignTechnician(appointment.id);
-      
+
       if (assignResult.success && assignResult.technician_id) {
-        console.log(`✅ [CREATE_APPT] Auto-assigned to technician: ${assignResult.technician_id}`);
         // Update appointment object with new technician_id
         appointment.technician_id = assignResult.technician_id;
       } else {
-        console.warn("⚠️ [CREATE_APPT] Auto-assign failed:", assignResult.message);
       }
     } catch (autoAssignError) {
-      console.error("❌ [CREATE_APPT] Auto-assign error:", autoAssignError);
       // Don't fail the whole booking if auto-assign fails
     }
   } else {
-    console.log("✅ [CREATE_APPT] Technician already assigned:", technicianId);
   }
 
   return { appointment, emailSent, emailError, qrCodeUrl };
@@ -488,16 +441,13 @@ app.get("/make-server-84f9c112/appointments", async (c) => {
       .from('appointment_info')
       .select('*')
       .order('created_at', { ascending: false });
-    
+
     if (error) {
-      console.error("❌ [GET_APPOINTMENTS] Postgres error:", error);
       throw error;
     }
-    
-    console.log(`📋 [GET_APPOINTMENTS] Returning ${appointments?.length || 0} appointments from Postgres`);
+
     return c.json({ success: true, data: appointments || [] });
   } catch (error: any) {
-    console.error("❌ [GET_APPOINTMENTS] Error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -513,21 +463,17 @@ app.get("/make-server-84f9c112/appointments/:id", async (c) => {
       .select('*')
       .eq('id', id)
       .maybeSingle();
-    
+
     if (error) {
-      console.error(`❌ [GET_APPOINTMENT] Postgres error:`, error);
       throw error;
     }
-    
+
     if (!appointment) {
-      console.warn(`⚠️ [GET_APPOINTMENT] Not found: ${id}`);
       return c.json({ success: false, error: "Appointment not found" }, 404);
     }
-    
-    console.log(`✅ [GET_APPOINTMENT] Found: ${id}`);
+
     return c.json({ success: true, data: appointment });
   } catch (error: any) {
-    console.error("❌ [GET_APPOINTMENT] Error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -562,11 +508,9 @@ app.put("/make-server-84f9c112/appointments/:id", async (c) => {
       .single();
     
     if (updateError) throw updateError;
-    
-    console.log(`✅ [UPDATE_APPOINTMENT] Updated: ${id}`);
+
     return c.json({ success: true, data: updated });
   } catch (error: any) {
-    console.error("❌ [UPDATE_APPOINTMENT] Error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -578,71 +522,58 @@ app.put("/make-server-84f9c112/appointments/:id", async (c) => {
 app.post("/make-server-84f9c112/check-in", async (c) => {
   try {
     const { appointmentId, phoneNumber } = await c.req.json();
-    console.log('🔍 [CHECK-IN] Request params:', { appointmentId, phoneNumber });
-    
+
     if (!appointmentId && !phoneNumber) return c.json({ success: false, error: "Missing params" }, 400);
     
     let appointment: any = null;
     
     // Try to find by ID first (Postgres)
     if (appointmentId) {
-      console.log('🔍 [CHECK-IN] Searching by ID in Postgres:', appointmentId);
-      
       // Try direct ID match first
       const { data: byId, error: idError } = await supabase
         .from('appointment_info')
         .select('*')
         .eq('id', appointmentId)
         .maybeSingle();
-      
+
       if (idError) {
-        console.error('⚠️ [CHECK-IN] Postgres ID query error:', idError);
       }
-      
+
       if (byId) {
         appointment = byId;
-        console.log('✅ [CHECK-IN] Found by ID:', appointment.id);
       } else {
         // Fallback: try legacy_appointment_id for old QR codes (pre-migration)
-        console.log('⚠️ [CHECK-IN] Not found by ID, trying legacy_appointment_id...');
         const { data: byLegacy, error: legacyError } = await supabase
           .from('appointment_info')
           .select('*')
           .eq('legacy_appointment_id', appointmentId)
           .maybeSingle();
-        
+
         if (legacyError) {
-          console.error('⚠️ [CHECK-IN] Legacy ID query error:', legacyError);
         }
-        
+
         if (byLegacy) {
           appointment = byLegacy;
-          console.log('✅ [CHECK-IN] Found by legacy ID:', appointment.id);
         } else {
-          console.log('⚠️ [CHECK-IN] Not found by legacy ID either, trying phone fallback...');
         }
       }
     }
     
     // Fallback to phone search if ID search failed (Postgres)
     if (!appointment && phoneNumber) {
-      console.log('🔍 [CHECK-IN] Searching by phone in Postgres:', phoneNumber);
       const searchPhone = phoneNumber.replace(/\D/g, '');
-      
+
       // Strategy 1: Look up customer_id via customer_profiles (phone stored as digits)
-      console.log('🔍 [CHECK-IN] Strategy 1: Lookup customer_profiles by normalized phone:', searchPhone);
       const { data: customer, error: customerError } = await supabase
         .from('customer_profiles')
         .select('id')
         .eq('phone', searchPhone)
         .maybeSingle();
-      
+
       if (customerError) {
-        console.error('⚠️ [CHECK-IN] Customer lookup error:', customerError);
       }
-      
+
       if (customer) {
-        console.log('✅ [CHECK-IN] Found customer_id:', customer.id);
         const { data: byCustomerId, error: custApptError } = await supabase
           .from('appointment_info')
           .select('*')
@@ -650,48 +581,42 @@ app.post("/make-server-84f9c112/check-in", async (c) => {
           .in('status', ['pending', 'confirmed', 'booked'])
           .order('appointment_time', { ascending: true })
           .limit(1);
-        
+
         if (custApptError) {
-          console.error('⚠️ [CHECK-IN] Customer appointment query error:', custApptError);
         }
-        
+
         if (byCustomerId && byCustomerId.length > 0) {
           appointment = byCustomerId[0];
-          console.log('✅ [CHECK-IN] Found by customer_id:', appointment.id);
         }
       }
-      
+
       // Strategy 2: Fallback - fetch recent pending appointments and match phone in JS
       if (!appointment) {
-        console.log('🔍 [CHECK-IN] Strategy 2: Fetching pending appointments for JS phone match...');
         const { data: pendingAppts, error: pendingError } = await supabase
           .from('appointment_info')
           .select('*')
           .in('status', ['pending', 'confirmed', 'booked'])
           .order('appointment_time', { ascending: true })
           .limit(50);
-        
+
         if (pendingError) {
-          console.error('⚠️ [CHECK-IN] Pending appointments query error:', pendingError);
         }
-        
+
         if (pendingAppts && pendingAppts.length > 0) {
           // Normalize both sides and compare
           const match = pendingAppts.find((appt: any) => {
             const apptPhone = (appt.customer_phone || '').replace(/\D/g, '');
             return apptPhone === searchPhone || apptPhone.endsWith(searchPhone) || searchPhone.endsWith(apptPhone);
           });
-          
+
           if (match) {
             appointment = match;
-            console.log('✅ [CHECK-IN] Found by JS phone match:', appointment.id);
           }
         }
       }
-      
+
       // Strategy 3: Original ilike as last resort (works if phone stored as digits)
       if (!appointment) {
-        console.log('🔍 [CHECK-IN] Strategy 3: ilike fallback...');
         const { data: byPhone, error: phoneError } = await supabase
           .from('appointment_info')
           .select('*')
@@ -699,20 +624,17 @@ app.post("/make-server-84f9c112/check-in", async (c) => {
           .in('status', ['pending', 'confirmed', 'booked'])
           .order('appointment_time', { ascending: true })
           .limit(1);
-        
+
         if (phoneError) {
-          console.error('⚠️ [CHECK-IN] Phone ilike query error:', phoneError);
         }
-        
+
         if (byPhone && byPhone.length > 0) {
           appointment = byPhone[0];
-          console.log('✅ [CHECK-IN] Found by ilike:', appointment.id);
         }
       }
     }
 
     if (!appointment) {
-      console.log('❌ [CHECK-IN] Appointment not found');
       return c.json({ success: false, error: "Not found" }, 404);
     }
 
@@ -732,13 +654,11 @@ app.post("/make-server-84f9c112/check-in", async (c) => {
         .single();
       
       if (updateError) {
-        console.error('❌ [CHECK-IN] Failed to update status in Postgres:', updateError);
         // Continue anyway - we still have the appointment data
       } else {
         appointment = updated;
-        console.log('✅ [CHECK-IN] Status updated to confirmed in Postgres');
       }
-      
+
       // 🔔 Save notification event for real-time updates (KV Admin - correct table)
       const notificationId = `notification:checkin:${Date.now()}`;
       const notificationData = {
@@ -753,7 +673,6 @@ app.post("/make-server-84f9c112/check-in", async (c) => {
         createdAt: new Date().toISOString(),
       };
       await kv.set(notificationId, notificationData);
-      console.log('✅ [CHECK-IN] Notification event saved:', notificationId);
     }
     
     // Map Postgres snake_case → camelCase for frontend compatibility
@@ -775,7 +694,6 @@ app.post("/make-server-84f9c112/check-in", async (c) => {
     
     return c.json({ success: true, data: responseData });
   } catch (e: any) {
-    console.error('❌ [CHECK-IN] Error:', e);
     return c.json({ success: false, error: e.message }, 500);
   }
 });
@@ -861,7 +779,6 @@ app.post("/make-server-84f9c112/appointments/availability", async (c) => {
             // Check if requested staff is active
             const requestedStaff = activeStaff.find((s: any) => s.id === staffId);
             if (!requestedStaff) {
-                console.warn(`⚠️ [AVAILABILITY] Staff ${staffId} is inactive or not found`);
                 continue; // Skip this slot if staff is inactive
             }
             candidateStaffIds = [staffId];
@@ -925,9 +842,8 @@ app.post("/make-server-84f9c112/appointments/availability", async (c) => {
     }
     
     return c.json({ success: true, data: availableSlots });
-    
+
   } catch (error: any) {
-    console.error("Availability Check Error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

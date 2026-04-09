@@ -19,8 +19,6 @@ const supabase = createClient(
  */
 app.get('/make-server-84f9c112/debug-postgres/customers/schema', async (c) => {
   try {
-    console.log('🔍 [DEBUG POSTGRES] Checking customer_profiles schema...');
-    
     // Query table with limit 1 to see structure
     const { data, error } = await supabase
       .from('customer_profiles')
@@ -28,7 +26,6 @@ app.get('/make-server-84f9c112/debug-postgres/customers/schema', async (c) => {
       .limit(1);
     
     if (error) {
-      console.error('❌ [DEBUG POSTGRES] Schema error:', error);
       return c.json({
         success: false,
         error: error.message,
@@ -39,23 +36,19 @@ app.get('/make-server-84f9c112/debug-postgres/customers/schema', async (c) => {
     }
     
     if (!data || data.length === 0) {
-      console.warn('⚠️ [DEBUG POSTGRES] Table is empty');
       return c.json({
         success: true,
         message: 'Table exists but contains no data',
         sample: null
       });
     }
-    
-    console.log('✅ [DEBUG POSTGRES] Sample record:', data[0]);
-    
+
     return c.json({
       success: true,
       columns: Object.keys(data[0]),
       sample_record: data[0]
     });
   } catch (error: any) {
-    console.error('❌ [DEBUG POSTGRES] Error:', error);
     return c.json({
       success: false,
       error: error.message
@@ -69,28 +62,22 @@ app.get('/make-server-84f9c112/debug-postgres/customers/schema', async (c) => {
  */
 app.get('/make-server-84f9c112/debug-postgres/customers/count', async (c) => {
   try {
-    console.log('🔍 [DEBUG POSTGRES] Counting customers...');
-    
     const { count, error } = await supabase
       .from('customer_profiles')
       .select('*', { count: 'exact', head: true });
     
     if (error) {
-      console.error('❌ [DEBUG POSTGRES] Count error:', error);
       return c.json({
         success: false,
         error: error.message
       }, 500);
     }
-    
-    console.log(`✅ [DEBUG POSTGRES] Total customers: ${count}`);
-    
+
     return c.json({
       success: true,
       total: count
     });
   } catch (error: any) {
-    console.error('❌ [DEBUG POSTGRES] Error:', error);
     return c.json({
       success: false,
       error: error.message
@@ -104,15 +91,12 @@ app.get('/make-server-84f9c112/debug-postgres/customers/count', async (c) => {
  */
 app.get('/make-server-84f9c112/debug-postgres/customers/list', async (c) => {
   try {
-    console.log('🔍 [DEBUG POSTGRES] Listing customers...');
-    
     const { data: customers, error } = await supabase
       .from('customer_profiles')
       .select('*')
       .limit(10);
     
     if (error) {
-      console.error('❌ [DEBUG POSTGRES] List error:', error);
       return c.json({
         success: false,
         error: error.message,
@@ -120,16 +104,13 @@ app.get('/make-server-84f9c112/debug-postgres/customers/list', async (c) => {
         details: error.details
       }, 500);
     }
-    
-    console.log(`✅ [DEBUG POSTGRES] Found ${customers.length} customers`);
-    
+
     return c.json({
       success: true,
       count: customers.length,
       customers
     });
   } catch (error: any) {
-    console.error('❌ [DEBUG POSTGRES] Error:', error);
     return c.json({
       success: false,
       error: error.message

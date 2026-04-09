@@ -119,27 +119,24 @@ export default function VLinkPaySettingsPage() {
       if (!contentType || !contentType.includes('application/json')) {
         const text = await response.text();
         console.error('❌ [DEBUG] Non-JSON response:', text);
-        alert(`Debug failed: Server returned non-JSON response. Check console for details.`);
+        setError('Debug failed: Server returned non-JSON response. Check console for details.');
         return;
       }
 
       const result = await response.json();
-      
+
       if (!result.success) {
         console.error('❌ [DEBUG] Error:', result);
-        alert(`Debug failed: ${result.error || result.message || 'Unknown error'}`);
+        setError(`Debug failed: ${result.error || result.message || 'Unknown error'}`);
         return;
       }
 
       console.log('🔍 [DEBUG] VLinkPay Settings:', result);
       console.table(result.data);
-      alert('✅ Debug info logged to console. Press F12 to view.\n\n' + 
-            `Has API Key (old): ${result.data.hasApiKey}\n` +
-            `Has Secret Key (new): ${result.data.hasSecretKey}\n` +
-            `All Fields: ${result.data.allFields.join(', ')}`);
-    } catch (err) {
+      setError(`✅ Debug info logged to console. Press F12 to view.\n\nHas API Key (old): ${result.data.hasApiKey}\nHas Secret Key (new): ${result.data.hasSecretKey}\nAll Fields: ${result.data.allFields.join(', ')}`);
+    } catch (err: any) {
       console.error('❌ [DEBUG] Failed:', err);
-      alert(`Debug failed: ${err.message}\n\nCheck console for details.`);
+      setError(`Debug failed: ${err.message}\n\nCheck console for details.`);
     }
   };
 

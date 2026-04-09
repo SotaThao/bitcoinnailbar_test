@@ -57,41 +57,36 @@ const initBucket = async () => {
     const bucketExists = buckets?.some(bucket => bucket.name === BUCKET_NAME);
     
     if (!bucketExists) {
-      console.log('📦 [EVENTS] Creating storage bucket...');
       const { error } = await supabase.storage.createBucket(BUCKET_NAME, {
         public: true,
         fileSizeLimit: 5242880, // 5MB
         allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
       });
-      
+
       if (error) {
         if (error.statusCode === '409' || error.message?.includes('already exists')) {
-          console.log('✅ [EVENTS] Bucket already exists');
+          // already exists
         } else {
-          console.error('❌ [EVENTS] Bucket creation failed:', error);
+          // creation failed
         }
       } else {
-        console.log('✅ [EVENTS] Bucket created successfully');
+        // created
       }
     } else {
-      console.log('✅ [EVENTS] Bucket already exists');
-      
       // Update bucket to public if needed
       try {
         const { error: updateError } = await supabase.storage.updateBucket(BUCKET_NAME, {
           public: true,
         });
         if (updateError) {
-          console.warn('⚠️ [EVENTS] Could not update bucket to public:', updateError);
-        } else {
-          console.log('✅ [EVENTS] Bucket updated to public');
+          // could not update
         }
       } catch (e) {
-        console.warn('⚠️ [EVENTS] Bucket update skipped:', e);
+        // update skipped
       }
     }
   } catch (error) {
-    console.error('❌ [EVENTS] Bucket initialization error:', error);
+    // initialization error
   }
 };
 
@@ -100,34 +95,26 @@ initBucket();
 
 // Helper to validate admin JWT token
 async function validateAdminToken(sessionToken: string | null): Promise<{ valid: boolean; userId?: string }> {
-  console.log('[EVENTS validateAdminToken] Called with token:', sessionToken ? 'EXISTS' : 'NULL');
-  
   if (!sessionToken) {
-    console.log('[EVENTS validateAdminToken] ❌ No token provided');
     return { valid: false };
   }
 
   try {
     // Import JWT verification from helpers
     const { verifyJWT } = await import('./helpers.tsx');
-    
-    console.log('[EVENTS validateAdminToken] Calling verifyJWT...');
+
     const payload = await verifyJWT(sessionToken);
-    console.log('[EVENTS validateAdminToken] verifyJWT payload:', payload);
-    
+
     // verifyJWT returns payload directly, or null if invalid
     if (!payload || !payload.userId) {
-      console.log('[EVENTS validateAdminToken] ❌ Invalid payload:', payload);
       return { valid: false };
     }
 
-    console.log('[EVENTS validateAdminToken] ✅ Token valid for user:', payload.userId);
     return {
       valid: true,
       userId: payload.userId,
     };
   } catch (error) {
-    console.error('[EVENTS validateAdminToken] ❌ Token validation error:', error);
     return { valid: false };
   }
 }
@@ -145,19 +132,16 @@ app.get('/make-server-84f9c112/events', async (c) => {
       .like('key', 'event:%');
     
     if (error) {
-      console.error('[EVENTS] Fetch error:', error);
       return c.json({ success: false, error: 'Failed to fetch events' }, 500);
     }
-    
+
     const events = (data || [])
       .map(item => item.value as Event)
       .filter(event => event.isActive)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
-    console.log(`✅ [EVENTS] Fetched ${events.length} active events`);
+
     return c.json({ success: true, data: events });
   } catch (error: any) {
-    console.error('[EVENTS] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -182,21 +166,18 @@ app.get('/make-server-84f9c112/admin/events', async (c) => {
       .like('key', 'event:%');
     
     if (error) {
-      console.error('[EVENTS ADMIN] Fetch error:', error);
       return c.json({ success: false, error: error.message }, 500);
     }
-    
+
     // Parse and sort by date (newest first)
     const events = (data || [])
       .map((d: any) => d.value)
-      .sort((a: Event, b: Event) => 
+      .sort((a: Event, b: Event) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
-    
-    console.log(`✅ [EVENTS ADMIN] Retrieved ${events.length} events`);
+
     return c.json({ success: true, data: events });
   } catch (error: any) {
-    console.error('[EVENTS ADMIN] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -248,14 +229,11 @@ app.post('/make-server-84f9c112/admin/events', async (c) => {
       .upsert({ key: `event:${eventId}`, value: newEvent });
     
     if (error) {
-      console.error('[EVENTS] Create error:', error);
       return c.json({ success: false, error: 'Failed to create event' }, 500);
     }
-    
-    console.log(`✅ [EVENTS] Created event: ${eventId}`);
+
     return c.json({ success: true, data: newEvent }, 201);
   } catch (error: any) {
-    console.error('[EVENTS] Create exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -300,14 +278,11 @@ app.put('/make-server-84f9c112/admin/events/:id', async (c) => {
       .upsert({ key: `event:${eventId}`, value: updatedEvent });
     
     if (error) {
-      console.error('[EVENTS] Update error:', error);
       return c.json({ success: false, error: 'Failed to update event' }, 500);
     }
-    
-    console.log(`✅ [EVENTS] Updated event: ${eventId}`);
+
     return c.json({ success: true, data: updatedEvent });
   } catch (error: any) {
-    console.error('[EVENTS] Update exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -343,27 +318,23 @@ app.delete('/make-server-84f9c112/admin/events/:id', async (c) => {
         await supabase.storage
           .from(BUCKET_NAME)
           .remove([event.imagePath]);
-        console.log(`✅ [EVENTS] Deleted image: ${event.imagePath}`);
       } catch (err) {
-        console.warn('⚠️ [EVENTS] Failed to delete image:', err);
+        // Failed to delete image
       }
     }
-    
+
     // Delete event from KV store
     const { error } = await supabase
       .from(KV_TABLE)
       .delete()
       .eq('key', `event:${eventId}`);
-    
+
     if (error) {
-      console.error('[EVENTS] Delete error:', error);
       return c.json({ success: false, error: 'Failed to delete event' }, 500);
     }
-    
-    console.log(`✅ [EVENTS] Deleted event: ${eventId}`);
+
     return c.json({ success: true, message: 'Event deleted successfully' });
   } catch (error: any) {
-    console.error('[EVENTS] Delete exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -416,7 +387,6 @@ app.post('/make-server-84f9c112/events/upload-image', async (c) => {
       });
 
     if (error) {
-      console.error('❌ [EVENTS] Upload error:', error);
       return c.json({ success: false, error: error.message }, 500);
     }
 
@@ -424,8 +394,6 @@ app.post('/make-server-84f9c112/events/upload-image', async (c) => {
     const { data: publicUrlData } = supabase.storage
       .from(BUCKET_NAME)
       .getPublicUrl(filename);
-
-    console.log('✅ [EVENTS] Image uploaded:', filename);
 
     return c.json({
       success: true,
@@ -437,10 +405,9 @@ app.post('/make-server-84f9c112/events/upload-image', async (c) => {
     });
 
   } catch (error: any) {
-    console.error('❌ [EVENTS] Upload error:', error);
-    return c.json({ 
-      success: false, 
-      error: error.message || 'Upload failed' 
+    return c.json({
+      success: false,
+      error: error.message || 'Upload failed'
     }, 500);
   }
 });
@@ -459,19 +426,15 @@ app.delete('/make-server-84f9c112/events/delete-image', async (c) => {
       .remove([path]);
 
     if (error) {
-      console.error('❌ [EVENTS] Delete error:', error);
       return c.json({ success: false, error: error.message }, 500);
     }
-
-    console.log('✅ [EVENTS] Image deleted:', path);
 
     return c.json({ success: true });
 
   } catch (error: any) {
-    console.error('❌ [EVENTS] Delete error:', error);
-    return c.json({ 
-      success: false, 
-      error: error.message || 'Delete failed' 
+    return c.json({
+      success: false,
+      error: error.message || 'Delete failed'
     }, 500);
   }
 });
