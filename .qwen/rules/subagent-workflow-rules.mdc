@@ -1,0 +1,244 @@
+---
+description: Subagent workflow rules — tool setup, roles, Telegram routing, communication flow, error handling, changelog sync
+alwaysApply: false
+---
+
+# Subagent Workflow Rules (Shared)
+
+> Rules chung cho **tất cả subagents** — tool setup, roles, Telegram routing, communication flow, error handling.
+> 
+> **Role-specific rules:**
+> - Product-Designer: [subagent-product-designer.mdc](./subagent-product-designer.mdc)
+> - Frontend-Developer: [subagent-frontend-developer.mdc](./subagent-frontend-developer.mdc)
+> - Backend-Developer: [subagent-backend-developer.mdc](./subagent-backend-developer.mdc)
+> - QA-Tester: [subagent-qa-tester.mdc](./subagent-qa-tester.mdc)
+
+---
+
+## Rule 0: Tool Requirements & Setup
+
+### 0.1 Required Tools
+
+| Tool | Purpose | Installation |
+|------|---------|-------------|
+| **Pencil MCP** | Wireframe & prototype design | Cursor Extensions Marketplace |
+| **Codex CLI** | AI-assisted code generation | `npm install -g @openai/codex` |
+| **QwenCLI** | Main code implementation | Built-in (Qwen Code) |
+| **GitHub CLI (`gh`)** | PR creation, issue management | `winget install GitHub.cli` |
+| **Telegram Bot** | Thread notifications | `scripts/send-dev-report.js`, `scripts/send-changelog.js` |
+| **Node.js** | Script execution | `winget install OpenJS.NodeJS` |
+
+### 0.2 Pencil MCP Setup
+
+**Pencil MCP là Cursor extension** — cài qua Cursor Extensions Marketplace.
+
+**Sử dụng:**
+- Command Palette → `Pencil: Create New Design`
+- Tên design: `<feature-name>-<ticket-id>`
+- Export: PNG/SVG → `Docs/01-product/wireframes/<feature>/`
+- Save: `Docs/01-product/wireframes/<feature>/<design>.pencil`
+
+**Design System Library (Reuse):**
+1. Feature đầu tiên → tạo component library → `Docs/01-product/design-system/<project>-library.pencil`
+2. Các feature sau → `Pencil: Import Components from Library` → reuse → chỉ tạo mới components chưa có
+
+### 0.3 Gemini CLI Setup (Gemini 3.1 Pro for Visual)
+
+```bash
+npm install -g @google/generative-ai-cli
+export GEMINI_API_KEY="your-key"  # https://aistudio.google.com/apikey
+```
+
+**When to use:** Color palette refinement, visual hierarchy, icon generation (SVG output), layout optimization.
+
+### 0.4 Telegram Bot Setup
+
+```bash
+# Bot credentials in .env.local (NEVER commit)
+TELEGRAM_BOT_TOKEN="your-bot-token"
+TELEGRAM_CHAT_ID="your-chat-id"
+
+# Test notification
+node scripts/send-dev-report.js "Test message" --thread 727
+```
+
+### 0.5 GitHub CLI Setup
+
+```bash
+gh auth login
+gh repo set-default PersonalProjectJob/Job360
+gh auth status
+```
+
+---
+
+## Rule 1: Subagent Architecture & Roles
+
+### 1.1 Subagent List
+
+| Subagent | Role | Doc Responsibility | Reports To | When Active |
+|----------|------|-------------------|------------|-------------|
+| `Product-Designer` | UX/UI Design, Wireframes | Product Doc (`01-product/`) | Thread 727 | Phase 1 |
+| `Frontend-Developer` | Frontend (React/TSX) | Engineering Doc — FE section (`02-engineering/`) | Thread 727 | Phase 2 |
+| `Backend-Developer` | Backend (APIs, DB) | Engineering Doc — BE section (`02-engineering/`) | Thread 727 | Phase 2 |
+| `QA-Tester` | Testing, validation | QA Doc (`03-qa/`) | Thread 735 | Phase 3 |
+
+### 1.2 Workflow Routing by Branch Type
+
+| Branch Type | Starting Phase | Skip | Reason |
+|-------------|---------------|------|--------|
+| `feature/*` | Phase 0 (Plan) | None | Full workflow |
+| `bugfix/*` | Phase 2 (Impl) | Phase 0, 1 | Fix existing code |
+| `hotfix/*` | Phase 2 (Impl) | Phase 0, 1 | Urgent fix |
+| `release/*` | Phase 3 (Test) | Phase 0, 1, 2 | Testing only |
+
+### 1.3 Telegram Thread Routing
+
+| Thread | Who Reports | What |
+|--------|------------|------|
+| **718** | System (auto) | Changelog, Master Doc updates, releases |
+| **727** | Product-Designer, Frontend-Developer, Backend-Developer | Design & implementation progress |
+| **735** | QA-Tester **ONLY** | Test results, quality gates |
+
+**CRITICAL:**
+- ❌ QA-Tester **DOES NOT** report to 727
+- ❌ Design/Devs **DO NOT** report to 735
+- ✅ 718 chỉ cho changelog & releases
+
+---
+
+## Rule 6: Telegram Notification (Thread Routing)
+
+### 6.1 Notification Trigger Points
+
+**Thread 718:** PR merged → main, feature released, Master Doc updated
+**Thread 727:** Design completed, FE implemented, BE implemented, dev blocked
+**Thread 735:** Pre-commit tests done, automated tests done, QA pass/fail
+
+### 6.2 Sending Notification
+
+```bash
+# Thread 727 — Design/Dev report
+node scripts/send-dev-report.js \
+  --agent "<agent-name>" --feature "<feature-name>" \
+  --status "completed|blocked|failed" \
+  --message "<report-content>" --thread "727"
+
+# Thread 735 — Test report
+node test-pre-commit.js --telegram --thread "735"
+
+# Thread 718 — Changelog
+node scripts/send-changelog.js \
+  --title "Brief Summary" --category "feature|fix|security|deployment|breaking" \
+  --changes "Change 1\nChange 2\nChange 3" --thread "718"
+```
+
+---
+
+## Rule 7: Subagent Communication Flow
+
+### 7.1 Feature Branch (Full Workflow)
+
+```
+Phase 0: Plan Mode (feature/* only)
+  → Create Master Doc → Product, Engineering, QA, Tasks docs
+  → Master Doc phân chia docs cho từng role
+  → User approves Master Doc ✅
+  ↓
+Phase 1: Product-Designer (Thread 727)
+  → Design System Audit → Wireframes via Pencil MCP
+  → Update Product Doc with Pencil link + Audit results
+  → Report Thread 727
+  ↓ [User reviews & approves design]
+  ↓
+Phase 2: Frontend-Developer & Backend-Developer (Thread 727, parallel)
+  → Read Engineering Doc + Design artifacts
+  → Implement → PR → test branch
+  → Report Thread 727
+  ↓ [Both complete & PRs → test]
+  ↓
+Phase 3: QA-Tester (Thread 735)
+  → Run tests → Report Thread 735
+  → If QA PASS → Report Thread 718 → Merge
+  → If QA FAIL → Report user → Wait for decision
+```
+
+### 7.2 Blocking Conditions
+
+| Subagent | Blocked By | Unblock Condition |
+|----------|-----------|-------------------|
+| Product-Designer | Master Doc not approved | User approves |
+| Frontend-Developer | Design not approved | User approves design |
+| Backend-Developer | Design not approved | User approves design |
+| QA-Tester | FE + BE PRs not on test | Both PRs merged to test |
+
+---
+
+## Rule 8: Error Handling & Escalation
+
+### 8.1 Failure Modes
+
+| Failure Type | Action |
+|--------------|--------|
+| Cannot read doc | Report Thread 727 → ❌ Failed |
+| Build fails | Attempt fix 3x → report → ❌ Failed |
+| Design rejected | Wait for user feedback → ⏸️ Blocked |
+| Test failures | Log bugs → report severity → ⚠️/❌ |
+
+### 8.2 QA FAIL Workflow
+
+```
+1. Log all bugs → Create GitHub issues with severity
+2. Update QA Doc → Add bug reports + changelog
+3. Report to USER:
+   - Bug list with severity
+   - Options: Fix & re-test / Deploy with known issues / Rollback
+4. WAIT for user decision — do NOT proceed
+```
+
+---
+
+## Rule 9: Changelog Synchronization
+
+### 9.1 Each Subagent Updates its own Doc changelog
+
+| Subagent | Updates | Reports To |
+|----------|---------|------------|
+| Product-Designer | Product Doc changelog | Thread 727 |
+| Frontend-Developer | Engineering Doc changelog (FE) | Thread 727 |
+| Backend-Developer | Engineering Doc changelog (BE) | Thread 727 |
+| QA-Tester | QA Doc changelog | Thread 735 |
+
+### 9.2 Master Doc Aggregation
+
+Master Doc aggregates all subagent changelogs. When all complete & QA PASS:
+```bash
+node scripts/send-changelog.js \
+  --title "Feature <name> completed" \
+  --category "feature" \
+  --changes "Design completed\nFrontend implemented\nBackend implemented\nQA passed" \
+  --thread "718"
+```
+
+---
+
+## Quick Reference
+
+### Thread Routing
+| Agent | Thread |
+|-------|--------|
+| Product-Designer | 727 |
+| Frontend-Developer | 727 |
+| Backend-Developer | 727 |
+| QA-Tester | 735 |
+| System (changelog) | 718 |
+
+### Report Checklist
+Every subagent report must have:
+- [ ] Agent name & feature
+- [ ] Status (completed/blocked/failed)
+- [ ] Artifacts created/modified
+- [ ] Next steps
+- [ ] Timestamp (date + time)
+- [ ] Links to relevant docs/PRs
+- [ ] Correct thread

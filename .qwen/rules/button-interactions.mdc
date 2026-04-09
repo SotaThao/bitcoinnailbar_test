@@ -1,0 +1,62 @@
+# Button Interaction Design System
+
+## Primary Button Interaction States
+
+All primary action buttons (yellow/gold `#f0b90b` background) MUST follow this interaction pattern:
+
+### Base State (No Hover)
+- **No neon/glow effect** - clean, solid appearance
+- Background: `bg-[#f0b90b]` or `bg-[var(--color-primary)]`
+- Text: `text-[#101724]` or `text-black`
+- Font: `font-bold`
+
+### Hover State
+- **Neon glow effect appears** with shadow
+- Add: `hover:shadow-[0_0_20px_rgba(240,185,11,0.5)]`
+- Smooth transition with `transition-all duration-200`
+
+### Active State (Click/Touch)
+- **Scale down slightly** for tactile feedback
+- Add: `active:scale-[0.98]`
+- Maintains hover glow during active state
+
+### Disabled State
+- Reduced opacity: `disabled:opacity-50`
+- Not-allowed cursor: `disabled:cursor-not-allowed`
+- No hover/active effects
+
+## Required className Pattern
+
+```tsx
+className="inline-flex min-w-[180px] items-center justify-center gap-1 rounded-full bg-[#f0b90b] px-5 py-2.5 text-sm font-bold text-[#101724] transition-all duration-200 hover:shadow-[0_0_20px_rgba(240,185,11,0.5)] active:scale-[0.98]"
+```
+
+Or with disabled state:
+
+```tsx
+className="h-11 w-full rounded-xl px-6 transition-all duration-200 hover:shadow-[0_0_20px_rgba(240,185,11,0.5)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+```
+
+## Components Using This Pattern
+
+- `HelpReviewTokenPage.tsx` - Change Place & Create Help Ticket buttons
+- `InlineReviewSection.tsx` - Write review button
+- `BusinessDetailCard.tsx` - Get Directions button (should be updated)
+
+## Enhancement Guidelines
+
+When enhancing button interactions:
+
+1. **Maintain performance**: Use `duration-200` for smooth but snappy feel
+2. **Consistent glow**: Always use `rgba(240,185,11,0.5)` for primary yellow buttons
+3. **Subtle scale**: `scale-[0.98]` provides tactile feedback without being distracting
+4. **Accessibility**: Always include disabled states with appropriate visual feedback
+5. **Mobile-first**: Ensure active states work well on touch devices
+
+## Future Enhancements
+
+Consider adding:
+- Ripple effect on click for material design feel
+- Haptic feedback on mobile (via navigator.vibrate)
+- Focus states for keyboard navigation: `focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50`
+- Loading spinner integration for async actions

@@ -1,0 +1,88 @@
+---
+description: 
+alwaysApply: true
+---
+
+[[calls]]
+match = "when the user requests code examples, setup or configuration steps, or library/API documentation"
+tool = "context7"
+
+Always think step by step and carefully before do something. Ask  max 3 questions to clarifying if any concerns.
+---
+description: PLAN — flow 3 phần (product-design-doc → engineering-doc → qa-doc) + quy ước file
+---
+
+When creating implementation plans:
+1. Analyze existing similar features
+2. Break down into smaller, manageable tasks
+3. Identify dependencies and prerequisites
+4. Document potential risks and mitigation strategies
+5. Create step-by-step implementation guide
+6. Save plan to plan.md file (hoặc gộp vào một file dưới `docs/06-tasks/` theo quy ước bên dưới)
+
+# PLAN — luồng áp dụng (không dùng skill orchestrator riêng)
+
+## Khi nào áp dụng
+
+- **Plan** mode trong Cursor, **hoặc** user cần **implementation plan** / **feature plan** / **technical spec** trước khi code.
+
+## Flow (bắt buộc theo thứ tự)
+
+```mermaid
+flowchart LR
+    P1["Part 1: product-design-doc"] --> P2["Part 2: engineering-doc"]
+    P2 --> P3["Part 3: qa-doc"]
+```
+
+1. **`.cursor/skills/product-design-doc/SKILL.md`** — Product / UX (Persona → Wireframe; User Flow **Mermaid**).  
+2. **`.cursor/skills/engineering-doc/SKILL.md`** — Codebase mapping, Technical, To-Do.  
+3. **`.cursor/skills/qa-doc/SKILL.md`** — Test Cases.
+
+Plan đầy đủ = **một** tài liệu (hoặc `plan.md`) gồm **10 section** đúng thứ tự:
+
+1. Persona  
+2. Scenario  
+3. Audit  
+4. Solution (Product & UX)  
+5. User Flow — **Mermaid**  
+6. Wireframe  
+7. Solution vs codebase  
+8. Technical  
+9. To-Do List  
+10. Test Cases  
+
+## Output & ticket (`docs/06-tasks/`)
+
+- Đường dẫn: `docs/06-tasks/{ticket}_{mô-tả-snake-case}_{YYMMDD}.md`  
+- **YYMMDD** (6 số), mô tả **snake_case** lowercase.  
+- Có **URL GitHub issue** đầy đủ trong doc; chưa có thì **hỏi user** trước khi đặt tên theo ticket.
+
+```javascript
+const parseGitHubIssueURL = (url) => {
+  const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/issues\/(\d+)/);
+  if (!match) return null;
+  return { org: match[1], repo: match[2], ticket: match[3], fullUrl: url };
+};
+```
+
+**GitHub API (fetch issue title/body):** Token **bắt buộc** qua biến môi trường `GITHUB_TOKEN` hoặc `GH_TOKEN` — không dán token vào chat, không commit file chứa token. Xem `.cursor/skills/Review-clean-code/SKILL.md` (mục *GitHub API & token*) và `.env.example`.
+
+## Update vs tạo mới
+
+```mermaid
+flowchart TD
+    A[Yêu cầu doc] --> B{Có doc trùng ticket / nội dung?}
+    B -->|Có| C[Hỏi: cập nhật hay tạo mới?]
+    B -->|Không| D[Tạo file mới theo convention]
+    C -->|Cập nhật| E[Append ## Changelog, mới nhất trên cùng]
+```
+
+## Không làm
+
+- Bỏ một trong ba phần khi user cần **plan đầy đủ**.  
+- User Flow chỉ bullet, không Mermaid.  
+- Đặt tên file theo ticket mà không có / không xác nhận issue URL.
+
+## Rule nhỏ theo phần (tùy chọn)
+
+- `product-design-doc.mdc` · `engineering-doc.mdc` · `qa-doc.mdc`

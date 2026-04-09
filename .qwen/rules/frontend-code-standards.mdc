@@ -1,0 +1,134 @@
+---
+description: Frontend code formatting and conventions — file naming, imports, component structure, TypeScript, Tailwind, API/state patterns.
+globs:
+  - "src/**/*.ts"
+  - "src/**/*.tsx"
+  - "src/**/*.css"
+alwaysApply: false
+---
+
+# Frontend Code Standards — CryptoMap360
+
+## File Naming
+
+- **Components / Pages**: `PascalCase.tsx` — `MerchantCard.tsx`, `MapPage.tsx`
+- **shadcn/ui primitives** (`src/app/components/ui/`): `lowercase.tsx` — `button.tsx`, `card.tsx`
+- **Hooks**: `camelCase.ts` prefixed with `use` — `useMerchants.ts`
+- **Stores**: `camelCase.ts` — `useMerchantsStore.ts`, `auth.store.ts`
+- **Services**: `camelCase.ts` suffixed with `Service` — `vlinkpayService.ts`
+- **Models/Types**: `camelCase.ts` — `location.ts`, `business.ts`
+- **Utils**: `camelCase.ts` — `formatPrice.ts`, `logger.ts`
+- **Test files**: co-locate with source, suffix `.test.ts` — `auth-service.test.ts`
+
+## Import Order
+
+Group imports with a blank line between groups, in this order:
+
+1. **React**: `import React from 'react'` / `import { useState } from 'react'`
+2. **Third-party libraries**: `zustand`, `@tanstack/react-query`, `react-router`, `zod`, `motion`, `lucide-react`, etc.
+3. **Internal by layer** (each `@/` group on its own line or grouped logically):
+   - `@/config/` — API endpoints, env
+   - `@/lib/` — query client, http client
+   - `@/services/` — API services
+   - `@/stores/` — Zustand stores
+   - `@/hooks/` — custom hooks
+   - `@/contexts/` — React contexts
+   - `@/models/` — TypeScript interfaces
+   - `@/app/components/` — feature components
+   - `@/components/` — shared layout components
+   - `@/utils/` — helpers
+4. **Relative imports**: `./ChildComponent`, `../shared/util`
+5. **Type-only imports**: `import type { Foo } from '...'`
+6. **Styles**: `import '@/styles/...'`
+
+## Component Structure
+
+Follow this order inside every component file:
+
+```
+1. Imports (ordered as above)
+2. Interface / type definitions (Props, local types)
+3. Sub-components or helpers (if small, co-located)
+4. Main component: export function ComponentName({ ... }: Props) { ... }
+   a. Hooks (useState, useEffect, custom hooks, store selectors)
+   b. Derived/computed values
+   c. Event handlers
+   d. return JSX
+5. Default export (if needed)
+```
+
+## TypeScript
+
+- Define data shapes as `interface` in `src/models/` — not inline `type` aliases for object shapes.
+- Use `import type { ... }` for type-only imports.
+- API responses typed via generics: `this.get<Merchant[]>('/merchants')`.
+- Avoid `any`. Use `unknown` + type guard when the type is truly dynamic.
+- Component props: `interface Props { ... }` above the component, not `React.FC<{ inline }>`.
+
+## Tailwind / CSS
+
+- Conditional classes: use `cn()` from `@/app/components/ui/utils` — never manual string concatenation.
+- Design tokens: use CSS variables from `src/styles/globals.css` `@theme` block — `var(--color-primary)`, `var(--spacing-md)`, `var(--radius-lg)`.
+- No inline `style={{ }}` except for truly dynamic values (calculated positions, canvas).
+- No `@apply` in CSS — Tailwind v4 discourages it; use utility classes directly.
+- Icons: use `lucide-react`; no emoji as icons.
+
+## API Layer
+
+- All API calls go through `src/services/` extending `BaseService` — never raw `fetch()` or `axios` in components.
+- Use `@/config/api` for endpoint constants: `API_ENDPOINTS.MERCHANTS`.
+- New service = new file in `src/services/`, extend `BaseService`, export singleton.
+
+## Reuse — URLs, brand assets, and static resources
+
+- **API / env base URLs** — Already centralized in `@/config/api` (and env). Do not duplicate `https://…` API hosts in components.
+- **Raster / SVG logos, third-party icon URLs, long CDN strings** — Prefer **one exported source of truth**:
+  - Shared across features → `src/config/` (e.g. `brandAssets.ts`, `externalUrls.ts`) **or**
+  - Owned by a UI module → exported constants next to the component (e.g. `CRYPTO_ICON_URLS` in `CryptoIcon.tsx`) and **import elsewhere** instead of copying the URL.
+- **UI icons** — Use `lucide-react` for standard icons; use centralized URL maps only when the asset is a **remote image** (crypto logo, partner logo), not scattered string literals in random files.
+- **Avoid** pasting the same external URL in multiple components; add one constant and reuse.
+
+## Internationalization (i18n)
+
+- **Single source for copy** — All user-visible strings (labels, buttons, errors, empty states, toasts) live in locale files, **not** inline in components.
+- **This repo:** `src/locales/en.json` and `src/locales/vi.json` — add/update **both** with the **same key paths** for every new string. If the project later moves to `en.ts` / `vi.ts` (or splits by feature modules), the rule stays: **one authoritative file per language**, imported/merged into the translation pipeline.
+- **Usage:** `useLanguage()` → `t('key')` (or nested keys as supported by `LanguageContext`). Do not hardcode English or Vietnamese in JSX/`return` except rare cases: `aria-*` technical tokens, dev-only logs, or tests.
+- **New UI:** When adding a screen or component text, add keys to **en + vi in the same PR** to avoid shipping English-only or missing keys.
+- **Legacy:** `LanguageContext` may expose flat legacy keys; prefer **nested JSON sections** (e.g. `navigation.*`, `sidebar.*`) for new keys to keep files maintainable.
+- **Refactor dần (không big-bang):** Không gom toàn bộ `LanguageContext` trong một PR. Khi **sửa màn / component**, đồng thời: (1) bỏ chuỗi hardcode, (2) thêm key vào `en.json` + `vi.json`, (3) ưu tiên **nested keys** mới; chỉ thêm mapping legacy trong context khi còn tương thích khóa cũ. Màn **mới** luôn dùng nested + đủ EN/VN từ đầu.
+
+## Encoding & mojibake (tránh chuỗi vỡ)
+
+- **UTF-8** cho mọi file nguồn và `en.json` / `vi.json`. Không tạo chuỗi kiểu `â€"`, `Ã©`, `âœ…` (UTF-8 bị đọc sai) — thường do copy/paste hoặc tool sai encoding.
+- **Log / comment:** ưu tiên prefix ASCII (`[WARN]`, `[ERROR]`) thay vì emoji trong string nếu không cần thiết; giảm rủi ro mojibake khi merge.
+- **Locale:** tiếng Việt trong JSON phải hiển thị đúng dấu trong IDE; nếu thấy ký tự lạ, sửa lại nguồn UTF-8.
+- Chi tiết & checklist: `.cursor/skills/frontend-code-standards/SKILL.md` (mục **Encoding & mojibake** trong §8).
+
+## State Management
+
+- **Server state** (data from API): TanStack Query — `useQuery`, `useMutation`, `queryClient`.
+- **Client state** (UI state, filters, user preferences): Zustand stores in `src/stores/`.
+- Never duplicate server data into Zustand. Query cache is the source of truth for API data.
+- Store naming: `use<Domain>Store` pattern — `useMerchantsStore`, `useUserStore`.
+
+## Forms
+
+- Use React Hook Form + Zod schema for all forms.
+- Schema in same file or co-located `schema.ts`.
+- Use `@hookform/resolvers/zod` for validation.
+
+## Quick Pre-Commit Checklist
+
+1. Imports ordered? No unused imports?
+2. Props interface defined? No `any`?
+3. `cn()` used for conditional classes?
+4. API calls through services, not raw fetch?
+5. Server state in Query, client state in Zustand?
+6. New external URLs / logos / icons — centralized or imported from an existing constant, not duplicated?
+7. New user-visible strings — added to `en.json` + `vi.json` (or future locale modules), not hardcoded in TSX?
+8. No mojibake — strings/logs look correct in UTF-8 (no stray `â€` / `Ã` patterns)?
+9. Accessibility: interactive elements have labels / focus states?
+
+## Full Reference
+
+For detailed examples and templates, see `.cursor/skills/frontend-code-standards/SKILL.md`.

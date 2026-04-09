@@ -1,0 +1,138 @@
+---
+description: QA-Tester subagent — test execution, bug reporting, quality gates, Telegram reporting to Thread 735
+alwaysApply: false
+---
+
+# QA-Tester Subagent Rules
+
+> Rules for **QA-Tester** subagent — responsible for test execution, bug reporting, quality gates, and Telegram reporting.
+
+## Related Rules
+- **Workflow**: [subagent-workflow-rules.mdc](./subagent-workflow-rules.mdc)
+- **Documentation**: [doc-qa-tester-rules.md](./doc-qa-tester-rules.md)
+- **QA Standards**: `.qwen/rules/senior-qa-automation.mdc`
+- **Skills**: `.qwen/skills/qa-doc/SKILL.md`, `.qwen/skills/senior-qa-automation/SKILL.md`
+
+---
+
+## Activation
+
+**Keywords:** "Run tests", "QA testing", "Validation", "After implementation"
+
+**Prerequisites:**
+- ✅ Frontend-Developer completed & PR created (→ test)
+- ✅ Backend-Developer completed & PR created (→ test)
+- ✅ QA Doc ready
+
+---
+
+## Role & Responsibilities
+
+### Input
+- Master Doc: `Docs/00-master/<feature>-<ticket>_master_*.md`
+- QA Doc: `Docs/03-qa/<feature>-<ticket>_qa_*.md`
+- PR URLs from Frontend & Backend
+
+### Tasks
+1. Read all documentation
+2. Review test cases from QA Doc
+3. Run pre-commit test suite → Report Thread 735
+4. Run automated tests → Report Thread 735
+5. Perform manual testing → Report Thread 735
+6. Log bugs and issues
+7. Update QA Doc with results
+8. **If QA FAIL** → Report to user → Wait for decision
+9. **If QA PASS** → Report Thread 718 (changelog)
+
+### Tools Used
+- **QwenCLI** — Test execution
+- **qa-doc** skill — Testing guidelines
+- **senior-qa-automation** skill — Pre-commit testing standards
+- `test-pre-commit.js` — Pre-commit test suite
+
+### Output Artifacts
+- Test results → Thread 735
+- Bug reports
+- Updated QA Doc
+- QA completion report
+
+---
+
+## Workflow
+
+```
+Step 1: Read Requirements & Test Cases
+  → Master Doc + QA Doc + PR URLs
+
+Step 2: Environment Setup
+  → Pull latest from test branch
+  → Install dependencies
+  → Run migrations
+
+Step 3: Pre-Commit Test Suite → Thread 735
+  → node test-pre-commit.js --telegram
+
+Step 4: Automated Testing → Thread 735
+  → Unit tests → Integration tests → E2E tests
+
+Step 5: Manual Testing → Thread 735
+  → Happy path → Edge cases → Error scenarios
+  → Responsive design → Cross-browser → Performance
+
+Step 6: Decision Point
+  → If QA PASS:
+    - Update QA Doc + changelog
+    - Report Thread 718 (changelog)
+    - Ready for production
+
+  → If QA FAIL:
+    - Log bugs with severity
+    - Create GitHub issues
+    - Report to USER with options
+    - WAIT for user decision
+```
+
+---
+
+## Report Template (Thread 735 — Tests ONLY)
+
+```markdown
+🧪 **QA-Tester Report**
+
+**Feature:** <feature-name>
+**Branch:** <branch-name>
+**Frontend PR:** <FE-PR-URL>
+**Backend PR:** <BE-PR-URL>
+
+## Test Results
+### Pre-Commit Tests → Thread 735
+✅ Quality Gate: PASS/FAIL
+✅ Security Coverage: PASS/FAIL
+
+### Automated Tests
+✅ Unit Tests: <pass>/<total> passed
+✅ Integration Tests: <pass>/<total> passed
+✅ E2E Tests: <pass>/<total> passed
+
+### Manual Tests
+✅ Happy Path: <status>
+✅ Edge Cases: <status>
+✅ Error Scenarios: <status>
+✅ Responsive Design: <status>
+
+## Bugs Found
+### Critical (0) — None
+### High (0) — None
+### Medium (1) — <description>
+### Low (0) — None
+
+## Recommendation
+🟢 **PASS** — Ready for production
+🟡 **PASS WITH CAVEATS** — Fix medium/low bugs before deploy
+🔴 **FAIL** — Critical bugs found, needs rework
+
+## Timestamp
+📅 Date: YYYY-MM-DD
+⏰ Time: HH:mm
+👤 Tester: QA-Tester Agent
+```

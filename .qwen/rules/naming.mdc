@@ -1,0 +1,83 @@
+---
+description: Shared naming conventions for ALL roles — branch parsing, file naming, versioning, folder structure
+alwaysApply: true
+---
+
+# Naming Conventions (Shared Atom)
+
+> Applies to: Product-Designer, Frontend-Developer, Backend-Developer, QA-Tester, PM/Lead
+
+---
+
+## 1. Branch Format
+
+```
+<type>/<ticket-id>_<description>
+```
+
+| Type | Example | Ticket ID | Description |
+|------|---------|-----------|-------------|
+| `feature` | `feature/1_push-code` | `1` | `push-code` |
+| `bugfix` | `bugfix/2_fix-login` | `2` | `fix-login` |
+| `hotfix` | `hotfix/3_security-patch` | `3` | `security-patch` |
+| `release` | `release/1.1.0` | N/A | Version number |
+
+---
+
+## 2. File Naming
+
+```
+<description>-<ticket-id>_<type>_<yymmdd>_v<major>.<month>.<day>.md
+```
+
+| Component | Source | Example |
+|-----------|--------|---------|
+| `<description>` | Branch (kebab-case) | `push-code` |
+| `<ticket-id>` | Branch | `1` |
+| `<type>` | Doc type | `master`, `product`, `engineering`, `qa`, `tasks` |
+| `<yymmdd>` | Date | `260407` |
+| Version | `v<major>.<month>.<day>` | `v1.4.7` |
+
+### Type → Folder Mapping
+
+| Type | Folder | Role |
+|------|--------|------|
+| `master` | `Docs/00-master/` | PM/Lead |
+| `product` | `Docs/01-product/` | Product-Designer |
+| `engineering` | `Docs/02-engineering/` | Frontend + Backend |
+| `qa` | `Docs/03-qa/` | QA-Tester |
+| `tasks` | `Docs/04-tasks/` | PM/Lead |
+
+### Versioning
+
+| Event | Action | Example |
+|-------|--------|---------|
+| Content change | Increment day | `v1.4.6` → `v1.4.7` |
+| New month | Reset day, increment month | `v1.4.9` → `v1.5.0` |
+| Major release | Reset month+day, increment major | `v1.12.9` → `v2.0.0` |
+
+---
+
+## 3. Folder Structure
+
+```
+Docs/
+├── 00-master/              # Master documents
+├── 01-product/             # Product Doc + wireframes + mockups
+│   ├── design-system/      # .pencil component library
+│   ├── wireframes/         # Stage 1 wireframes
+│   └── mockups/            # Stage 2 visual mockups
+├── 02-engineering/         # Engineering Doc (FE + BE sections)
+├── 03-qa/                  # QA Doc + test results
+├── 04-tasks/               # Task breakdown
+└── 05-changelog/           # Optional changelog
+```
+
+---
+
+## 4. Rules
+
+- ✅ **kebab-case** only — no spaces, no special chars
+- ✅ Always include version + date
+- ✅ File in correct `Docs/` subfolder
+- ✅ Extension: `.md` (docs), `.pencil` (design files)

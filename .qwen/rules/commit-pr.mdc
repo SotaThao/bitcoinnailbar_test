@@ -1,0 +1,115 @@
+---
+description: Shared commit & PR rules — branch name as subject, --body-file, target branch, auto-assign
+alwaysApply: true
+---
+
+# Commit & PR Rules (Shared Atom)
+
+> Applies to: Frontend-Developer, Backend-Developer, QA-Tester
+
+---
+
+## 1. Commit Convention
+
+### Subject = Branch Name (MANDATORY)
+```bash
+git commit -m "$(git branch --show-current)" -m "<body>"
+```
+
+### Body Format
+```
+<issue_title_from_github>
+
+<first_2-3_lines_of_issue>
+
+<code_changes_summary>
+
+Refs #<issue_number>
+```
+
+---
+
+## 2. Pre-Commit Checklist
+
+- [ ] Remove all `console.*` calls
+- [ ] No hard-coded values (use env/constants)
+- [ ] No dead code or unused variables
+- [ ] TypeScript: no errors
+- [ ] ESLint: clean
+- [ ] Build: success
+
+---
+
+## 3. Pull Request Rules
+
+### 3.1 Use `--body-file` (MANDATORY)
+```bash
+# ✅ CORRECT
+node scripts/generate-pr-body.js  # → scripts/pr-body.md
+gh pr create --body-file scripts/pr-body.md --base test
+
+# ❌ WRONG — truncates on Windows
+gh pr create --body "## Summary\n..."
+```
+
+### 3.2 PR Body — Only 3 Sections
+```markdown
+## Summary
+**Branch:** `<branch>`
+**Feature:** #<number> - <title>
+<1-2 sentence description>
+
+## Changelog
+| Version | Date | Time | Author | Description |
+|---------|------|------|--------|-------------|
+
+## Testing
+- Production build passed
+- No TypeScript errors
+- No linting errors
+- No console logs
+- QA report sent to Telegram
+
+Closes #<number>
+```
+
+### 3.3 Target Branch Rule
+
+| Source Branch | Base Branch |
+|--------------|-------------|
+| `feature/*` | `test` |
+| `bugfix/*` | `test` |
+| `hotfix/*` | `main` |
+| `release/*` | `main` |
+
+### 3.4 Auto-Assign (MANDATORY)
+```bash
+PR_NUMBER=$(gh pr view --json number -q .number)
+gh pr edit $PR_NUMBER --add-assignee PersonalProjectJob
+```
+
+### 3.5 PR Title
+```
+<branch_name>: <short_summary>
+```
+
+---
+
+## 4. Quick Commands
+
+```bash
+# Get current branch
+git branch --show-current
+
+# Parse issue number (bash)
+echo "$BRANCH" | grep -oP '^\w+/(\d+)' | grep -oP '\d+$'
+
+# Determine base branch
+if [[ "$BRANCH" == hotfix/* ]]; then BASE="main"; else BASE="test"; fi
+
+# Create PR
+gh pr create --head $BRANCH --base $BASE --body-file scripts/pr-body.md
+
+# Assign
+gh pr edit $(gh pr view --json number -q .number) --add-assignee PersonalProjectJob
+```

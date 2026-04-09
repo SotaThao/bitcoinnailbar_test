@@ -1,0 +1,62 @@
+---
+description: UI/UX và code FE — workflow ui-ux-pro-max, shadcn/Tailwind, accessibility; dùng khi thiết kế màn hình, component, layout, theme.
+globs:
+  - "src/**/*.tsx"
+  - "src/**/*.css"
+alwaysApply: false
+---
+
+# Thiết kế giao diện và code frontend
+
+## Khi nào áp dụng
+
+Bắt đầu **bước thiết kế UI** hoặc **implement FE** (màn hình mới, component, layout, theme, responsive, animation, review UI/UX). Không bắt buộc cho thuần logic/API/store không đụng UI.
+
+## Stack dự án (CryptoMap360)
+
+- **React + Vite**, **Tailwind CSS**, **shadcn/ui (Radix)** — ưu tiên tái sử dụng component và pattern có sẵn trong repo; không thêm thư viện UI nặng nếu chưa có lý do rõ.
+
+## Bắt buộc: đọc skill trước khi “nhảy” vào code
+
+1. **UI/UX Pro Max (workflow + dữ liệu + checklist)**  
+   Đọc và làm theo `.cursor/skills/ui-ux-pro-max/SKILL.md` cho đến khi có hướng style/spacing/UX rõ (không bỏ qua bước **design system** khi task là thiết kế hoặc redesign đáng kể).
+
+2. **Chạy design system search (khi Python có sẵn)**  
+   Từ **thư mục gốc repo**, dùng đường dẫn **trong project** (không dùng `skills/...` như ví dụ trong skill nếu không khớp cwd):
+
+   ```bash
+   python .cursor/skills/ui-ux-pro-max/scripts/search.py "<product_type> <industry> <keywords>" --design-system -p "CryptoMap360"
+   ```
+
+   Bổ sung theo nhu cầu:
+
+   ```bash
+   python .cursor/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain ux
+   python .cursor/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack shadcn
+   python .cursor/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack react
+   ```
+
+   Nếu không chạy được script (môi trường thiếu Python): vẫn **áp dụng thủ công** các mục “Common Rules for Professional UI” và **Pre-Delivery Checklist** trong cùng file skill.
+
+3. **Skill FE / styling (implementation)**  
+   Khi viết TSX + Tailwind + shadcn: đọc và căn chỉnh với `.cursor/skills/ux-ui/ui-styling/SKILL.md` (component có thể truy cập, responsive, dark mode, form/dialog patterns).
+
+4. **Chuẩn code frontend (đặt tên, import, API, state, i18n)**  
+   Sau khi có hướng UI, khi implement code: tuân theo `.cursor/rules/frontend-code-standards.mdc` và chi tiết `.cursor/skills/frontend-code-standards/SKILL.md` (import order, `cn()`, services, TanStack Query vs Zustand, **copy trong `en.json` / `vi.json` + `t()`** — không nhét chuỗi UI trực tiếp trong TSX) để output đồng bộ với repo.
+
+5. **Skill bổ sung (theo ngữ cảnh)**  
+   - Tokens / hệ thống: `.cursor/skills/ux-ui/design-system/SKILL.md`  
+   - Tổng quan design đa phương tiện: `.cursor/skills/ux-ui/design/SKILL.md`  
+   - Giọng điệu & nhận diện: `.cursor/skills/ux-ui/brand/SKILL.md`  
+   - Bản tóm “khi nào bắt buộc dùng skill”: `.cursor/skills/ux-ui/ui-ux-pro-max/SKILL.md` (mục When to Apply / Must Use)
+
+## Quy ước trong repo
+
+- **Ngôn ngữ / copy:** Mọi chuỗi hiển thị cho user (nhãn, lỗi, empty state) nằm trong `src/locales/en.json` và `src/locales/vi.json`, dùng `useLanguage()` → `t('...')`. Không hardcode tiếng Anh/Việt trong component (trừ ngoại lệ kỹ thuật trong `frontend-code-standards`). **Refactor i18n legacy:** làm **dần theo màn / PR** — xem mục *Gradual refactor* trong `.cursor/skills/frontend-code-standards/SKILL.md` §8. Nếu sau này tách `en.ts` / `vi.ts`, vẫn giữ **một nguồn / ngôn ngữ**.
+- **Nút primary** và trạng thái tương tác: tuân theo rule hiện có `.cursor/rules/button-interactions.mdc` khi đụng button vàng/primary.
+- **Không dùng emoji làm icon UI**; dùng SVG / bộ icon thống nhất (Lucide, v.v.) như skill ui-ux-pro-max nhắc.
+- **Accessibility**: focus visible, label form, contrast, `prefers-reduced-motion` khi có animation — đồng bộ checklist trong skill.
+
+## Trước khi coi là xong UI
+
+Chạy mental (hoặc thực) checklist **Pre-Delivery Checklist** trong `.cursor/skills/ui-ux-pro-max/SKILL.md` (visual, interaction, light/dark, layout, a11y).

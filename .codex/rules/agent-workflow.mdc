@@ -1,0 +1,48 @@
+---
+description: Agent workflow — Context7 for library docs; plan.md; plan-workflow skills; on "Tạo commit"/"Create Commit" run Review-clean-code skill.
+alwaysApply: true
+---
+
+[[calls]]
+match = "when the user requests code examples, setup or configuration steps, or library/API documentation"
+tool  = "context7"
+
+Always think step by step and carefully before do something. Ask  max 3 questions to clarifying if any concerns.
+# Agent workflow (tài liệu, cách làm việc, kế hoạch)
+
+## 1. Tài liệu thư viện, ví dụ code, setup (Context7)
+
+**Khi nào:** Người dùng yêu cầu **ví dụ code**, **bước setup/cấu hình**, hoặc **tài liệu thư viện / API**.
+
+**Làm gì:** Ưu tiên dùng **Context7** (MCP `plugin-context7-plugin-context7` hoặc skill Context7 trong project) để tra tài liệu và ví dụ **cập nhật**, không chỉ dựa vào kiến thức tĩnh.
+
+*Nếu cần định tuyến Context7 ở cấp User: dùng mục Rules trong Settings của Cursor và gộp vào **một** rule duy nhất (xem hướng dẫn định tuyến tool trong tài liệu Cursor); nội dung tương đương đã có ở **mục 1** phía trên.*
+
+## 2. Cách suy nghĩ và làm rõ yêu cầu
+
+Luôn **suy nghĩ từng bước, cẩn thận** trước khi làm. Nếu còn **điểm chưa rõ** ảnh hưởng kết quả, hỏi người dùng **tối đa 3 câu** để làm rõ (ưu tiên câu có tác động lớn nhất).
+
+## 3. Template — implementation plan cho tính năng mới
+
+Khi **tạo kế hoạch triển khai** (implementation plan):
+
+1. **Phân tích** các tính năng tương tự đã có trong codebase.
+2. **Chia nhỏ** thành task vừa sức, dễ theo dõi.
+3. **Xác định** phụ thuộc và điều kiện tiên quyết.
+4. **Ghi nhận** rủi ro có thể xảy ra và cách giảm thiểu.
+5. **Viết** hướng dẫn triển khai theo từng bước.
+6. **Lưu** nội dung kế hoạch vào file **`plan.md`** tại **thư mục gốc repo** (trừ khi người dùng chỉ định đường dẫn khác).
+
+**Bổ sung với Plan mode có cấu trúc:** Nếu chat ở **Plan mode** hoặc cần plan theo chuẩn dự án, tuân rule **`plan-workflow.mdc`** (flow PLAN + `docs/06-tasks/`) và lần lượt ba skill **`.cursor/skills/product-design-doc/`**, **`engineering-doc/`**, **`qa-doc/`** — không dùng skill orchestrator riêng.
+
+## 4. Tạo commit / Create Commit → skill Review-clean-code
+
+**Khi nào:** Người dùng chat các cụm tương đương (không phân biệt hoa thường nếu rõ ý), ví dụ: **「Tạo commit」**, **「Create Commit」**, **「chạy commit」**, **「review clean code và commit」** — tức là muốn **chuẩn bị commit** sau khi dọn log / kiểm tra convention.
+
+**Bắt buộc làm gì:**
+
+1. **Đọc và làm theo** `.cursor/skills/Review-clean-code/SKILL.md` (workflow đầy đủ: scope staged/modified → gỡ `console.*` trong phạm vi → kiểm tra cấu trúc theo `frontend-code-standards` / rules → verify → **`git commit`** với **subject = tên nhánh hiện tại** (`git branch --show-current`), **body = mô tả ngắn** thay đổi).
+2. Không bỏ qua skill này để chỉ `git commit -m "update"` khi user đã gọi đúng trigger trên — trừ khi user nói rõ chỉ commit message tùy ý.
+3. **GitHub token (Issues API / body commit):** Chỉ dùng **`GITHUB_TOKEN` hoặc `GH_TOKEN`** từ môi trường — không dán token trong chat. Xem `.cursor/skills/Review-clean-code/SKILL.md` và `.env.example`.
+
+**Tham chiếu nhanh:** skill **Review-clean-code** — `.cursor/skills/Review-clean-code/SKILL.md` (đồng bộ tại `.agents/skills/`, `.claude/skills/`, `.codex/skills/` nếu có).

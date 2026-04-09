@@ -1,0 +1,137 @@
+---
+description: Backend-Developer subagent — API implementation, database, business logic
+alwaysApply: false
+---
+
+# Backend-Developer Subagent Rules
+
+> Rules for **Backend-Developer** subagent — responsible for API implementation, database schema, and business logic.
+
+## Related Rules
+- **Workflow**: [subagent-workflow-rules.mdc](./subagent-workflow-rules.mdc)
+- **Documentation**: [doc-engineer-rules.md](./doc-engineer-rules.md)
+- **Skills**: `.qwen/skills/Review-clean-code/SKILL.md`
+
+---
+
+## Activation
+
+**Keywords:** "Implement backend", "Backend development", "API implementation", "Database changes"
+
+**Prerequisites:**
+- ✅ Product-Designer completed
+- ✅ User approved design
+- ✅ Engineering Doc ready (BE section)
+
+**Note:** Backend can work **in parallel** with Frontend after design approval.
+
+---
+
+## Role & Responsibilities
+
+### Input
+- Master Doc: `Docs/00-master/<feature>-<ticket>_master_*.md`
+- Engineering Doc: `Docs/02-engineering/<feature>-<ticket>_engineering_*.md` (BE section)
+- API specifications from design
+
+### Tasks
+1. Read all documentation
+2. Implement API endpoints
+3. Update database schema (if needed)
+4. Add business logic
+5. Implement error handling
+6. Follow Review-clean-code workflow
+7. Update Engineering Doc (BE section) with changelog
+8. Create PR with proper changelog (base → test)
+9. Report to Thread 727
+
+### Tools Used
+- **QwenCLI** — Code implementation
+- **Review-clean-code** skill — Clean code & commit
+- Database tools — Migration scripts
+
+### Output Artifacts
+- API endpoints
+- Database migrations
+- Updated Engineering Doc (BE section)
+- PR with changelog (→ test branch)
+
+---
+
+## Workflow
+
+```
+Step 1: Read Requirements
+  → Master Doc + Engineering Doc (BE section) + API specs
+
+Step 2: Implementation
+  → Create API endpoints (services/)
+  → Implement business logic
+  → Add database migrations (if needed)
+  → Error handling (try-catch)
+  → Input validation
+  → Null-safety checks
+
+Step 3: Clean Code Review
+  → Remove all console.* calls
+  → Check for hard-coded values (API URLs, secrets)
+  → Move configs to environment.ts or .env
+  → Run TypeScript check
+  → Run lint
+
+Step 4: Testing
+  → Unit tests for API functions
+  → Test error scenarios
+  → Verify input validation
+
+Step 5: Commit → Follow commit-and-pr-rules
+Step 6: Create PR (→ test branch)
+Step 7: Report to Thread 727
+```
+
+---
+
+## Report Template (Thread 727)
+
+```markdown
+🔧 **Backend-Developer Report**
+
+**Feature:** <feature-name>
+**Branch:** <branch-name>
+**PR:** <PR-URL> (→ test)
+
+## Completed Tasks
+✅ API endpoints implemented
+✅ Database migrations (if applicable)
+✅ Error handling implemented
+✅ Input validation added
+✅ TypeScript errors: 0
+✅ Lint errors: 0
+✅ PR created (→ test)
+
+## API Endpoints Created/Modified
+- `GET /api/<endpoint>`: <description>
+- `POST /api/<endpoint>`: <description>
+
+## Database Changes
+- Tables modified: <list>
+- New indexes: <list>
+
+## Code Quality Checks
+- [x] TypeScript: No errors
+- [x] ESLint: Clean
+- [x] Console logs: Removed
+- [x] Hard-coded values: None
+- [x] Error handling: Complete
+
+## PR Information
+🔗 PR URL: https://github.com/PersonalProjectJob/Job360/pull/<number>
+📝 Commits: <number>
+📊 Files changed: <number>
+🎯 Base Branch: test
+
+## Timestamp
+📅 Date: YYYY-MM-DD
+⏰ Time: HH:mm
+👤 Developer: Backend-Developer Agent
+```

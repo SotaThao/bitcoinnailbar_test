@@ -1,0 +1,46 @@
+---
+description: Shared Telegram thread routing — who reports to which thread
+alwaysApply: true
+---
+
+# Telegram Routing (Shared Atom)
+
+> Applies to: ALL agents
+
+---
+
+## Thread Mapping
+
+| Thread | Who Reports | What |
+|--------|------------|------|
+| **718** | System (auto) | Changelog, Master Doc updates, releases |
+| **727** | Product-Designer, Frontend-Developer, Backend-Developer | Design & implementation progress |
+| **735** | QA-Tester **ONLY** | Test results, quality gates |
+
+---
+
+## CRITICAL Rules
+
+- ❌ QA-Tester **DOES NOT** report to 727
+- ❌ Design/Devs **DO NOT** report to 735
+- ✅ 718 chỉ cho changelog & releases (auto-send)
+
+---
+
+## Commands
+
+```bash
+# Thread 727 — Design/Dev report
+node scripts/send-dev-report.js \
+  --agent "<agent>" --feature "<feature>" \
+  --status "completed|blocked|failed" \
+  --message "<content>" --thread "727"
+
+# Thread 735 — Test report
+node test-pre-commit.js --telegram --thread "735"
+
+# Thread 718 — Changelog
+node scripts/send-changelog.js \
+  --title "Summary" --category "feature|fix|security" \
+  --changes "Change 1\nChange 2" --thread "718"
+```
