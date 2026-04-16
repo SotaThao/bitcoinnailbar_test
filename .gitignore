@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Build output (Vite)
+dist/
+dist-ssr/
+
+# Vite cache
+.vite/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Test / coverage
+coverage/
+.nyc_output/
+
+# Supabase CLI (local state)
+.supabase/
+supabase/.branches/
+supabase/.temp/
+
+# Editor / OS
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Optional tooling
+.vercel/
+.turbo/
+*.local
