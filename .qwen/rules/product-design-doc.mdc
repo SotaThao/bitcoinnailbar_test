@@ -1,0 +1,8 @@
+---
+description: Plan Part 1 — product-design-doc (Persona → Wireframe, User Flow Mermaid).
+alwaysApply: false
+---
+
+# Rule — product-design doc (Part 1)
+
+Khi viết **Phần 1** của plan: làm theo `.cursor/skills/product-design-doc/SKILL.md`. User Flow phải có **Mermaid**. Solution Phần 1 chỉ tầng product/UX; chi tiết repo thuộc **engineering-doc**. Quy ước file và flow PLAN: **`.cursor/rules/plan-workflow.mdc`**.

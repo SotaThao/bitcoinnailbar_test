@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Home, 
-  Calendar, 
-  UserCheck, 
+import {
+  Home,
+  Calendar,
+  UserCheck,
   Clipboard,
   ChevronLeft,
   ChevronRight,
@@ -33,8 +33,7 @@ import { projectId, publicAnonKey } from '@utils/supabase/info';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import bitcoinLogo from 'figma:asset/8504cf526757125a74c4095fde998e4033127268.png';
-import imgPattern from 'figma:asset/f84ad6d75c01f5865641dba32416e817dee06ff5.png';
+import { ASSETS } from '../config/assets';
 
 import { QRCodeCanvas } from 'qrcode.react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
@@ -178,9 +177,9 @@ function CryptoSlide() {
   return (
     <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-r from-[#111827] to-black overflow-hidden">
       {/* Background Pattern */}
-      <div 
+      <div
         className="absolute inset-0 opacity-20 bg-repeat"
-        style={{ backgroundImage: `url('${imgPattern}')`, backgroundSize: '18px 18px' }}
+        style={{ backgroundImage: `url('${ASSETS.vipCardPattern}')`, backgroundSize: '18px 18px' }}
       />
       {/* Orange Glow */}
       <div className="absolute top-0 right-0 w-48 h-48 bg-[#f7931a]/20 blur-[80px] rounded-full" />
@@ -209,9 +208,9 @@ function CryptoSlide() {
         <div className="hidden md:block transform rotate-12 relative z-10">
            {/* Glowing Shadow */}
            <div className="absolute inset-0 bg-[#f7931a] blur-[40px] opacity-40 rounded-full" />
-           <motion.img 
-             src={bitcoinLogo} 
-             alt="Bitcoin" 
+           <motion.img
+             src={ASSETS.bitcoinIconOrange}
+             alt="Bitcoin"
              animate={{ y: [0, -10, 0] }}
              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
              className="w-[60px] h-[60px] md:w-[80px] md:h-[80px] object-contain drop-shadow-[0_0_10px_rgba(247,147,26,0.5)] relative z-20"
@@ -384,9 +383,9 @@ const Header = ({ onLogin }: { onLogin: () => void }) => (
     className="absolute top-0 w-full flex justify-between items-center px-8 py-6 z-50"
   >
     <div className="flex items-center gap-3">
-      <img 
-        src={bitcoinLogo} 
-        alt="Bitcoin Nail Bar" 
+      <img
+        src={ASSETS.bitcoinIconOrange}
+        alt="Bitcoin Nail Bar"
         className="w-12 h-12 object-contain drop-shadow-md"
       />
       <div className="flex flex-col">

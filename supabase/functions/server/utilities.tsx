@@ -62,7 +62,6 @@ utilitiesApp.get("/make-server-84f9c112/menu/images", async (c) => {
     const images = await kv.get("menu:images") || [];
     return c.json({ success: true, data: images });
   } catch (error: any) {
-    console.error("❌ [GET MENU IMAGES] Error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -123,7 +122,6 @@ utilitiesApp.post("/make-server-84f9c112/admin/menu/upload", async (c) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("❌ [CLOUDINARY UPLOAD] Error:", errorText);
       return c.json({ success: false, error: errorText }, 500);
     }
 
@@ -147,10 +145,8 @@ utilitiesApp.post("/make-server-84f9c112/admin/menu/upload", async (c) => {
     
     await kv.set("menu:images", images);
     
-    console.log(`✅ [MENU UPLOAD] Image uploaded: ${newImage.id} - ${newImage.name}`);
     return c.json({ success: true, data: newImage });
   } catch (error: any) {
-    console.error("❌ [MENU UPLOAD] Exception:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -198,10 +194,8 @@ utilitiesApp.delete("/make-server-84f9c112/admin/menu/:id", async (c) => {
     const updatedImages = images.filter((img: any) => img.id !== id);
     await kv.set("menu:images", updatedImages);
     
-    console.log(`✅ [MENU DELETE] Image deleted: ${id}`);
     return c.json({ success: true, message: "Image deleted" });
   } catch (error: any) {
-    console.error("❌ [MENU DELETE] Exception:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -219,10 +213,8 @@ utilitiesApp.put("/make-server-84f9c112/admin/menu/reorder", async (c) => {
     
     await kv.set("menu:images", updatedImages);
     
-    console.log(`✅ [MENU REORDER] ${updatedImages.length} images reordered`);
     return c.json({ success: true, data: updatedImages });
   } catch (error: any) {
-    console.error("❌ [MENU REORDER] Exception:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -290,7 +282,6 @@ utilitiesApp.put("/make-server-84f9c112/admin/menu/:id/update", async (c) => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("❌ [CLOUDINARY UPDATE] Error:", errorText);
         return c.json({ success: false, error: errorText }, 500);
       }
 
@@ -328,10 +319,8 @@ utilitiesApp.put("/make-server-84f9c112/admin/menu/:id/update", async (c) => {
     images[imageIndex] = updatedImageData;
     await kv.set("menu:images", images);
 
-    console.log(`✅ [MENU UPDATE] Image updated: ${id}`);
     return c.json({ success: true, data: updatedImageData });
   } catch (error: any) {
-    console.error("❌ [MENU UPDATE] Exception:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -343,7 +332,6 @@ utilitiesApp.put("/make-server-84f9c112/admin/menu/:id/update", async (c) => {
 // GET: Proxy for VLinkExchange to avoid CORS
 utilitiesApp.get("/make-server-84f9c112/proxy/vlink", async (c) => {
   try {
-    console.log('🔍 [PROXY VLINK] Fetching from upstream...');
     const response = await fetch('https://vlinkexchange.com/matching/public/active-markets?limit=500', {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -353,16 +341,12 @@ utilitiesApp.get("/make-server-84f9c112/proxy/vlink", async (c) => {
       }
     });
     if (!response.ok) {
-      console.warn(`⚠️ [PROXY VLINK] Primary API failed (${response.status})`);
       throw new Error(`Upstream API failed: ${response.status} ${response.statusText}`);
     }
     const data = await response.json();
-    console.log('✅ [PROXY VLINK] Successfully fetched data');
     return c.json(data);
   } catch (error: any) {
-    console.error("❌ [PROXY VLINK] Error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
 
-console.log('✅ Utilities module initialized (8 routes: upload, chat, menu images x5, vlink proxy)');

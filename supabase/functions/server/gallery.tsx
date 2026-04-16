@@ -147,10 +147,7 @@ async function deleteFromCloudinary(publicId: string): Promise<void> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("❌ Cloudinary delete failed:", errorText);
     // Don't throw - allow deletion from KV even if Cloudinary fails
-  } else {
-    console.log("✅ Deleted from Cloudinary:", publicId);
   }
 }
 
@@ -168,8 +165,7 @@ galleryApp.get("/make-server-84f9c112/gallery/images", async (c) => {
     const limit = parseInt(c.req.query("limit") || "0", 10);
     
     const images = (await kv.get("gallery:images")) || [];
-    console.log(`📸 [GALLERY] Fetched ${images.length} images - Filter: ${contentFilter}, Limit: ${limit}`);
-    
+
     // Sort by order first
     let filteredImages = images.sort((a: GalleryImage, b: GalleryImage) => a.order - b.order);
     
@@ -197,7 +193,6 @@ galleryApp.get("/make-server-84f9c112/gallery/images", async (c) => {
     
     return c.json({ success: true, data: filteredImages });
   } catch (error: any) {
-    console.error("❌ [GALLERY] Fetch error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -221,11 +216,8 @@ galleryApp.post("/make-server-84f9c112/gallery/image/:id/view", async (c) => {
     images[imageIndex].views = (images[imageIndex].views || 0) + 1;
     await kv.set("gallery:images", images);
 
-    console.log(`👁️ [GALLERY] View tracked - ID: ${id}, Views: ${images[imageIndex].views}`);
-
     return c.json({ success: true, views: images[imageIndex].views });
   } catch (error: any) {
-    console.error("❌ [GALLERY] View tracking error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -259,8 +251,6 @@ galleryApp.post("/make-server-84f9c112/admin/gallery/upload", async (c) => {
       return c.json({ success: false, error: "Image must be less than 10MB" }, 400);
     }
 
-    console.log(`📤 [GALLERY] Uploading image - Category: ${category}, Show Logo: ${showLogo}, Size: ${file.size}`);
-
     // Upload to Cloudinary with category-based folder structure
     const sanitizedCategory = sanitizeFolderName(category);
     const folderPath = `bitcoin-nail-bar/gallery/${sanitizedCategory}`;
@@ -286,11 +276,8 @@ galleryApp.post("/make-server-84f9c112/admin/gallery/upload", async (c) => {
     const updatedImages = [...images, newImage];
     await kv.set("gallery:images", updatedImages);
 
-    console.log(`✅ [GALLERY] Image uploaded - ID: ${newImage.id}, URL: ${url}, Show Logo: ${showLogo}`);
-
     return c.json({ success: true, data: newImage });
   } catch (error: any) {
-    console.error("❌ [GALLERY] Upload error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -309,8 +296,6 @@ galleryApp.delete("/make-server-84f9c112/admin/gallery/:id", async (c) => {
       return c.json({ success: false, error: "Image not found" }, 404);
     }
 
-    console.log(`🗑️ [GALLERY] Deleting image - ID: ${id}, Public ID: ${imageToDelete.public_id}`);
-
     // Delete from Cloudinary
     await deleteFromCloudinary(imageToDelete.public_id);
 
@@ -324,11 +309,8 @@ galleryApp.delete("/make-server-84f9c112/admin/gallery/:id", async (c) => {
 
     await kv.set("gallery:images", remainingImages);
 
-    console.log(`✅ [GALLERY] Image deleted - ID: ${id}`);
-
     return c.json({ success: true });
   } catch (error: any) {
-    console.error("❌ [GALLERY] Delete error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -349,11 +331,8 @@ galleryApp.put("/make-server-84f9c112/admin/gallery/reorder", async (c) => {
 
     await kv.set("gallery:images", updatedImages);
 
-    console.log(`✅ [GALLERY] Reordered ${updatedImages.length} images`);
-
     return c.json({ success: true, data: updatedImages });
   } catch (error: any) {
-    console.error("❌ [GALLERY] Reorder error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -382,11 +361,8 @@ galleryApp.put("/make-server-84f9c112/admin/gallery/:id/category", async (c) => 
     images[imageIndex].category = category;
     await kv.set("gallery:images", images);
 
-    console.log(`✅ [GALLERY] Updated category - ID: ${id}, Category: ${category}`);
-
     return c.json({ success: true, data: images[imageIndex] });
   } catch (error: any) {
-    console.error("❌ [GALLERY] Category update error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -413,8 +389,6 @@ galleryApp.put("/make-server-84f9c112/admin/gallery/:id", async (c) => {
 
     // If new file provided, upload and delete old one
     if (file && file instanceof File) {
-      console.log(`🔄 [GALLERY] Replacing image - ID: ${id}`);
-
       // Upload new image with category-based folder structure
       const sanitizedCategory = sanitizeFolderName(existingImage.category);
       const folderPath = `bitcoin-nail-bar/gallery/${sanitizedCategory}`;
@@ -438,11 +412,8 @@ galleryApp.put("/make-server-84f9c112/admin/gallery/:id", async (c) => {
     images[imageIndex] = existingImage;
     await kv.set("gallery:images", images);
 
-    console.log(`✅ [GALLERY] Image updated - ID: ${id}`);
-
     return c.json({ success: true, data: existingImage });
   } catch (error: any) {
-    console.error("❌ [GALLERY] Update error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -467,11 +438,8 @@ galleryApp.put("/make-server-84f9c112/admin/gallery/:id/featured", async (c) => 
     images[imageIndex].featured = featured;
     await kv.set("gallery:images", images);
 
-    console.log(`✅ [GALLERY] Featured status updated - ID: ${id}, Featured: ${featured}`);
-
     return c.json({ success: true, data: images[imageIndex] });
   } catch (error: any) {
-    console.error("❌ [GALLERY] Featured update error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

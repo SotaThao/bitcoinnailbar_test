@@ -50,6 +50,7 @@ export default function CustomerManagementTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [error, setError] = useState<string | null>(null);
   const customersPerPage = 20;
 
   const fetchCustomers = async (
@@ -234,6 +235,24 @@ export default function CustomerManagementTab() {
 
   return (
     <div className="space-y-6">
+      {/* Error Message */}
+      {error && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+          <svg className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div className="flex-1">
+            <h4 className="font-semibold text-sm text-amber-900">Info</h4>
+            <p className="text-sm text-amber-700 mt-1">{error}</p>
+          </div>
+          <button onClick={() => setError(null)} className="text-amber-400 hover:text-amber-600 flex-shrink-0">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Search & Stats */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
         {/* Search Bar */}
@@ -257,7 +276,7 @@ export default function CustomerManagementTab() {
           <button
             className="flex items-center gap-2 px-6 py-2 bg-[#FF9800] text-white rounded-lg hover:bg-[#F57C00] transition-colors h-9 whitespace-nowrap"
             onClick={() =>
-              alert("Add Customer feature coming soon!")
+              setError("Add Customer feature coming soon!")
             }
           >
             <UserPlus className="w-4 h-4" />
@@ -318,7 +337,7 @@ export default function CustomerManagementTab() {
           <p className="text-gray-500">No customers found</p>
           <button
             onClick={() =>
-              alert("Add Customer feature coming soon!")
+              setError("Add Customer feature coming soon!")
             }
             className="mt-4 px-4 py-2 bg-[#FF9800] text-white rounded-lg hover:bg-[#F57C00] transition-colors"
           >
@@ -444,7 +463,7 @@ export default function CustomerManagementTab() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() =>
-                              alert(
+                              setError(
                                 "View/Edit customer feature coming soon!",
                               )
                             }

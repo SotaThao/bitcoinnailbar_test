@@ -3,7 +3,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Eye, EyeOff, ShieldCheck, AlertCircle } from 'lucide-react';
-import bitcoinLogo from 'figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png';
+import { ASSETS } from '@/app/config/assets';
 import { projectId, publicAnonKey } from '/utils/supabase/info';
 
 // Helper function to format phone number as (XXX) XXX-XXXX
@@ -103,7 +103,7 @@ export default function SetupOwnerPage() {
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-3 mb-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-full shadow-[0_0_20px_rgba(255,152,0,0.6)]">
-              <img src={bitcoinLogo} alt="Bitcoin" className="h-12 w-12 object-contain" />
+              <img src={ASSETS.bitcoinLogo} alt="Bitcoin" className="h-12 w-12 object-contain" />
             </div>
             <div className="flex flex-col">
               <span className="font-serif font-bold text-2xl tracking-tight text-gray-900 uppercase">BITCOIN</span>

@@ -50,6 +50,7 @@ export default function RedeemCodesTab() {
     string | null
   >(null);
   const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchCodes = async (silent: boolean = false) => {
     if (!silent) setLoading(true);
@@ -102,7 +103,7 @@ export default function RedeemCodesTab() {
         const errorMsg =
           result.details || result.error || "Unknown error";
         if (!silent)
-          alert(`Failed to fetch redeem codes:\n\n${errorMsg}`);
+          setError(`Failed to fetch redeem codes: ${errorMsg}`);
       }
     } catch (error: any) {
       console.error(
@@ -111,8 +112,8 @@ export default function RedeemCodesTab() {
       );
       console.error("❌ [ADMIN] Error stack:", error.stack);
       if (!silent)
-        alert(
-          `Error fetching redeem codes:\n\n${error.message || "Unknown error"}`,
+        setError(
+          `Error fetching redeem codes: ${error.message || "Unknown error"}`,
         );
     } finally {
       if (!silent) setLoading(false);
@@ -148,11 +149,11 @@ export default function RedeemCodesTab() {
         setCodes(codes.filter((c) => c.code !== code));
         setDeleteConfirm(null);
       } else {
-        alert(`Failed to delete code: ${result.error}`);
+        setError(`Failed to delete code: ${result.error}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting code:", error);
-      alert("Failed to delete redeem code");
+      setError("Failed to delete redeem code");
     }
   };
 
@@ -182,17 +183,17 @@ export default function RedeemCodesTab() {
       const result = await response.json();
 
       if (result.success) {
-        alert(
-          `✅ Cleanup successful!\n\nDeleted ${result.deleted} expired pending orders.`,
+        setError(
+          `✅ Cleanup successful! Deleted ${result.deleted} expired pending orders.`,
         );
         // Refresh codes list
         fetchCodes();
       } else {
-        alert(`❌ Cleanup failed:\n\n${result.error}`);
+        setError(`❌ Cleanup failed: ${result.error}`);
       }
     } catch (error: any) {
       console.error("Error cleaning up expired orders:", error);
-      alert(`❌ Error during cleanup:\n\n${error.message}`);
+      setError(`❌ Error during cleanup: ${error.message}`);
     } finally {
       setCleanupLoading(false);
     }
@@ -243,6 +244,38 @@ export default function RedeemCodesTab() {
 
   return (
     <div className="space-y-6">
+      {/* Error/Success Message */}
+      {error && (
+        <div className={`p-4 rounded-xl flex items-start gap-3 ${
+          error.startsWith('✅') || error.startsWith('Cleanup successful')
+            ? 'bg-green-50 border border-green-200'
+            : 'bg-red-50 border border-red-200'
+        }`}>
+          {error.startsWith('✅') || error.startsWith('Cleanup successful') ? (
+            <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+          ) : (
+            <XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+          )}
+          <div className="flex-1">
+            <h4 className={`font-semibold text-sm ${
+              error.startsWith('✅') || error.startsWith('Cleanup successful')
+                ? 'text-green-900'
+                : 'text-red-900'
+            }`}>
+              {error.startsWith('✅') || error.startsWith('Cleanup successful') ? 'Success' : 'Error'}
+            </h4>
+            <p className={`text-sm mt-1 whitespace-pre-line ${
+              error.startsWith('✅') || error.startsWith('Cleanup successful')
+                ? 'text-green-700'
+                : 'text-red-700'
+            }`}>{error}</p>
+          </div>
+          <button onClick={() => setError(null)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard

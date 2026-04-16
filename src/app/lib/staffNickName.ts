@@ -1,3 +1,34 @@
+function normalizeTimeValue(value: unknown): string {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (!raw) return "";
+
+  let match = raw.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (match) {
+    const [, hour, minute] = match;
+    return `${hour.padStart(2, "0")}:${minute}`;
+  }
+
+  match = raw.match(/^([01]?\d|2[0-3])([0-5]\d)$/);
+  if (match) {
+    const [, hour, minute] = match;
+    return `${hour.padStart(2, "0")}:${minute}`;
+  }
+
+  match = raw.match(/^(\d{1,2})(?::([0-5]\d))?\s*([AP]M)$/);
+  if (match) {
+    const [, hourRaw, minuteRaw = "00", meridiem] = match;
+    const hourNum = Number(hourRaw);
+    if (hourNum < 1 || hourNum > 12) return "";
+    const normalizedHour =
+      meridiem === "AM"
+        ? hourNum % 12
+        : hourNum % 12 + 12;
+    return `${String(normalizedHour).padStart(2, "0")}:${minuteRaw}`;
+  }
+
+  return "";
+}
+
 /**
  * Postgres uses `nick_name`; admin forms use `nickname`.
  * API usually maps both; this covers raw rows and cached payloads.
@@ -10,10 +41,30 @@ export function normalizeStaffRecord<T extends Record<string, unknown>>(
   licenseNumber: string;
   role: string;
   baseHourlyRate: string;
+  workingDays: string[];
+  workingHours: { start: string; end: string } | null;
 } {
   const r = row as Record<string, unknown>;
   const nick = r.nickname ?? r.nick_name;
   const hourly = r.hourly_rate ?? r.hourlyRate ?? r.baseHourlyRate;
+  const workingDaysSource = r.workingDays ?? r.working_days;
+  const workingDays = Array.isArray(workingDaysSource)
+    ? workingDaysSource.map((day) => String(day))
+    : [];
+  const workingHoursSource = r.workingHours ?? r.working_hours;
+  const workingHours =
+    workingHoursSource &&
+    typeof workingHoursSource === "object" &&
+    !Array.isArray(workingHoursSource)
+      ? {
+          start: normalizeTimeValue(
+            (workingHoursSource as Record<string, unknown>).start,
+          ),
+          end: normalizeTimeValue(
+            (workingHoursSource as Record<string, unknown>).end,
+          ),
+        }
+      : null;
   return {
     ...row,
     nickname: nick != null && String(nick).trim() !== "" ? String(nick) : "",
@@ -24,6 +75,8 @@ export function normalizeStaffRecord<T extends Record<string, unknown>>(
       hourly != null && hourly !== ""
         ? String(hourly)
         : String(r.baseHourlyRate ?? ""),
+    workingDays,
+    workingHours,
   };
 }
 

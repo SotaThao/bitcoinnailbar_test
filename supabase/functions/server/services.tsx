@@ -49,7 +49,6 @@ app.get('/make-server-84f9c112/services', async (c) => {
     
     return c.json({ success: true, data: enrichedServices });
   } catch (e) {
-    console.error('❌ [GET SERVICES] Error:', e);
     return c.json({ success: false, error: String(e) }, 500);
   }
 });
@@ -64,13 +63,11 @@ app.post('/make-server-84f9c112/services', async (c) => {
       ...body,
       createdAt: new Date().toISOString()
     };
-    
+
     await kv.set(id, service);
-    console.log(`✅ [CREATE SERVICE] Created: ${id}`);
-    
+
     return c.json({ success: true, data: service });
   } catch (error: any) {
-    console.error('❌ [CREATE SERVICE] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -79,20 +76,16 @@ app.post('/make-server-84f9c112/services', async (c) => {
 app.delete('/make-server-84f9c112/services/:id', async (c) => {
   try {
     const id = c.req.param('id');
-    console.log(`🗑️  [DELETE SERVICE] Deleting service: ${id}`);
-    
+
     // Delete from KV store using direct Supabase delete
     const { error } = await supabase.from(KV_TABLE_ADMIN).delete().eq('key', id);
-    
+
     if (error) {
-      console.error('❌ [DELETE SERVICE] Error:', error);
       return c.json({ success: false, error: error.message }, 500);
     }
-    
-    console.log(`✅ [DELETE SERVICE] Successfully deleted: ${id}`);
+
     return c.json({ success: true, message: 'Service deleted successfully' });
   } catch (error: any) {
-    console.error('❌ [DELETE SERVICE] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

@@ -1,0 +1,8 @@
+---
+description: Plan Part 2 — engineering-doc (codebase mapping, technical, To-Do).
+alwaysApply: false
+---
+
+# Rule — engineering doc (Part 2)
+
+Khi viết **Phần 2** của plan: làm theo `.cursor/skills/engineering-doc/SKILL.md`. Test case chi tiết thuộc **qa-doc**. Quy ước file / ticket: **`.cursor/rules/plan-workflow.mdc`**.

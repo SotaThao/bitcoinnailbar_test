@@ -55,7 +55,6 @@ settingsApp.get("/make-server-84f9c112/settings/social-media", async (c) => {
     }
     return c.json({ success: true, data: socialMedia });
   } catch (error: any) {
-    console.error('❌ [SOCIAL MEDIA GET] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -70,10 +69,8 @@ settingsApp.put("/make-server-84f9c112/settings/social-media", async (c) => {
       tiktok: body.tiktok || "",
       updatedAt: new Date().toISOString()
     });
-    console.log('✅ [SOCIAL MEDIA UPDATE] Successfully updated');
     return c.json({ success: true, data: body });
   } catch (error: any) {
-    console.error('❌ [SOCIAL MEDIA UPDATE] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -85,15 +82,13 @@ settingsApp.put("/make-server-84f9c112/settings/social-media", async (c) => {
 // GET: Service Menu Data
 settingsApp.get("/make-server-84f9c112/settings/service-menu", async (c) => {
   try {
-    console.log('🔍 [SERVICE MENU GET] Fetching data from KV store...');
     const data = await kv.get("settings:service-menu");
-    
+
     if (!data) {
-      console.log('⚠️ [SERVICE MENU GET] No data found, initializing with defaults');
       await kv.set("settings:service-menu", initialServices);
       return c.json({ success: true, data: initialServices });
     }
-    
+
     // Count services
     const categoryCounts: Record<string, number> = {};
     Object.keys(data).forEach(categoryKey => {
@@ -104,11 +99,9 @@ settingsApp.get("/make-server-84f9c112/settings/service-menu", async (c) => {
       });
       categoryCounts[categoryKey] = totalServices;
     });
-    console.log('✅ [SERVICE MENU GET] Returning data, services per category:', categoryCounts);
-    
+
     return c.json({ success: true, data });
   } catch (error: any) {
-    console.error('❌ [SERVICE MENU GET] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -117,9 +110,7 @@ settingsApp.get("/make-server-84f9c112/settings/service-menu", async (c) => {
 settingsApp.put("/make-server-84f9c112/settings/service-menu", async (c) => {
   try {
     const body = await c.req.json();
-    console.log('🔍 [SERVICE MENU PUT] Received data:', JSON.stringify(body, null, 2));
-    console.log('📊 [SERVICE MENU PUT] Data size:', JSON.stringify(body).length, 'bytes');
-    
+
     // Count services in each category
     const categoryCounts: Record<string, number> = {};
     Object.keys(body).forEach(categoryKey => {
@@ -130,18 +121,14 @@ settingsApp.put("/make-server-84f9c112/settings/service-menu", async (c) => {
       });
       categoryCounts[categoryKey] = totalServices;
     });
-    console.log('📈 [SERVICE MENU PUT] Services per category:', categoryCounts);
-    
+
     await kv.set("settings:service-menu", body);
-    console.log('✅ [SERVICE MENU PUT] Successfully saved to KV store');
-    
+
     // Verify by reading back
     const savedData = await kv.get("settings:service-menu");
-    console.log('🔍 [SERVICE MENU PUT] Verification read - data exists:', !!savedData);
-    
+
     return c.json({ success: true, data: body });
   } catch (error: any) {
-    console.error('❌ [SERVICE MENU PUT] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -150,10 +137,8 @@ settingsApp.put("/make-server-84f9c112/settings/service-menu", async (c) => {
 settingsApp.post("/make-server-84f9c112/settings/service-menu/reset", async (c) => {
   try {
     await kv.set("settings:service-menu", initialServices);
-    console.log('✅ [SERVICE MENU RESET] Reset to default values');
     return c.json({ success: true, data: initialServices });
   } catch (error: any) {
-    console.error('❌ [SERVICE MENU RESET] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -166,17 +151,11 @@ settingsApp.post("/make-server-84f9c112/settings/service-menu/reset", async (c) 
 settingsApp.get("/make-server-84f9c112/settings/categories", async (c) => {
   try {
     const categories = await kv.get("settings:categories");
-    console.log(`📋 [GET CATEGORIES] Found ${categories?.length || 0} categories`);
-    if (categories && categories.length > 0) {
-      console.log(`📋 [GET CATEGORIES] IDs:`, categories.map((c: any) => `${c.id}:${c.name}`));
-    }
     if (!categories) {
-      console.log(`⚠️ [GET CATEGORIES] No categories found, returning empty array`);
       return c.json({ success: true, data: [] });
     }
     return c.json({ success: true, data: categories });
   } catch (error: any) {
-    console.error("❌ [GET CATEGORIES] Error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -186,10 +165,8 @@ settingsApp.put("/make-server-84f9c112/settings/categories", async (c) => {
   try {
     const body = await c.req.json();
     await kv.set("settings:categories", body);
-    console.log(`✅ [UPDATE CATEGORIES] Updated ${body.length} categories`);
     return c.json({ success: true, data: body });
   } catch (error: any) {
-    console.error("❌ [UPDATE CATEGORIES] Error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -210,11 +187,9 @@ settingsApp.put("/make-server-84f9c112/settings/categories/reorder", async (c) =
     }));
     
     await kv.set("settings:categories", reorderedCategories);
-    console.log(`✅ [REORDER CATEGORIES] Successfully reordered ${reorderedCategories.length} categories`);
-    
+
     return c.json({ success: true, data: reorderedCategories });
   } catch (error: any) {
-    console.error("❌ [REORDER CATEGORIES] Error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -236,11 +211,9 @@ settingsApp.post("/make-server-84f9c112/settings/categories", async (c) => {
     
     categories.push(newCategory);
     await kv.set("settings:categories", categories);
-    
-    console.log(`✅ [ADD CATEGORY] Added category ID ${newCategory.id}: ${newCategory.name}`);
+
     return c.json({ success: true, data: newCategory });
   } catch (error: any) {
-    console.error("❌ [ADD CATEGORY] Error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -249,55 +222,45 @@ settingsApp.post("/make-server-84f9c112/settings/categories", async (c) => {
 settingsApp.delete("/make-server-84f9c112/settings/categories/:id", async (c) => {
   try {
     const id = parseInt(c.req.param("id"));
-    console.log(`🗑️ [DELETE CATEGORY] Request to delete category ID: ${id}`);
-    
+
     // 1. Get and filter categories
     const categories = await kv.get("settings:categories") || [];
-    console.log(`📋 [DELETE CATEGORY] Total categories in DB: ${categories.length}`);
-    
+
     const categoryToDelete = categories.find((cat: any) => cat.id === id);
-    
+
     if (!categoryToDelete) {
-      console.warn(`⚠️ [DELETE CATEGORY] Category with ID ${id} not found (may have been already deleted)`);
-      console.log(`🔍 [DELETE CATEGORY] Available category IDs:`, categories.map((c: any) => c.id));
       // Return 200 with success=true since idempotent delete is acceptable
-      return c.json({ 
-        success: true, 
+      return c.json({
+        success: true,
         message: `Category ${id} not found (may have been already deleted)`,
-        alreadyDeleted: true 
+        alreadyDeleted: true
       }, 200);
     }
-    
+
     const categoryName = categoryToDelete.name;
-    console.log(`📌 [DELETE CATEGORY] Found category: "${categoryName}" (ID: ${id})`);
-    
+
     const filtered = categories.filter((cat: any) => cat.id !== id);
     await kv.set("settings:categories", filtered);
-    console.log(`✅ [DELETE CATEGORY] Category removed from categories list`);
-    
+
     // 2. CASCADE DELETE: Remove all services in this category from service-menu
     const serviceMenu = await kv.get("settings:service-menu") || {};
-    
+
     // Remove the category key from service menu if exists
     if (serviceMenu[categoryName]) {
       const servicesCount = serviceMenu[categoryName]?.groups?.reduce((total: number, group: any) => {
         return total + (group.services?.length || 0);
       }, 0) || 0;
-      
+
       delete serviceMenu[categoryName];
       await kv.set("settings:service-menu", serviceMenu);
-      console.log(`✅ [DELETE CATEGORY] CASCADE: Removed "${categoryName}" from service menu (${servicesCount} services deleted)`);
-    } else {
-      console.log(`ℹ️ [DELETE CATEGORY] No services found in service menu for "${categoryName}"`);
     }
-    
-    return c.json({ 
-      success: true, 
+
+    return c.json({
+      success: true,
       message: `Category "${categoryName}" deleted successfully`,
       cascadeDeleted: true
     });
   } catch (error: any) {
-    console.error("❌ [DELETE CATEGORY] Error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -306,52 +269,47 @@ settingsApp.delete("/make-server-84f9c112/settings/categories/:id", async (c) =>
 settingsApp.post("/make-server-84f9c112/settings/categories/delete-batch", async (c) => {
   try {
     const { ids } = await c.req.json();
-    
+
     if (!Array.isArray(ids)) {
       return c.json({ success: false, error: "Invalid ids array" }, 400);
     }
-    
-    console.log(`🗑️ [DELETE BATCH] Request to delete ${ids.length} categories: [${ids.join(', ')}]`);
-    
+
     const categories = await kv.get("settings:categories") || [];
     const serviceMenu = await kv.get("settings:service-menu") || {};
-    
+
     let deletedCount = 0;
     let cascadeDeletedServices = 0;
-    
+
     // Filter out categories with matching IDs
     const remaining = categories.filter((cat: any) => {
       if (ids.includes(cat.id)) {
         deletedCount++;
-        
+
         // CASCADE DELETE from service menu
         if (serviceMenu[cat.name]) {
           const servicesInCategory = serviceMenu[cat.name]?.groups?.reduce((total: number, group: any) => {
             return total + (group.services?.length || 0);
           }, 0) || 0;
-          
+
           cascadeDeletedServices += servicesInCategory;
           delete serviceMenu[cat.name];
         }
-        
+
         return false; // Remove this category
       }
       return true; // Keep this category
     });
-    
+
     await kv.set("settings:categories", remaining);
     await kv.set("settings:service-menu", serviceMenu);
-    
-    console.log(`✅ [DELETE BATCH] Deleted ${deletedCount} categories, cascade deleted ${cascadeDeletedServices} services`);
-    
-    return c.json({ 
-      success: true, 
+
+    return c.json({
+      success: true,
       message: `Deleted ${deletedCount} categories`,
       deletedCount,
       cascadeDeletedServices
     });
   } catch (error: any) {
-    console.error("❌ [DELETE BATCH] Error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -366,7 +324,6 @@ settingsApp.get("/make-server-84f9c112/settings/homepage-menu", async (c) => {
     const mode = await kv.get("settings:homepage-menu-mode") || "services-list";
     return c.json({ success: true, data: { mode } });
   } catch (error: any) {
-    console.error("❌ [GET HOMEPAGE SETTING] Error:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -381,11 +338,9 @@ settingsApp.post("/make-server-84f9c112/admin/settings/homepage-menu", async (c)
     }
     
     await kv.set("settings:homepage-menu-mode", mode);
-    
-    console.log(`✅ [HOMEPAGE SETTING] Mode set to: ${mode}`);
+
     return c.json({ success: true, data: { mode } });
   } catch (error: any) {
-    console.error("❌ [HOMEPAGE SETTING] Exception:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -398,9 +353,8 @@ settingsApp.post("/make-server-84f9c112/admin/settings/homepage-menu", async (c)
 settingsApp.get("/make-server-84f9c112/settings/chatbot-avatar", async (c) => {
   try {
     const avatarPath = await kv.get("settings:chatbot-avatar-path") || '';
-    
+
     if (!avatarPath) {
-      console.log('ℹ️ [CHATBOT AVATAR] No avatar path found in KV store');
       return c.json({ success: true, data: { avatar: '' } });
     }
 
@@ -410,10 +364,8 @@ settingsApp.get("/make-server-84f9c112/settings/chatbot-avatar", async (c) => {
       .from(BUCKET_NAME)
       .getPublicUrl(avatarPath);
 
-    console.log(`✅ [CHATBOT AVATAR] Public URL generated for: ${avatarPath}`);
     return c.json({ success: true, data: { avatar: data.publicUrl } });
   } catch (error: any) {
-    console.error("❌ [CHATBOT SETTING] Exception:", error);
     // Fallback to empty avatar on error
     return c.json({ success: true, data: { avatar: '' } });
   }
@@ -423,14 +375,12 @@ settingsApp.get("/make-server-84f9c112/settings/chatbot-avatar", async (c) => {
 settingsApp.post("/make-server-84f9c112/admin/settings/chatbot-avatar", async (c) => {
   try {
     const { avatarPath } = await c.req.json();
-    
+
     // Save file path to KV store
     await kv.set("settings:chatbot-avatar-path", avatarPath || '');
-    
-    console.log(`✅ [CHATBOT SETTING] Avatar path updated: ${avatarPath}`);
+
     return c.json({ success: true, data: { avatarPath } });
   } catch (error: any) {
-    console.error("❌ [CHATBOT SETTING] Exception:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -445,7 +395,6 @@ async function translateText(text: string, sourceLang: 'vi' | 'en', targetLang: 
     const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY');
     
     if (!DEEPSEEK_API_KEY) {
-      console.warn('⚠️ [TRANSLATE] DEEPSEEK_API_KEY not found, returning original text');
       return text;
     }
 
@@ -506,9 +455,7 @@ async function translateText(text: string, sourceLang: 'vi' | 'en', targetLang: 
     // Strip HTML if present
     const { plain: plainText, hasHtml } = stripHtml(text);
     
-    console.log(`🔍 [TRANSLATE] Input has HTML: ${hasHtml}`);
     if (hasHtml) {
-      console.log(`🔍 [TRANSLATE] Plain text extracted: "${plainText.substring(0, 100)}..."`);
     }
 
     const langMap = { vi: 'Vietnamese', en: 'English' };
@@ -546,8 +493,6 @@ async function translateText(text: string, sourceLang: 'vi' | 'en', targetLang: 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ [TRANSLATE] DeepSeek API error (${response.status}):`, errorText);
       return text; // Fallback to original
     }
 
@@ -555,22 +500,15 @@ async function translateText(text: string, sourceLang: 'vi' | 'en', targetLang: 
     const translated = result.choices?.[0]?.message?.content?.trim();
 
     if (!translated) {
-      console.warn('⚠️ [TRANSLATE] Empty response from DeepSeek');
       return text;
     }
 
     // Reconstruct HTML if original had HTML tags
     const finalText = hasHtml ? reconstructHtml(text, translated) : translated;
 
-    console.log(`✅ [TRANSLATE] "${plainText.substring(0, 50)}..." → "${translated.substring(0, 50)}..."`);
-    if (hasHtml) {
-      console.log(`🔧 [TRANSLATE] HTML reconstructed: "${finalText.substring(0, 100)}..."`);
-    }
-    
     return finalText;
 
   } catch (error: any) {
-    console.error('❌ [TRANSLATE] Exception:', error.message);
     return text; // Fallback to original on error
   }
 }
@@ -583,9 +521,7 @@ settingsApp.post("/make-server-84f9c112/admin/settings/promotions", async (c) =>
     if (!Array.isArray(promotions)) {
       return c.json({ success: false, error: "Invalid promotions data" }, 400);
     }
-    
-    console.log(`🔄 [PROMOTIONS SAVE] Processing ${promotions.length} promotions with auto-translation...`);
-    
+
     // Helper function to detect if text is Vietnamese
     const isVietnamese = (text: string): boolean => {
       // Check for Vietnamese characters
@@ -600,14 +536,11 @@ settingsApp.post("/make-server-84f9c112/admin/settings/promotions", async (c) =>
         
         // Detect language from title (most reliable field)
         const isVi = isVietnamese(input.title || input.description || "");
-        
-        console.log(`🌐 [LANGUAGE DETECT] Promotion "${promo.id}": ${isVi ? "Vietnamese" : "English"}`);
-        
+
         try {
           if (isVi) {
             // Input is Vietnamese → Generate English translation
-            console.log(`🤖 [TRANSLATE] VI→EN for promotion "${promo.id}"`);
-            
+
             const enData: any = {};
             const fieldsToTranslate = ['badge', 'title', 'subtitle', 'discount', 'description', 'days', 'buttonText'];
             
@@ -635,9 +568,8 @@ settingsApp.post("/make-server-84f9c112/admin/settings/promotions", async (c) =>
             enData.backgroundImagePath = input.backgroundImagePath;
             enData.iconImage = input.iconImage;
             enData.iconImagePath = input.iconImagePath;
-            
-            console.log(`✅ [TRANSLATE] Promotion "${promo.id}" VI→EN completed`);
-            
+            enData.videoUrl = input.videoUrl;
+
             return {
               ...promo,
               vi: { ...input }, // VI = input data
@@ -645,8 +577,7 @@ settingsApp.post("/make-server-84f9c112/admin/settings/promotions", async (c) =>
             };
           } else {
             // Input is English → Generate Vietnamese translation
-            console.log(`🤖 [TRANSLATE] EN→VI for promotion "${promo.id}"`);
-            
+
             const viData: any = {};
             const fieldsToTranslate = ['badge', 'title', 'subtitle', 'discount', 'description', 'days', 'buttonText'];
             
@@ -674,9 +605,8 @@ settingsApp.post("/make-server-84f9c112/admin/settings/promotions", async (c) =>
             viData.backgroundImagePath = input.backgroundImagePath;
             viData.iconImage = input.iconImage;
             viData.iconImagePath = input.iconImagePath;
-            
-            console.log(`✅ [TRANSLATE] Promotion "${promo.id}" EN→VI completed`);
-            
+            viData.videoUrl = input.videoUrl;
+
             return {
               ...promo,
               vi: viData,       // VI = translated
@@ -684,8 +614,6 @@ settingsApp.post("/make-server-84f9c112/admin/settings/promotions", async (c) =>
             };
           }
         } catch (translateError: any) {
-          console.error(`❌ [TRANSLATE] Failed for promotion "${promo.id}":`, translateError);
-          
           // Fallback: use input for both languages
           return {
             ...promo,
@@ -697,11 +625,9 @@ settingsApp.post("/make-server-84f9c112/admin/settings/promotions", async (c) =>
     );
     
     await kv.set("settings:promotions", translatedPromotions);
-    
-    console.log(`✅ [PROMOTIONS SETTING] ${translatedPromotions.length} promotions saved with auto-translation`);
+
     return c.json({ success: true, data: { promotions: translatedPromotions } });
   } catch (error: any) {
-    console.error("❌ [PROMOTIONS SETTING] Exception:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -718,7 +644,6 @@ settingsApp.get("/make-server-84f9c112/settings/promotions", async (c) => {
         
         // 🔄 MIGRATION: Add default buttonText if missing
         if (updatedPromo.input && !updatedPromo.input.buttonText) {
-          console.log(`⚠️ [MIGRATION] Adding default buttonText to promotion ${promo.id}`);
           updatedPromo.input.buttonText = "Tìm hiểu thêm";
         }
         
@@ -734,7 +659,6 @@ settingsApp.get("/make-server-84f9c112/settings/promotions", async (c) => {
         if (updatedPromo.en && updatedPromo.en.buttonText) {
           const vietnameseChars = /[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i;
           if (vietnameseChars.test(updatedPromo.en.buttonText)) {
-            console.log(`⚠️ [MIGRATION] Fixing Vietnamese buttonText in EN translation for promotion ${promo.id}`);
             updatedPromo.en.buttonText = "Register Now";
           }
         }
@@ -752,7 +676,7 @@ settingsApp.get("/make-server-84f9c112/settings/promotions", async (c) => {
                 updatedPromo.input.backgroundImage = signedData.signedUrl;
               }
             } catch (err) {
-              console.error(`❌ Error signing input background image:`, err);
+              // Silently handle error
             }
           }
           
@@ -767,11 +691,11 @@ settingsApp.get("/make-server-84f9c112/settings/promotions", async (c) => {
                 updatedPromo.input.iconImage = signedData.signedUrl;
               }
             } catch (err) {
-              console.error(`❌ Error signing input icon image:`, err);
+              // Silently handle error
             }
           }
         }
-        
+
         // Process vi & en translations (for display)
         for (const lang of ['vi', 'en']) {
           if (!updatedPromo[lang]) continue;
@@ -787,10 +711,10 @@ settingsApp.get("/make-server-84f9c112/settings/promotions", async (c) => {
                 updatedPromo[lang].backgroundImage = signedData.signedUrl;
               }
             } catch (err) {
-              console.error(`❌ Error signing ${lang} background image:`, err);
+              // Silently handle error
             }
           }
-          
+
           // Icon Image
           if (updatedPromo[lang].iconImagePath) {
             try {
@@ -802,19 +726,17 @@ settingsApp.get("/make-server-84f9c112/settings/promotions", async (c) => {
                 updatedPromo[lang].iconImage = signedData.signedUrl;
               }
             } catch (err) {
-              console.error(`❌ Error signing ${lang} icon image:`, err);
+              // Silently handle error
             }
           }
         }
-        
+
         return updatedPromo;
       })
     );
-    
-    console.log(`✅ [PROMOTIONS GET] Fetched ${promotionsWithSignedUrls.length} promotions with fresh signed URLs`);
+
     return c.json({ success: true, data: { promotions: promotionsWithSignedUrls } });
   } catch (error: any) {
-    console.error("❌ [PROMOTIONS GET] Exception:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -823,10 +745,8 @@ settingsApp.get("/make-server-84f9c112/settings/promotions", async (c) => {
 settingsApp.get("/make-server-84f9c112/debug/promotions-raw", async (c) => {
   try {
     const promotions = await kv.get("settings:promotions") || [];
-    
-    console.log(`🔍 [DEBUG] Raw promotions from KV store:`, JSON.stringify(promotions, null, 2));
-    
-    return c.json({ 
+
+    return c.json({
       success: true, 
       data: { 
         promotions,
@@ -835,9 +755,6 @@ settingsApp.get("/make-server-84f9c112/debug/promotions-raw", async (c) => {
       } 
     });
   } catch (error: any) {
-    console.error("❌ [DEBUG] Exception:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
-
-console.log('✅ Settings module initialized with 17 routes');

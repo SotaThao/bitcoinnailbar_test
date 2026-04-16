@@ -39,13 +39,10 @@ app.post('/migrate-technicians', requireAuth, async (c) => {
       return c.json({ success: false, error: 'Unauthorized: Owner/Admin only' }, 403);
     }
 
-    console.log('🔄 [MIGRATION] Starting technician migration...');
-
     const supabase = getSupabaseClient();
-    
+
     // Get all staff from KV Store
     const kvStaff = await kv.getByPrefix('staff:');
-    console.log(`📊 [MIGRATION] Found ${kvStaff.length} technicians in KV Store`);
 
     if (kvStaff.length === 0) {
       return c.json({
@@ -70,7 +67,6 @@ app.post('/migrate-technicians', requireAuth, async (c) => {
           .single();
 
         if (existing) {
-          console.log(`⏭️  [MIGRATION] Skipping ${staff.name} - already migrated`);
           migrationResults.push({
             legacy_id: staff.id,
             name: staff.name,
@@ -135,7 +131,6 @@ app.post('/migrate-technicians', requireAuth, async (c) => {
 
         if (error) throw error;
 
-        console.log(`✅ [MIGRATION] Migrated technician: ${staff.name} (${staff.id} → ${data.id})`);
         successCount++;
         migrationResults.push({
           legacy_id: staff.id,
@@ -145,7 +140,6 @@ app.post('/migrate-technicians', requireAuth, async (c) => {
         });
 
       } catch (error: any) {
-        console.error(`❌ [MIGRATION] Failed to migrate ${staff.name}:`, error);
         errorCount++;
         migrationResults.push({
           legacy_id: staff.id,
@@ -156,8 +150,6 @@ app.post('/migrate-technicians', requireAuth, async (c) => {
       }
     }
 
-    console.log(`✅ [MIGRATION] Technician migration complete: ${successCount} success, ${errorCount} errors`);
-
     return c.json({
       success: true,
       migrated: successCount,
@@ -167,7 +159,6 @@ app.post('/migrate-technicians', requireAuth, async (c) => {
     });
 
   } catch (error: any) {
-    console.error('❌ [MIGRATION] Technician migration error:', error);
     return c.json({
       success: false,
       error: error.message || 'Technician migration failed',
@@ -186,13 +177,10 @@ app.post('/migrate-appointments', requireAuth, async (c) => {
       return c.json({ success: false, error: 'Unauthorized: Owner/Admin only' }, 403);
     }
 
-    console.log('🔄 [MIGRATION] Starting appointment migration...');
-
     const supabase = getSupabaseClient();
-    
+
     // Get all appointments from KV Store
     const kvAppointments = await kv.getByPrefix('appointment:');
-    console.log(`📊 [MIGRATION] Found ${kvAppointments.length} appointments in KV Store`);
 
     if (kvAppointments.length === 0) {
       return c.json({
@@ -241,7 +229,6 @@ app.post('/migrate-appointments', requireAuth, async (c) => {
           .single();
 
         if (existing) {
-          console.log(`⏭️  [MIGRATION] Skipping appointment ${appointment.id} - already migrated`);
           migrationResults.push({
             legacy_id: appointment.id,
             status: 'skipped',
@@ -307,7 +294,6 @@ app.post('/migrate-appointments', requireAuth, async (c) => {
 
         if (error) throw error;
 
-        console.log(`✅ [MIGRATION] Migrated appointment: ${appointment.id} → ${data.id}`);
         successCount++;
         migrationResults.push({
           legacy_id: appointment.id,
@@ -317,7 +303,6 @@ app.post('/migrate-appointments', requireAuth, async (c) => {
         });
 
       } catch (error: any) {
-        console.error(`❌ [MIGRATION] Failed to migrate appointment ${appointment.id}:`, error);
         errorCount++;
         migrationResults.push({
           legacy_id: appointment.id,
@@ -326,8 +311,6 @@ app.post('/migrate-appointments', requireAuth, async (c) => {
         });
       }
     }
-
-    console.log(`✅ [MIGRATION] Appointment migration complete: ${successCount} success, ${errorCount} errors`);
 
     return c.json({
       success: true,
@@ -338,7 +321,6 @@ app.post('/migrate-appointments', requireAuth, async (c) => {
     });
 
   } catch (error: any) {
-    console.error('❌ [MIGRATION] Appointment migration error:', error);
     return c.json({
       success: false,
       error: error.message || 'Appointment migration failed',
@@ -357,13 +339,10 @@ app.post('/migrate-assignment-logs', requireAuth, async (c) => {
       return c.json({ success: false, error: 'Unauthorized: Owner/Admin only' }, 403);
     }
 
-    console.log('🔄 [MIGRATION] Starting assignment log migration...');
-
     const supabase = getSupabaseClient();
-    
+
     // Get all logs from KV Store
     const kvLogs = await kv.getByPrefix('assignment-log:');
-    console.log(`📊 [MIGRATION] Found ${kvLogs.length} assignment logs in KV Store`);
 
     if (kvLogs.length === 0) {
       return c.json({
@@ -407,7 +386,6 @@ app.post('/migrate-assignment-logs', requireAuth, async (c) => {
           : null;
 
         if (!appointmentId) {
-          console.warn(`⚠️  [MIGRATION] Skipping log - appointment not found: ${log.appointmentId}`);
           errorCount++;
           continue;
         }
@@ -448,12 +426,9 @@ app.post('/migrate-assignment-logs', requireAuth, async (c) => {
         successCount++;
 
       } catch (error: any) {
-        console.error(`❌ [MIGRATION] Failed to migrate log:`, error);
         errorCount++;
       }
     }
-
-    console.log(`✅ [MIGRATION] Assignment log migration complete: ${successCount} success, ${errorCount} errors`);
 
     return c.json({
       success: true,
@@ -463,7 +438,6 @@ app.post('/migrate-assignment-logs', requireAuth, async (c) => {
     });
 
   } catch (error: any) {
-    console.error('❌ [MIGRATION] Assignment log migration error:', error);
     return c.json({
       success: false,
       error: error.message || 'Assignment log migration failed',
@@ -482,8 +456,6 @@ app.post('/migrate-all', requireAuth, async (c) => {
       return c.json({ success: false, error: 'Unauthorized: Owner/Admin only' }, 403);
     }
 
-    console.log('🚀 [MIGRATION] Starting FULL migration...');
-
     const results: any = {
       technicians: null,
       appointments: null,
@@ -491,7 +463,6 @@ app.post('/migrate-all', requireAuth, async (c) => {
     };
 
     // Step 1: Migrate technicians
-    console.log('📋 [MIGRATION] Step 1/3: Migrating technicians...');
     const techResponse = await app.request('/migrate-technicians', {
       method: 'POST',
       headers: c.req.raw.headers,
@@ -499,7 +470,6 @@ app.post('/migrate-all', requireAuth, async (c) => {
     results.technicians = await techResponse.json();
 
     // Step 2: Migrate appointments
-    console.log('📋 [MIGRATION] Step 2/3: Migrating appointments...');
     const apptResponse = await app.request('/migrate-appointments', {
       method: 'POST',
       headers: c.req.raw.headers,
@@ -507,14 +477,11 @@ app.post('/migrate-all', requireAuth, async (c) => {
     results.appointments = await apptResponse.json();
 
     // Step 3: Migrate assignment logs
-    console.log('📋 [MIGRATION] Step 3/3: Migrating assignment logs...');
     const logsResponse = await app.request('/migrate-assignment-logs', {
       method: 'POST',
       headers: c.req.raw.headers,
     });
     results.assignmentLogs = await logsResponse.json();
-
-    console.log('✅ [MIGRATION] FULL migration complete!');
 
     return c.json({
       success: true,
@@ -523,7 +490,6 @@ app.post('/migrate-all', requireAuth, async (c) => {
     });
 
   } catch (error: any) {
-    console.error('❌ [MIGRATION] Full migration error:', error);
     return c.json({
       success: false,
       error: error.message || 'Full migration failed',
@@ -576,14 +542,11 @@ app.get('/migration-status', requireAuth, async (c) => {
     });
 
   } catch (error: any) {
-    console.error('❌ [MIGRATION] Status check error:', error);
     return c.json({
       success: false,
       error: error.message,
     }, 500);
   }
 });
-
-console.log('✅ Postgres Migration module initialized');
 
 export default app;

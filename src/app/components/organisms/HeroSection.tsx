@@ -14,7 +14,7 @@ import { PrimaryButton } from "../PrimaryButton";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { useLanguage } from "../../context/LanguageContext";
 import { FloatingIcon } from "../molecules/FloatingIcon";
-import imgImage from "figma:asset/f84ad6d75c01f5865641dba32416e817dee06ff5.png";
+import { ASSETS } from "../../config/assets";
 
 export function HeroSection() {
   const { t } = useLanguage();
@@ -379,7 +379,7 @@ export function HeroSection() {
                     <div
                       className="absolute inset-[0.9px] opacity-30"
                       style={{
-                        backgroundImage: `url('${imgImage}')`,
+                        backgroundImage: `url('${ASSETS.vipCardPattern}')`,
                         backgroundSize: "24px 22px",
                         backgroundRepeat: "repeat",
                         backgroundPosition: "top left",
@@ -491,7 +491,7 @@ export function HeroSection() {
                 <div
                   className="absolute inset-[0.9px] opacity-40"
                   style={{
-                    backgroundImage: `url('${imgImage}')`,
+                    backgroundImage: `url('${ASSETS.vipCardPattern}')`,
                     backgroundSize: "24px 22px",
                     backgroundRepeat: "repeat",
                     backgroundPosition: "top left",

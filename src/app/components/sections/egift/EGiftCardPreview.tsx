@@ -1,9 +1,6 @@
 import { motion } from "motion/react";
 import { Check } from "lucide-react";
-import bitcoinLogo from "figma:asset/2e1db8bc09ca3990d8353e1709360b43f3caa800.png";
-import shopLogo from "figma:asset/a0a142070a5eba3845c46a9b2c9f3045cc1462ff.png";
-import bnbLogo from "figma:asset/8504cf526757125a74c4095fde998e4033127268.png";
-import imgQr from "figma:asset/67a09cd28fc49fe9fb982254a0abba67cf925b41.png";
+import { ASSETS } from "../../../config/assets";
 
 export interface CardColor {
   id: string;
@@ -174,7 +171,7 @@ export function EGiftCardPreview({
                   {/* Logo Container */}
                   <div className="w-[8cqw] h-[8cqw] rounded-full border-[0.15cqw] border-[#F7931A] bg-[#1a1a1a] flex items-center justify-center p-[3px] shadow-lg shrink-0 overflow-hidden">
                     <img
-                      src={bnbLogo}
+                      src={ASSETS.bitcoinIconOrange}
                       alt="Bitcoin Nail Bar Logo"
                       className="w-full h-full object-contain"
                     />
@@ -361,7 +358,7 @@ export function EGiftCardPreview({
 
                 <div className="bg-white p-[1%] rounded shadow-sm w-[15%] aspect-square flex items-center justify-center">
                   <img
-                    src={imgQr}
+                    src={ASSETS.giftCardQR}
                     alt="QR"
                     className="w-full h-full object-contain"
                   />

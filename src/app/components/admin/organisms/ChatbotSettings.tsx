@@ -16,6 +16,7 @@ export function ChatbotSettings({
 }: ChatbotSettingsProps) {
   const [uploading, setUploading] = useState(false);
   const [currentAvatar, setCurrentAvatar] = useState(avatarUrl);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -61,7 +62,7 @@ export function ChatbotSettings({
       );
     } catch (error: any) {
       console.error("❌ Upload error:", error);
-      alert(`Upload failed: ${error.message}`);
+      setError(`Upload failed: ${error.message}`);
     } finally {
       setUploading(false);
     }
@@ -78,12 +79,27 @@ export function ChatbotSettings({
       console.log("✅ Chatbot avatar removed");
     } catch (error: any) {
       console.error("❌ Remove error:", error);
-      alert(`Remove failed: ${error.message}`);
+      setError(`Remove failed: ${error.message}`);
     }
   };
 
   return (
     <div className="space-y-4">
+      {/* Error Message */}
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+          <svg className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm text-red-700 flex-1">{error}</p>
+          <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 flex-shrink-0">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <div className="relative border-2 border-dashed border-gray-200 rounded-lg overflow-hidden bg-gray-50 hover:border-gray-300 transition-colors">
         {currentAvatar ? (
           <div className="relative group">

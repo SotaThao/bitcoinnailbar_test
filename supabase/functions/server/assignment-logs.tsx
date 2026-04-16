@@ -63,15 +63,11 @@ export async function createAssignmentLog(params: {
       .single();
     
     if (error) {
-      console.error('❌ [ASSIGNMENT LOG] Postgres insert error:', error);
       throw error;
     }
-    
-    console.log(`✅ [ASSIGNMENT LOG] Created log for appointment ${params.appointmentId}: ${params.fromTechnicianName || '(unassigned)'} → ${params.toTechnicianName}`);
-    
+
     return data;
   } catch (error) {
-    console.error('❌ [ASSIGNMENT LOG] Failed to create log:', error);
     throw error;
   }
 }
@@ -89,18 +85,14 @@ app.get('/appointment/:appointmentId', requireAuth, async (c) => {
       .order('timestamp', { ascending: false });
     
     if (error) {
-      console.error('❌ [ASSIGNMENT LOGS] Postgres error:', error);
       throw error;
     }
-    
-    console.log(`✅ [ASSIGNMENT LOGS] Retrieved ${logs?.length || 0} logs for appointment ${appointmentId}`);
-    
+
     return c.json({
       success: true,
       data: logs || [],
     });
   } catch (error: any) {
-    console.error('❌ [ASSIGNMENT LOGS] Get appointment logs error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to fetch assignment logs',
@@ -155,12 +147,9 @@ app.get('/recent', requireAuth, async (c) => {
     const { data: logs, error, count } = await query;
     
     if (error) {
-      console.error('❌ [ASSIGNMENT LOGS] Postgres error:', error);
       throw error;
     }
-    
-    console.log(`✅ [ASSIGNMENT LOGS] Retrieved ${logs?.length || 0} recent logs`);
-    
+
     return c.json({
       success: true,
       data: logs || [],
@@ -168,7 +157,6 @@ app.get('/recent', requireAuth, async (c) => {
       limit: limit,
     });
   } catch (error: any) {
-    console.error('❌ [ASSIGNMENT LOGS] Get recent logs error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to fetch recent assignment logs',
@@ -200,10 +188,9 @@ app.get('/stats', requireAuth, async (c) => {
       .select('*');
     
     if (error) {
-      console.error('❌ [ASSIGNMENT LOGS] Postgres error:', error);
       throw error;
     }
-    
+
     const logs = allLogs || [];
     
     // Calculate statistics
@@ -250,22 +237,17 @@ app.get('/stats', requireAuth, async (c) => {
       topUsers,
       averageAutoAssignScore: avgScore.toFixed(1),
     };
-    
-    console.log(`✅ [ASSIGNMENT LOGS] Generated statistics from ${totalChanges} logs`);
-    
+
     return c.json({
       success: true,
       data: stats,
     });
   } catch (error: any) {
-    console.error('❌ [ASSIGNMENT LOGS] Get stats error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to fetch assignment statistics',
     }, 500);
   }
 });
-
-console.log('✅ Assignment Logs module initialized');
 
 export default app;

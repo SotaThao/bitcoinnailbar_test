@@ -1,0 +1,67 @@
+---
+description: Shared doc workflow for ALL roles — sequence, approvals, cross-references
+alwaysApply: true
+---
+
+# Doc Workflow (Shared Atom)
+
+> Applies to: Product-Designer, Frontend-Developer, Backend-Developer, QA-Tester, PM/Lead
+
+---
+
+## 1. Sequential Order
+
+```
+PM/Lead: Create Master Doc → Get user approval
+    ↓
+Product-Designer: Create Product Doc (UX, wireframes)
+    ↓
+Engineers: Create Engineering Doc (technical specs)
+    ↓
+QA-Tester: Create QA Doc (test cases)
+    ↓
+PM/Lead: Create Tasks Doc → Cross-link all docs
+    ↓
+ALL: Get approvals → Begin implementation
+    ↓
+Continuous: Update docs with changelog (HH:mm timestamps)
+```
+
+---
+
+## 2. Critical Rules
+
+- ❌ **NEVER** create Product/Engineering/QA docs without Master Doc first
+- ✅ Master Doc **MUST** be approved before detailed docs
+- ✅ Every doc **MUST** have "Related Documents" section with links
+- ✅ Every update **MUST** increment version + log in changelog
+- ✅ Changelog entries **MUST** include HH:mm timestamps
+
+---
+
+## 3. Doc Responsibility Matrix
+
+| Doc | Creates | Reviews | Approves |
+|-----|---------|---------|----------|
+| Master Doc | PM/Lead | All roles | User |
+| Product Doc | Product-Designer | PM/Lead | User |
+| Engineering Doc | Engineers | PM/Lead | User |
+| QA Doc | QA-Tester | Engineers | User |
+| Tasks Doc | PM/Lead | All roles | User |
+
+---
+
+## 4. Cross-Reference Rules
+
+Every doc's "Related Documents" section **MUST** link:
+1. Master Doc (always)
+2. Adjacent docs in sequence (Product → Engineering, etc.)
+3. GitHub Issue URL
+4. PR URL (after implementation)
+
+### Example
+```markdown
+## Related Documents
+- **Master Doc:** `Docs/00-master/push-code-1_master_260407_v1.0.0.md`
+- **GitHub Issue:** https://github.com/PersonalProjectJob/Job360/issues/1
+```

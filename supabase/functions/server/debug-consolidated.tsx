@@ -15,11 +15,9 @@ export const debugConsolidatedApp = new Hono();
 // GET: Test customer write/read (KV Store)
 debugConsolidatedApp.get('/make-server-84f9c112/debug/test-customer-write', async (c) => {
   try {
-    console.log('🧪 [DEBUG] Testing direct customerKV write...');
-    
     const testPhone = '9998887777';
     const testCustomerId = `customer_us:${testPhone}`;
-    
+
     // Test customer object
     const testCustomer = {
       id: testCustomerId,
@@ -39,38 +37,33 @@ debugConsolidatedApp.get('/make-server-84f9c112/debug/test-customer-write', asyn
       created_by: 'debug_test',
       is_deleted: false
     };
-    
-    console.log('📝 [DEBUG] Writing test customer:', testCustomerId);
-    
+
     // Write to DB
     await customerKV.set(testCustomerId, testCustomer);
-    console.log('✅ [DEBUG] Write completed');
-    
+
     // Read back
-    console.log('📖 [DEBUG] Reading back customer...');
     const readBack = await customerKV.get(testCustomerId);
-    
+
     // Verify
     if (readBack && readBack.id === testCustomerId) {
       return c.json({
         success: true,
-        message: 'Customer write/read test PASSED ✅',
+        message: 'Customer write/read test PASSED',
         data: { written: testCustomer, readBack }
       });
     } else {
       return c.json({
         success: false,
-        message: 'Customer write/read test FAILED ❌',
+        message: 'Customer write/read test FAILED',
         error: 'Read back data does not match',
         data: { written: testCustomer, readBack }
       }, 500);
     }
-    
+
   } catch (error: any) {
-    console.error('❌ [DEBUG] Test failed:', error);
     return c.json({
       success: false,
-      message: 'Customer write/read test FAILED ❌',
+      message: 'Customer write/read test FAILED',
       error: error.message
     }, 500);
   }
@@ -79,11 +72,9 @@ debugConsolidatedApp.get('/make-server-84f9c112/debug/test-customer-write', asyn
 // GET: Create test customer with membership
 debugConsolidatedApp.get('/make-server-84f9c112/debug/create-test-member', async (c) => {
   try {
-    console.log('🧪 [DEBUG] Creating test customer with membership...');
-    
     const testPhone = '5551234567';
     const testCustomerId = `customer_us:${testPhone}`;
-    
+
     // Create customer with Gold membership
     const testCustomer = {
       id: testCustomerId,
@@ -109,19 +100,16 @@ debugConsolidatedApp.get('/make-server-84f9c112/debug/create-test-member', async
       created_by: 'debug_test',
       is_deleted: false
     };
-    
+
     await customerKV.set(testCustomerId, testCustomer);
-    
-    console.log('✅ [DEBUG] Test member created:', testCustomerId);
-    
+
     return c.json({
       success: true,
       message: 'Test member created successfully',
       data: testCustomer
     });
-    
+
   } catch (error: any) {
-    console.error('❌ [DEBUG] Failed to create test member:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -134,9 +122,7 @@ debugConsolidatedApp.get('/make-server-84f9c112/debug/create-test-member', async
 debugConsolidatedApp.get('/make-server-84f9c112/debug/vlinkpay-settings', async (c) => {
   try {
     const settings = await kv.get('vlinkpay:settings') || {};
-    
-    console.log('🔍 [DEBUG] VLinkPay settings:', settings);
-    
+
     return c.json({
       success: true,
       data: {
@@ -147,7 +133,6 @@ debugConsolidatedApp.get('/make-server-84f9c112/debug/vlinkpay-settings', async 
       }
     });
   } catch (error: any) {
-    console.error('❌ [DEBUG] VLinkPay settings error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -159,14 +144,10 @@ debugConsolidatedApp.get('/make-server-84f9c112/debug/vlinkpay-settings', async 
 // GET: List all users (admin KV)
 debugConsolidatedApp.get('/make-server-84f9c112/debug/users', async (c) => {
   try {
-    console.log('🔍 [DEBUG USERS] Fetching all users...');
-    
     const usersColon = await kv.getByPrefix('user:');
     const usersHash = await kv.getByPrefix('user#');
     const allUsers = [...usersColon, ...usersHash];
-    
-    console.log(`✅ [DEBUG USERS] Found ${allUsers.length} users`);
-    
+
     return c.json({
       success: true,
       data: {
@@ -182,7 +163,6 @@ debugConsolidatedApp.get('/make-server-84f9c112/debug/users', async (c) => {
       }
     });
   } catch (error: any) {
-    console.error('❌ [DEBUG USERS] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -190,12 +170,8 @@ debugConsolidatedApp.get('/make-server-84f9c112/debug/users', async (c) => {
 // GET: List all sessions
 debugConsolidatedApp.get('/make-server-84f9c112/debug/sessions', async (c) => {
   try {
-    console.log('🔍 [DEBUG SESSIONS] Fetching all sessions...');
-    
     const sessions = await kv.getByPrefix('session:');
-    
-    console.log(`✅ [DEBUG SESSIONS] Found ${sessions.length} sessions`);
-    
+
     return c.json({
       success: true,
       data: {
@@ -211,7 +187,6 @@ debugConsolidatedApp.get('/make-server-84f9c112/debug/sessions', async (c) => {
       }
     });
   } catch (error: any) {
-    console.error('❌ [DEBUG SESSIONS] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -231,9 +206,7 @@ debugConsolidatedApp.post('/make-server-84f9c112/debug/get-hash', async (c) => {
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    
-    console.log('🔐 [DEBUG HASH] Generated hash for password');
-    
+
     return c.json({
       success: true,
       data: {
@@ -243,7 +216,6 @@ debugConsolidatedApp.post('/make-server-84f9c112/debug/get-hash', async (c) => {
       }
     });
   } catch (error: any) {
-    console.error('❌ [DEBUG HASH] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -289,16 +261,13 @@ debugConsolidatedApp.post("/make-server-84f9c112/test-resend-direct", async (c) 
     });
     
     const data = await response.json();
-    
-    console.log('📧 [TEST EMAIL] Resend response:', data);
-    
+
     return c.json({
       success: response.ok,
       status: response.status,
       data
     });
   } catch (error: any) {
-    console.error('❌ [TEST EMAIL] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -310,20 +279,15 @@ debugConsolidatedApp.post("/make-server-84f9c112/test-resend-direct", async (c) 
 // GET: Check data integrity
 debugConsolidatedApp.get("/make-server-84f9c112/debug/data-check", async (c) => {
   try {
-    console.log('🔍 [DATA CHECK] Starting data integrity check...');
-    
     // Check customers
     const customers = await customerKV.getByPrefix('customer_');
-    console.log(`📊 [DATA CHECK] Found ${customers.length} customers`);
-    
+
     // Check appointments
     const appointments = await customerKV.getByPrefix('appointment:');
-    console.log(`📊 [DATA CHECK] Found ${appointments.length} appointments`);
-    
+
     // Check services
     const services = await customerKV.getByPrefix('service:');
-    console.log(`📊 [DATA CHECK] Found ${services.length} services`);
-    
+
     return c.json({
       success: true,
       data: {
@@ -334,7 +298,6 @@ debugConsolidatedApp.get("/make-server-84f9c112/debug/data-check", async (c) => 
       }
     });
   } catch (error: any) {
-    console.error('❌ [DATA CHECK] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -342,11 +305,8 @@ debugConsolidatedApp.get("/make-server-84f9c112/debug/data-check", async (c) => 
 // POST: Clean appointments
 debugConsolidatedApp.post("/make-server-84f9c112/debug/clean-appointments", async (c) => {
   try {
-    console.log('🧹 [CLEAN APPOINTMENTS] Starting cleanup...');
-    
     const appointments = await customerKV.getByPrefix('appointment:');
-    console.log(`📊 [CLEAN] Found ${appointments.length} appointments`);
-    
+
     return c.json({
       success: true,
       message: 'Cleanup completed',
@@ -356,7 +316,6 @@ debugConsolidatedApp.post("/make-server-84f9c112/debug/clean-appointments", asyn
       }
     });
   } catch (error: any) {
-    console.error('❌ [CLEAN APPOINTMENTS] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -364,11 +323,8 @@ debugConsolidatedApp.post("/make-server-84f9c112/debug/clean-appointments", asyn
 // POST: Clean staff
 debugConsolidatedApp.post("/make-server-84f9c112/debug/clean-staff", async (c) => {
   try {
-    console.log('🧹 [CLEAN STAFF] Starting cleanup...');
-    
     const staff = await customerKV.getByPrefix('staff:');
-    console.log(`📊 [CLEAN] Found ${staff.length} staff members`);
-    
+
     return c.json({
       success: true,
       message: 'Staff cleanup completed',
@@ -377,7 +333,6 @@ debugConsolidatedApp.post("/make-server-84f9c112/debug/clean-staff", async (c) =
       }
     });
   } catch (error: any) {
-    console.error('❌ [CLEAN STAFF] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -385,11 +340,8 @@ debugConsolidatedApp.post("/make-server-84f9c112/debug/clean-staff", async (c) =
 // POST: Cleanup duplicate customers (v1)
 debugConsolidatedApp.post("/make-server-84f9c112/debug/cleanup-duplicates", async (c) => {
   try {
-    console.log('🧹 [CLEANUP DUPLICATES V1] Starting...');
-    
     const customers = await customerKV.getByPrefix('customer_');
-    console.log(`📊 [CLEANUP] Found ${customers.length} customers`);
-    
+
     return c.json({
       success: true,
       message: 'Duplicate cleanup v1 completed',
@@ -399,7 +351,6 @@ debugConsolidatedApp.post("/make-server-84f9c112/debug/cleanup-duplicates", asyn
       }
     });
   } catch (error: any) {
-    console.error('❌ [CLEANUP DUPLICATES V1] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -407,11 +358,8 @@ debugConsolidatedApp.post("/make-server-84f9c112/debug/cleanup-duplicates", asyn
 // POST: Cleanup duplicate customers (v2)
 debugConsolidatedApp.post("/make-server-84f9c112/debug/cleanup-duplicates-v2", async (c) => {
   try {
-    console.log('🧹 [CLEANUP DUPLICATES V2] Starting enhanced cleanup...');
-    
     const customers = await customerKV.getByPrefix('customer_');
-    console.log(`📊 [CLEANUP V2] Found ${customers.length} customers`);
-    
+
     return c.json({
       success: true,
       message: 'Duplicate cleanup v2 completed',
@@ -421,9 +369,7 @@ debugConsolidatedApp.post("/make-server-84f9c112/debug/cleanup-duplicates-v2", a
       }
     });
   } catch (error: any) {
-    console.error('❌ [CLEANUP DUPLICATES V2] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
 
-console.log('✅ Debug Consolidated module initialized with 13 routes');

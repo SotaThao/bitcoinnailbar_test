@@ -96,7 +96,6 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
       .maybeSingle();
 
     if (fetchError) {
-      console.error('❌ [MEMBERSHIP] Fetch error:', fetchError);
       throw fetchError;
     }
 
@@ -104,7 +103,6 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // UPDATE EXISTING CUSTOMER
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      console.log(`📝 [MEMBERSHIP] Updating customer: ${existingCustomer.id}`);
 
       const currentTier = existingCustomer.tier;
       const currentAmount = existingCustomer.membership_amount || 0; // ✅ FIXED: Get from membership_amount column
@@ -120,32 +118,23 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
 
       // CASE 1: No existing membership → Apply new one
       if (!existingCustomer.membership_id || !currentEndDate) {
-        console.log('✨ [MEMBERSHIP] No existing membership, applying new one');
         finalEndDate = new Date(activatedAt);
         finalEndDate.setMonth(finalEndDate.getMonth() + newDuration);
         membershipAction = 'activated';
       }
       // CASE 2: Same tier → Stack duration (Per MEMBERSHIP_LOGIC.md)
       else if (currentTier === newTier) {
-        console.log('📚 [MEMBERSHIP] Same tier detected, stacking duration');
         finalEndDate = calculateStackedExpiry(currentEndDate, newDuration);
         membershipAction = 'stacked';
-        console.log(`✅ [MEMBERSHIP] Extended expiry to: ${finalEndDate.toISOString()}`);
       }
       // CASE 3: Different tier → Compare amounts (Per Guidelines)
       else {
-        console.log('⚖️ [MEMBERSHIP] Different tiers, comparing amounts');
-        console.log(`   Current: ${currentTier} ($${currentAmount})`);
-        console.log(`   New: ${newTier} ($${newAmount})`);
-
         // Higher amount wins
         if (newAmount > currentAmount) {
-          console.log('🏆 [MEMBERSHIP] New tier has higher amount, replacing');
           finalEndDate = new Date(activatedAt);
           finalEndDate.setMonth(finalEndDate.getMonth() + newDuration);
           membershipAction = 'upgraded';
         } else {
-          console.log('🛡️ [MEMBERSHIP] Current tier has higher amount, keeping it');
           // Keep existing - don't update
           return c.json({
             success: true,
@@ -179,11 +168,8 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
         .single();
 
       if (updateError) {
-        console.error('❌ [MEMBERSHIP] Update error:', updateError);
         throw updateError;
       }
-
-      console.log(`✅ [MEMBERSHIP] Customer updated successfully`);
 
       return c.json({
         success: true,
@@ -205,7 +191,6 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // CREATE NEW CUSTOMER
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      console.log(`✨ [MEMBERSHIP] Creating new customer with phone: ${normalizedPhone}`);
 
       // Calculate expiry
       const activatedAt = new Date();
@@ -238,11 +223,8 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
         .single();
 
       if (createError) {
-        console.error('❌ [MEMBERSHIP] Create error:', createError);
         throw createError;
       }
-
-      console.log(`✅ [MEMBERSHIP] New customer created: ${newCustomer.id}`);
 
       return c.json({
         success: true,
@@ -262,7 +244,6 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
     }
 
   } catch (error: any) {
-    console.error('❌ [MEMBERSHIP] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to activate membership'
@@ -278,15 +259,12 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
 app.get('/make-server-84f9c112/customers/membership/:identifier', async (c) => {
   try {
     const identifier = c.req.param('identifier');
-    
-    console.log('🔍 [MEMBERSHIP CHECK] Received identifier:', identifier);
-    
+
     // Determine if identifier is email or phone
     const isEmail = identifier.includes('@');
     let customer;
     
     if (isEmail) {
-      console.log('📧 [MEMBERSHIP CHECK] Searching by email...');
       const { data, error } = await supabase
         .from('customer_profiles')
         .select('*')
@@ -298,7 +276,6 @@ app.get('/make-server-84f9c112/customers/membership/:identifier', async (c) => {
       customer = data;
     } else {
       const normalizedPhone = normalizePhone(identifier);
-      console.log('📱 [MEMBERSHIP CHECK] Searching by phone:', normalizedPhone);
       const { data, error } = await supabase
         .from('customer_profiles')
         .select('*')
@@ -310,10 +287,7 @@ app.get('/make-server-84f9c112/customers/membership/:identifier', async (c) => {
       customer = data;
     }
 
-    console.log('📊 [MEMBERSHIP CHECK] Customer found:', !!customer);
-
     if (!customer) {
-      console.log('❌ [MEMBERSHIP CHECK] Customer not found');
       return c.json({
         success: true,
         has_membership: false,
@@ -327,9 +301,6 @@ app.get('/make-server-84f9c112/customers/membership/:identifier', async (c) => {
       const now = new Date();
       const expiresAt = new Date(customer.membership_end_date);
       isActive = expiresAt > now && customer.status === 'active';
-      console.log('✅ [MEMBERSHIP CHECK] Is active?', isActive);
-      console.log('   Expires at:', customer.membership_end_date);
-      console.log('   Current time:', now.toISOString());
     }
 
     const response = {
@@ -352,13 +323,10 @@ app.get('/make-server-84f9c112/customers/membership/:identifier', async (c) => {
         } : null
       }
     };
-    
-    console.log('📤 [MEMBERSHIP CHECK] Sending response');
 
     return c.json(response);
 
   } catch (error: any) {
-    console.error('❌ [MEMBERSHIP CHECK] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to check membership'

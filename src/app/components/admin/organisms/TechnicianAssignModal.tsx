@@ -64,6 +64,7 @@ export function TechnicianAssignModal({
   const [customReason, setCustomReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch technicians and reasons on mount
   useEffect(() => {
@@ -139,12 +140,12 @@ export function TechnicianAssignModal({
 
   const handleAssign = async () => {
     if (!selectedTechnicianId) {
-      alert("Please select a technician");
+      setError("Please select a technician");
       return;
     }
 
     if (!selectedReasonId) {
-      alert("Please select a reason");
+      setError("Please select a reason");
       return;
     }
 
@@ -184,15 +185,15 @@ export function TechnicianAssignModal({
       const result = await response.json();
 
       if (result.success) {
-        alert("✅ Technician assigned successfully!");
+        setError("✅ Technician assigned successfully!");
         onSuccess();
         onClose();
       } else {
-        alert(`❌ Failed to assign: ${result.error}`);
+        setError(`❌ Failed to assign: ${result.error}`);
       }
     } catch (error: any) {
       console.error("Assignment error:", error);
-      alert(`❌ Error: ${error.message}`);
+      setError(`❌ Error: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -214,6 +215,33 @@ export function TechnicianAssignModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
+        {/* Error/Success Message */}
+        {error && (
+          <div className={`p-3 rounded-lg flex items-start gap-2 ${
+            error.startsWith('✅')
+              ? 'bg-green-50 border border-green-200'
+              : 'bg-red-50 border border-red-200'
+          }`}>
+            {error.startsWith('✅') ? (
+              <svg className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            <p className={`text-sm flex-1 ${
+              error.startsWith('✅') ? 'text-green-700' : 'text-red-700'
+            }`}>{error}</p>
+            <button onClick={() => setError(null)} className="text-gray-400 hover:text-gray-600 flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-gray-900">
             {currentTechnicianId ? "Reassign" : "Assign"} Technician

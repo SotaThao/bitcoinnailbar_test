@@ -1,0 +1,8 @@
+---
+description: Plan Part 3 — qa-doc (test cases).
+alwaysApply: false
+---
+
+# Rule — QA doc (Part 3)
+
+Khi viết **Phần 3** của plan: làm theo `.cursor/skills/qa-doc/SKILL.md`. Căn chỉnh với User Flow (Part 1) và Technical (Part 2). Flow PLAN: **`.cursor/rules/plan-workflow.mdc`**.

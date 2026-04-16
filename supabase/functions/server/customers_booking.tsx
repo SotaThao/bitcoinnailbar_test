@@ -138,8 +138,6 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
       // UPDATE EXISTING CUSTOMER
       // Per BOOKING_CUSTOMER_LOGIC.md: Only count if Complete
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      console.log(`📝 [BOOKING] Updating existing customer: ${existingCustomer.id}`);
-      console.log(`   Appointment status: ${appointment_status}`);
 
       // Update fields (user can update email/address during booking)
       existingCustomer.full_name = full_name; // Allow name update
@@ -150,12 +148,10 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
       // ✅ CRITICAL: Only accumulate if status = 'Complete'
       // Per BOOKING_CUSTOMER_LOGIC.md Section 2
       if (appointment_status === 'Complete') {
-        console.log(`   ✅ Status = Complete → Accumulating statistics`);
         existingCustomer.total_visits += 1;
         existingCustomer.total_spent += appointment_amount;
         existingCustomer.last_visit = appointment_time;
       } else {
-        console.log(`   ⏸️  Status = ${appointment_status} → NOT counting in statistics yet`);
         // Don't update total_visits, total_spent, or last_visit
       }
       
@@ -171,18 +167,12 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
       // Save
       await customerKV.set(existingCustomer.id, existingCustomer);
 
-      console.log(`✅ [BOOKING] Customer updated successfully`);
-      console.log(`   Total visits: ${existingCustomer.total_visits}`);
-      console.log(`   Total spent: $${existingCustomer.total_spent}`);
-
       // Check membership validity for booking date
       let validMembership = null;
       if (existingCustomer.membership) {
         const isValid = isMembershipValid(existingCustomer.membership, appointment_time);
         if (isValid) {
           validMembership = existingCustomer.membership;
-        } else {
-          console.log(`⚠️ [BOOKING] Membership expired or not valid for booking date`);
         }
       }
 
@@ -200,8 +190,6 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
       // CREATE NEW CUSTOMER
       // Per BOOKING_CUSTOMER_LOGIC.md: Only count if Complete
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      console.log(`✨ [BOOKING] Creating new customer with phone: ${normalizedPhone}`);
-      console.log(`   Appointment status: ${appointment_status}`);
 
       // Generate key
       const key = region === 'US' 
@@ -215,7 +203,6 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
 
       // ✅ CRITICAL: Check status before counting
       const shouldCount = appointment_status === 'Complete';
-      console.log(`   ${shouldCount ? '✅' : '⏸️'} ${shouldCount ? 'Counting' : 'NOT counting'} in initial statistics`);
 
       // Create customer
       const newCustomer: Customer = {
@@ -239,10 +226,6 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
       // Save
       await customerKV.set(key, newCustomer);
 
-      console.log(`✅ [BOOKING] New customer created: ${key}`);
-      console.log(`   Total visits: ${newCustomer.total_visits}`);
-      console.log(`   Total spent: $${newCustomer.total_spent}`);
-
       return c.json({
         success: true,
         data: {
@@ -254,7 +237,6 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
     }
 
   } catch (error: any) {
-    console.error('❌ [BOOKING] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to process booking'
@@ -295,8 +277,6 @@ app.get('/make-server-84f9c112/customers/lookup/:phone', async (c) => {
       }
     }
 
-    console.log(`✅ [LOOKUP] Customer found: ${customer.id}, Membership valid: ${!!validMembership}`);
-
     return c.json({
       success: true,
       found: true,
@@ -308,7 +288,6 @@ app.get('/make-server-84f9c112/customers/lookup/:phone', async (c) => {
     });
 
   } catch (error: any) {
-    console.error('❌ [LOOKUP] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to lookup customer'

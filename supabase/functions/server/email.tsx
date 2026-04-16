@@ -16,7 +16,6 @@ export const sendEmail = async (
   const apiKey = Deno.env.get('RESEND_API_KEY');
   
   if (!apiKey) {
-    console.error("❌ Missing RESEND_API_KEY secret");
     throw new Error("Email configuration missing (API Key not found)");
   }
 
@@ -24,10 +23,6 @@ export const sendEmail = async (
   const fromEmail = from 
     || Deno.env.get('RESEND_FROM_EMAIL') 
     || 'Bitcoin Nail Bar <bookings@tnsthao94.online>';
-
-  console.log(`📧 Sending email to: ${to}`);
-  console.log(`   From: ${fromEmail}`);
-  console.log(`   Subject: ${subject}`);
 
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -45,22 +40,12 @@ export const sendEmail = async (
 
   const data = await response.json();
 
-  console.log(`   Response Status: ${response.status}`);
-  
   if (!response.ok) {
-    // Log detailed error from Resend
-    console.error("❌ Resend API Error:", {
-      status: response.status,
-      statusText: response.statusText,
-      error: data
-    });
-    
     // Throw error with detailed message
     const errorMessage = data.message || data.error || 'Failed to send email via Resend';
     throw new Error(`Resend Error (${response.status}): ${errorMessage}`);
   }
 
-  console.log(`✅ Email sent successfully! ID: ${data.id}`);
   return data;
 };
 

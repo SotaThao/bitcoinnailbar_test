@@ -37,6 +37,7 @@ interface ServiceCategorySidebarProps {
   onEditCategory?: (category: ServiceCategory) => void;
   onDeleteCategory?: (categoryId: number) => void;
   onReorder?: (newOrder: ServiceCategory[]) => void;
+  onError?: (message: string) => void;
 }
 
 function SortableCategoryItem({
@@ -47,6 +48,7 @@ function SortableCategoryItem({
   onTabChange,
   onEditCategory,
   onDeleteCategory,
+  onError,
 }: {
   category: ServiceCategory;
   index: number;
@@ -55,6 +57,7 @@ function SortableCategoryItem({
   onTabChange: (categoryName: string) => void;
   onEditCategory?: (category: ServiceCategory) => void;
   onDeleteCategory?: (categoryId: number) => void;
+  onError?: (message: string) => void;
 }) {
   const {
     attributes,
@@ -140,7 +143,7 @@ function SortableCategoryItem({
                   console.error(
                     `❌ [UI] Invalid category ID: ${category.id}`,
                   );
-                  alert("Cannot delete: Invalid category ID");
+                  onError?.("Cannot delete: Invalid category ID");
                   return;
                 }
 
@@ -267,6 +270,7 @@ export function ServiceCategorySidebar({
                   onTabChange={onTabChange}
                   onEditCategory={onEditCategory}
                   onDeleteCategory={onDeleteCategory}
+                  onError={onError}
                 />
               );
             })}

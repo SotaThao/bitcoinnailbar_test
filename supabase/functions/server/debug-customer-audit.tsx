@@ -20,8 +20,6 @@ const supabase = createClient(
  */
 app.get('/make-server-84f9c112/debug/customer-audit', async (c) => {
   try {
-    console.log('🔍 [AUDIT] Starting customer data audit...');
-
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 1. Check Postgres customer_profiles
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -56,8 +54,6 @@ app.get('/make-server-84f9c112/debug/customer-audit', async (c) => {
       })) || []
     };
 
-    console.log('✅ [AUDIT] Postgres customer_profiles:', pgStats.total, 'records');
-
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 2. Check KV Store kv_store_84f9c112 (old homepage data)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -70,8 +66,6 @@ app.get('/make-server-84f9c112/debug/customer-audit', async (c) => {
       total: kvOldRecords?.length || 0,
       sample_keys: kvOldRecords?.slice(0, 5).map((r: any) => r.key) || []
     };
-
-    console.log('✅ [AUDIT] KV Store (kv_store_84f9c112):', kvOldStats.total, 'customer records');
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 3. Check KV Store kv_store_customers (separate table)
@@ -88,11 +82,8 @@ app.get('/make-server-84f9c112/debug/customer-audit', async (c) => {
         sample_keys: kvCustomersRecords?.slice(0, 5).map((r: any) => r.key) || [],
         error: kvCustomersError
       };
-
-      console.log('✅ [AUDIT] KV Store (kv_store_customers):', kvCustomersStats.total, 'customer records');
     } catch (e) {
       kvCustomersStats.error = `Table might not exist: ${e}`;
-      console.log('⚠️ [AUDIT] kv_store_customers table not accessible');
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -153,15 +144,12 @@ app.get('/make-server-84f9c112/debug/customer-audit', async (c) => {
       status: recommendations.length > 0 ? 'ACTION_REQUIRED' : 'HEALTHY',
     };
 
-    console.log('✅ [AUDIT] Audit complete:', auditResult.status);
-
     return c.json({
       success: true,
       data: auditResult
     });
 
   } catch (error: any) {
-    console.error('❌ [AUDIT] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Audit failed'
@@ -177,8 +165,6 @@ app.get('/make-server-84f9c112/debug/customer-compare/:phone', async (c) => {
   try {
     const phone = c.req.param('phone');
     const normalizedPhone = phone.replace(/\D/g, ''); // Remove non-digits
-
-    console.log(`🔍 [COMPARE] Searching for phone: ${normalizedPhone}`);
 
     // Check Postgres
     const { data: pgCustomer } = await supabase
@@ -213,7 +199,7 @@ app.get('/make-server-84f9c112/debug/customer-compare/:phone', async (c) => {
 
       kvCustomersMatch = kvCustomersRecord;
     } catch (e) {
-      console.log('⚠️ kv_store_customers not accessible');
+      // kv_store_customers not accessible
     }
 
     const comparison = {
@@ -248,7 +234,6 @@ app.get('/make-server-84f9c112/debug/customer-compare/:phone', async (c) => {
     });
 
   } catch (error: any) {
-    console.error('❌ [COMPARE] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Comparison failed'

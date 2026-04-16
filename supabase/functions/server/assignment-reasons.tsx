@@ -61,10 +61,8 @@ function hasManagePermission(user: any): boolean {
 async function seedDefaultReasonsIfNeeded() {
   try {
     const existingReasons = await kv.getByPrefix('assignment-reason:');
-    
+
     if (existingReasons.length === 0) {
-      console.log('🌱 [ASSIGNMENT REASONS] Seeding default reasons...');
-      
       for (const reason of DEFAULT_REASONS) {
         const reasonId = `assignment-reason:${Date.now()}${Math.random()}`;
         await kv.set(reasonId, {
@@ -78,11 +76,9 @@ async function seedDefaultReasonsIfNeeded() {
           createdAt: new Date().toISOString(),
         });
       }
-      
-      console.log(`✅ [ASSIGNMENT REASONS] Seeded ${DEFAULT_REASONS.length} default reasons`);
     }
   } catch (error) {
-    console.error('❌ [ASSIGNMENT REASONS] Seeding error:', error);
+    // Seeding error
   }
 }
 
@@ -98,15 +94,12 @@ app.get('/', async (c) => {
     const activeReasons = reasons
       .filter((r: any) => r.isActive !== false)
       .sort((a: any, b: any) => (a.displayOrder || 999) - (b.displayOrder || 999));
-    
-    console.log(`✅ [ASSIGNMENT REASONS] Retrieved ${activeReasons.length} active reasons`);
-    
+
     return c.json({
       success: true,
       data: activeReasons,
     });
   } catch (error: any) {
-    console.error('❌ [ASSIGNMENT REASONS] List error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to fetch assignment reasons',
@@ -131,15 +124,12 @@ app.get('/all', requireAuth, async (c) => {
     // Sort by displayOrder
     const sortedReasons = reasons
       .sort((a: any, b: any) => (a.displayOrder || 999) - (b.displayOrder || 999));
-    
-    console.log(`✅ [ASSIGNMENT REASONS] Retrieved ${sortedReasons.length} total reasons (admin view)`);
-    
+
     return c.json({
       success: true,
       data: sortedReasons,
     });
   } catch (error: any) {
-    console.error('❌ [ASSIGNMENT REASONS] List all error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to fetch all assignment reasons',
@@ -193,15 +183,12 @@ app.post('/', requireAuth, async (c) => {
     };
     
     await kv.set(reasonId, newReason);
-    
-    console.log(`✅ [ASSIGNMENT REASONS] Created reason: ${reasonId}`);
-    
+
     return c.json({
       success: true,
       data: newReason,
     }, 201);
   } catch (error: any) {
-    console.error('❌ [ASSIGNMENT REASONS] Create error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to create assignment reason',
@@ -264,15 +251,12 @@ app.put('/:id', requireAuth, async (c) => {
     };
     
     await kv.set(reasonId, updatedReason);
-    
-    console.log(`✅ [ASSIGNMENT REASONS] Updated reason: ${reasonId}`);
-    
+
     return c.json({
       success: true,
       data: updatedReason,
     });
   } catch (error: any) {
-    console.error('❌ [ASSIGNMENT REASONS] Update error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to update assignment reason',
@@ -310,15 +294,12 @@ app.delete('/:id', requireAuth, async (c) => {
     };
     
     await kv.set(reasonId, deletedReason);
-    
-    console.log(`✅ [ASSIGNMENT REASONS] Soft deleted reason: ${reasonId}`);
-    
+
     return c.json({
       success: true,
       message: 'Reason deactivated successfully',
     });
   } catch (error: any) {
-    console.error('❌ [ASSIGNMENT REASONS] Delete error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to delete assignment reason',
@@ -363,22 +344,17 @@ app.put('/reorder', requireAuth, async (c) => {
     
     const updatedReasons = await Promise.all(updatePromises);
     const successfulUpdates = updatedReasons.filter(r => r !== null);
-    
-    console.log(`✅ [ASSIGNMENT REASONS] Reordered ${successfulUpdates.length} reasons`);
-    
+
     return c.json({
       success: true,
       data: successfulUpdates,
     });
   } catch (error: any) {
-    console.error('❌ [ASSIGNMENT REASONS] Reorder error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to reorder assignment reasons',
     }, 500);
   }
 });
-
-console.log('✅ Assignment Reasons module initialized');
 
 export default app;

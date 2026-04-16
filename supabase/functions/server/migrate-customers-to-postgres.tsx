@@ -26,11 +26,6 @@ app.post('/make-server-84f9c112/admin/migrate/customers-to-postgres', requireAut
     const mergeStrategy = body.merge_strategy || 'postgres_priority'; // postgres_priority | kv_priority | merge_max
     const deleteOldData = body.delete_old_data === true; // Default false for safety
 
-    console.log('🚀 [MIGRATION] Starting customer migration...');
-    console.log(`   Dry run: ${dryRun}`);
-    console.log(`   Merge strategy: ${mergeStrategy}`);
-    console.log(`   Delete old data: ${deleteOldData}`);
-
     const migrationLog = [];
     const errors = [];
 
@@ -45,7 +40,6 @@ app.post('/make-server-84f9c112/admin/migrate/customers-to-postgres', requireAut
       .like('key', 'customer:%');
 
     if (kvOldError) {
-      console.error('❌ [MIGRATION] Error loading kv_store_84f9c112:', kvOldError);
       errors.push({ source: 'kv_store_84f9c112', error: kvOldError.message });
     }
 
@@ -62,8 +56,6 @@ app.post('/make-server-84f9c112/admin/migrate/customers-to-postgres', requireAut
         return null;
       }
     }).filter(Boolean);
-
-    console.log(`✅ [MIGRATION] Loaded ${kvOldCustomers.length} customers from kv_store_84f9c112`);
 
     // 1B. Load from kv_store_customers (separate table)
     let kvCustomersRecords = [];
@@ -87,10 +79,7 @@ app.post('/make-server-84f9c112/admin/migrate/customers-to-postgres', requireAut
           return null;
         }
       }).filter(Boolean);
-
-      console.log(`✅ [MIGRATION] Loaded ${kvCustomersRecords.length} customers from kv_store_customers`);
     } catch (e: any) {
-      console.log('⚠️ [MIGRATION] kv_store_customers table not accessible:', e.message);
       errors.push({ source: 'kv_store_customers', error: e.message });
     }
 
@@ -122,7 +111,6 @@ app.post('/make-server-84f9c112/admin/migrate/customers-to-postgres', requireAut
       .select('*');
 
     if (pgError) {
-      console.error('❌ [MIGRATION] Error loading Postgres customers:', pgError);
       return c.json({
         success: false,
         error: 'Failed to load Postgres customers: ' + pgError.message
@@ -135,8 +123,6 @@ app.post('/make-server-84f9c112/admin/migrate/customers-to-postgres', requireAut
         pgCustomersByPhone.set(c.phone, c);
       }
     });
-
-    console.log(`✅ [MIGRATION] Loaded ${pgCustomers?.length || 0} existing Postgres customers`);
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // STEP 3: Transform & Merge Logic
@@ -244,11 +230,6 @@ app.post('/make-server-84f9c112/admin/migrate/customers-to-postgres', requireAut
       }
     }
 
-    console.log(`📊 [MIGRATION] Summary:`);
-    console.log(`   Will create: ${toCreate.length}`);
-    console.log(`   Will update: ${toUpdate.length}`);
-    console.log(`   Conflicts: ${conflicts.length}`);
-
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // STEP 4: Execute Migration (if not dry-run)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -256,7 +237,6 @@ app.post('/make-server-84f9c112/admin/migrate/customers-to-postgres', requireAut
     let executionResults = null;
 
     if (!dryRun) {
-      console.log('🚀 [MIGRATION] Executing migration...');
 
       const createResults = [];
       const updateResults = [];
@@ -269,11 +249,9 @@ app.post('/make-server-84f9c112/admin/migrate/customers-to-postgres', requireAut
           .select();
 
         if (createError) {
-          console.error('❌ [MIGRATION] Create error:', createError);
           errors.push({ operation: 'create', error: createError.message });
         } else {
           createResults.push(...(created || []));
-          console.log(`✅ [MIGRATION] Created ${created?.length || 0} customers`);
         }
       }
 
@@ -287,14 +265,11 @@ app.post('/make-server-84f9c112/admin/migrate/customers-to-postgres', requireAut
           .single();
 
         if (updateError) {
-          console.error(`❌ [MIGRATION] Update error for ${update.phone}:`, updateError);
           errors.push({ operation: 'update', phone: update.phone, error: updateError.message });
         } else {
           updateResults.push(updated);
         }
       }
-
-      console.log(`✅ [MIGRATION] Updated ${updateResults.length} customers`);
 
       executionResults = {
         created: createResults,
@@ -303,7 +278,6 @@ app.post('/make-server-84f9c112/admin/migrate/customers-to-postgres', requireAut
 
       // Optional: Delete old KV data
       if (deleteOldData && errors.length === 0) {
-        console.log('🗑️  [MIGRATION] Cleaning up old KV data...');
 
         for (const kvRecord of allKvCustomers) {
           const tableName = kvRecord.source;
@@ -313,15 +287,10 @@ app.post('/make-server-84f9c112/admin/migrate/customers-to-postgres', requireAut
             .eq('key', kvRecord.key);
 
           if (deleteError) {
-            console.error(`❌ [MIGRATION] Delete error for ${kvRecord.key}:`, deleteError);
             errors.push({ operation: 'delete', key: kvRecord.key, error: deleteError.message });
           }
         }
-
-        console.log('✅ [MIGRATION] Cleanup complete');
       }
-    } else {
-      console.log('🔍 [MIGRATION] DRY RUN - No changes made');
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -360,13 +329,9 @@ app.post('/make-server-84f9c112/admin/migrate/customers-to-postgres', requireAut
       ]
     };
 
-    console.log('✅ [MIGRATION] Complete!');
-    console.log(JSON.stringify(result.summary, null, 2));
-
     return c.json(result);
 
   } catch (error: any) {
-    console.error('❌ [MIGRATION] Fatal error:', error);
     return c.json({
       success: false,
       error: error.message || 'Migration failed'

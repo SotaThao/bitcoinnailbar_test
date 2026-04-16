@@ -24,11 +24,9 @@ const retry = async <T>(fn: () => Promise<T>, retries = 3, delay = 200): Promise
     return await fn();
   } catch (error: any) {
     if (retries > 0 && (String(error).includes("connection error") || String(error).includes("connection reset"))) {
-      console.warn(`⚠️ Request failed, retrying... (${retries} left). Error: ${error.message || error}`);
       await new Promise(r => setTimeout(r, delay));
       return retry(fn, retries - 1, delay * 2);
     }
-    console.error(`❌ [RETRY] All retries exhausted. Final error:`, error);
     throw error;
   }
 };
@@ -70,9 +68,7 @@ const getEncryptionKey = async (): Promise<CryptoKey> => {
   const keyData = encoder.encode(keyString);
   const hashBuffer = await crypto.subtle.digest('SHA-256', keyData);
   const hashedKey = new Uint8Array(hashBuffer);
-  
-  console.log('🔑 [ENCRYPTION] Key normalized to', hashedKey.length, 'bytes via SHA-256');
-  
+
   // Import the hashed key for AES-GCM encryption
   return await crypto.subtle.importKey(
     'raw',
@@ -113,7 +109,6 @@ const decryptApiKey = async (encryptedText: string): Promise<string> => {
     const decoder = new TextDecoder();
     return decoder.decode(decryptedBuffer);
   } catch (error) {
-    console.error('❌ [DECRYPTION] Failed to decrypt API key:', error);
     throw new Error(`Decryption failed: ${error.message}`);
   }
 };
@@ -141,11 +136,7 @@ const generateChecksum = (params: {
   
   // Generate MD5 hash
   const hash = createHash('md5').update(dataString).digest('hex');
-  
-  console.log('🔐 [CHECKSUM] Generated MD5 checksum for payment URL');
-  console.log('🔐 [CHECKSUM] Amount format: INTEGER (no decimals)');
-  console.log('🔐 [CHECKSUM] Amount value:', formattedAmount);
-  
+
   return hash;
 };
 
@@ -195,11 +186,7 @@ const buildVLinkPayURL = (params: {
   
   // 🧪 ACTIVE TEST: Format 2 - INTEGER (no decimals)
   const formattedAmount = Math.floor(params.amount).toString();
-  console.log('🧪 [TEST] Amount format: INTEGER');
-  console.log('🧪 [TEST] Original amount:', params.amount);
-  console.log('🧪 [TEST] Formatted amount:', formattedAmount);
-  console.log('🧪 [TEST] Example: 479.00 → "479"');
-  
+
   // Generate MD5 checksum with SAME amount format as URL
   const checksum = generateChecksum({
     amount: params.amount,  // Will be converted to INTEGER "479" (same as URL)
@@ -209,9 +196,7 @@ const buildVLinkPayURL = (params: {
     timestamp,
     secretKey: params.secretKey
   });
-  
-  console.log('✅ [CHECKSUM] Using same INTEGER format for both checksum and URL');
-  
+
   url.searchParams.append('amount', formattedAmount);  // ← Using INTEGER format
   url.searchParams.append('merchantOrderCode', params.merchantOrderCode);
   url.searchParams.append('email', params.customerEmail);
@@ -219,11 +204,9 @@ const buildVLinkPayURL = (params: {
   url.searchParams.append('checksum', checksum);
   url.searchParams.append('timestamp', timestamp.toString());
   url.searchParams.append('orderRedirectUrl', params.orderRedirectUrl);
-  
-  // ❌ REMOVED: Don't pass metadata to VLinkPay (they don't support custom params)
+
   // The tier info is already saved in orderData, will be used during redeem
-  console.log('📝 [PAYMENT] Order data saved with tier:', params.membershipTier);
-  
+
   return url.toString();
 };
 
@@ -232,8 +215,7 @@ const buildVLinkPayURL = (params: {
 // POST /make-server-84f9c112/payment/create-link
 app.post('/make-server-84f9c112/payment/create-link', async (c) => {
   try {
-    console.log('💳 [PAYMENT] Creating payment link...');
-    
+
     const body = await c.req.json();
     const { planId, tierName, duration, amount, email } = body;
     
@@ -260,15 +242,12 @@ app.post('/make-server-84f9c112/payment/create-link', async (c) => {
         error: 'Secret key not configured. Please update VLINKPAY settings.'
       }, 500);
     }
-    
-    console.log('🔐 [PAYMENT] Decrypting secret key...');
+
     const decryptedSecretKey = await decryptApiKey(settings.secretKey);
-    console.log('✅ [PAYMENT] Secret key decrypted successfully');
-    
+
     // 2. Generate unique merchant order code (NO REDEEM CODE YET - VLinkPay will generate it)
     const merchantOrderCode = generateMerchantOrderCode();
-    console.log(`✅ [PAYMENT] Generated merchant order code: ${merchantOrderCode}`);
-    
+
     // 3. Save order to KV (status: pending_payment, NO redeemCode yet)
     const orderData = {
       merchantOrderCode,
@@ -287,8 +266,7 @@ app.post('/make-server-84f9c112/payment/create-link', async (c) => {
     };
     
     await kv.set(`order:${merchantOrderCode}`, orderData);
-    console.log('💾 [PAYMENT] Saved order to database (awaiting payment)');
-    
+
     // 4. Build VLINKPAY payment URL (without email, will be appended by frontend)
     const paymentUrl = buildVLinkPayURL({
       sandboxEndpoint: settings.sandboxEndpoint,
@@ -304,10 +282,8 @@ app.post('/make-server-84f9c112/payment/create-link', async (c) => {
     
     // Replace placeholder with actual template for frontend
     const finalPaymentUrl = paymentUrl.replace(encodeURIComponent('{email}'), '{email}');
-    
-    console.log(`✅ [PAYMENT] Payment link created successfully`);
-    
-    return c.json({ 
+
+    return c.json({
       success: true, 
       data: {
         paymentUrl: finalPaymentUrl,
@@ -317,10 +293,9 @@ app.post('/make-server-84f9c112/payment/create-link', async (c) => {
       message: 'Payment link created successfully'
     });
   } catch (error) {
-    console.error('❌ [PAYMENT] Error creating payment link:', error);
-    return c.json({ 
-      success: false, 
-      error: `Failed to create payment link: ${error.message}` 
+    return c.json({
+      success: false,
+      error: `Failed to create payment link: ${error.message}`
     }, 500);
   }
 });
@@ -329,8 +304,7 @@ app.post('/make-server-84f9c112/payment/create-link', async (c) => {
 // Called by frontend after VLinkPay redirect with redeemCode
 app.post('/make-server-84f9c112/payment/complete-order', async (c) => {
   try {
-    console.log('🎉 [PAYMENT] Completing order with VLinkPay redeemCode...');
-    
+
     const body = await c.req.json();
     const { merchantOrderCode, redeemCode, planId, membershipTier, duration, amount, customerEmail } = body;
     
@@ -344,20 +318,16 @@ app.post('/make-server-84f9c112/payment/complete-order', async (c) => {
         error: 'redeemCode is required' 
       }, 400);
     }
-    
-    console.log(`🎫 [PAYMENT] VLinkPay Code: ${redeemCode}`);
-    
+
     let orderData = null;
     let foundMerchantOrderCode = merchantOrderCode;
     
     // If merchantOrderCode provided, use it directly
     if (merchantOrderCode) {
-      console.log(`📦 [PAYMENT] Using provided merchantOrderCode: ${merchantOrderCode}`);
       orderData = await kv.get(`order:${merchantOrderCode}`);
     } else {
       // Otherwise, search for pending order (sessionStorage lost scenario)
-      console.log('🔍 [PAYMENT] merchantOrderCode not provided, searching for pending order...');
-      
+
       // Query all orders with prefix "order:"
       const { data: allOrders, error } = await supabase
         .from(KV_TABLE)
@@ -368,26 +338,22 @@ app.post('/make-server-84f9c112/payment/complete-order', async (c) => {
         .limit(50);
       
       if (error) {
-        console.error('❌ [PAYMENT] Error querying orders:', error);
         // Don't throw, continue to check params
       } else {
-        console.log(`📋 [PAYMENT] Found ${allOrders?.length || 0} pending orders`);
-        
+
         // Find the most recent pending order (assuming it's the user's order)
         if (allOrders && allOrders.length > 0) {
           const latestOrder = allOrders[0];
-          orderData = typeof latestOrder.value === 'string' 
-            ? JSON.parse(latestOrder.value) 
+          orderData = typeof latestOrder.value === 'string'
+            ? JSON.parse(latestOrder.value)
             : latestOrder.value;
           foundMerchantOrderCode = orderData.merchantOrderCode;
-          console.log(`✅ [PAYMENT] Found pending order: ${foundMerchantOrderCode}`);
         }
       }
     }
 
     // 3. Fallback: Use provided params from localStorage (since we don't save pending orders anymore)
     if (!orderData && membershipTier && amount) {
-        console.log('⚠️ [PAYMENT] Order not found in DB (LocalStorage Flow), using provided details');
         orderData = {
           merchantOrderCode: merchantOrderCode || generateMerchantOrderCode(), // ✅ FIX: Use BNB- prefix instead of ORDER-
           planId,
@@ -403,11 +369,6 @@ app.post('/make-server-84f9c112/payment/complete-order', async (c) => {
     }
     
     if (!orderData) {
-      console.error('❌ [PAYMENT] Order not found');
-      console.log('💡 [PAYMENT] This usually means:');
-      console.log('   1. User took too long to complete payment');
-      console.log('   2. Order was already completed');
-      console.log('   3. Invalid merchantOrderCode');
       return c.json({ 
         success: false, 
         error: 'Order not found. Please contact support with code: ' + redeemCode
@@ -415,7 +376,6 @@ app.post('/make-server-84f9c112/payment/complete-order', async (c) => {
     }
     
     if (orderData.status !== 'pending_payment') {
-      console.error('❌ [PAYMENT] Order already completed or invalid status:', orderData.status);
       return c.json({ 
         success: false, 
         error: 'Order already completed or invalid' 
@@ -425,7 +385,6 @@ app.post('/make-server-84f9c112/payment/complete-order', async (c) => {
     // 2. Check if redeemCode already exists (prevent duplicates)
     const existingCode = await kv.get(`redeem_code:${redeemCode}`);
     if (existingCode) {
-      console.error('❌ [PAYMENT] Redeem code already exists:', redeemCode);
       return c.json({ 
         success: false, 
         error: 'This redeem code has already been registered' 
@@ -448,33 +407,22 @@ app.post('/make-server-84f9c112/payment/complete-order', async (c) => {
       redeemedAt: null,
       redeemedBy: null
     };
-    
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('💾 [PAYMENT] Saving redeem code to database...');
-    console.log('🎯 [PAYMENT] Membership Tier:', orderData.membershipTier);
-    console.log('📦 [PAYMENT] Order Data:', JSON.stringify(orderData, null, 2));
-    console.log('📝 [PAYMENT] Redemption Data:', JSON.stringify(redemptionData, null, 2));
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
+
     await kv.set(`redeem_code:${redeemCode}`, redemptionData);
-    console.log('✅ [PAYMENT] Saved VLinkPay redeem code to database');
-    
+
     // Verify the save worked
     const verifyCode = await kv.get(`redeem_code:${redeemCode}`);
     if (!verifyCode) {
-      console.error('❌ [PAYMENT] CRITICAL: Code was not saved properly!');
       throw new Error('Failed to save redeem code to database');
     }
-    console.log('✅ [PAYMENT] Verified code exists in database');
-    
+
     // 4. Update order status
     orderData.redeemCode = redeemCode;
     orderData.status = 'pending'; // ← Payment completed, code ready to redeem (will become 'used' after redemption)
     orderData.paymentCompletedAt = new Date().toISOString();
     
     await kv.set(`order:${foundMerchantOrderCode}`, orderData);
-    console.log('✅ [PAYMENT] Order completed successfully');
-    
+
     // TODO: Send email with redeem code to customer
     
     return c.json({ 
@@ -488,10 +436,9 @@ app.post('/make-server-84f9c112/payment/complete-order', async (c) => {
       message: 'Payment completed successfully'
     });
   } catch (error) {
-    console.error('❌ [PAYMENT] Error completing order:', error);
-    return c.json({ 
-      success: false, 
-      error: `Failed to complete order: ${error.message}` 
+    return c.json({
+      success: false,
+      error: `Failed to complete order: ${error.message}`
     }, 500);
   }
 });
@@ -500,8 +447,7 @@ app.post('/make-server-84f9c112/payment/complete-order', async (c) => {
 app.get('/make-server-84f9c112/payment/status/:code', async (c) => {
   try {
     const code = c.req.param('code');
-    console.log(`🔍 [PAYMENT] Checking status for code: ${code}`);
-    
+
     const redemption = await kv.get(`redeem_code:${code}`);
     
     if (!redemption) {
@@ -525,10 +471,9 @@ app.get('/make-server-84f9c112/payment/status/:code', async (c) => {
       }
     });
   } catch (error) {
-    console.error('❌ [PAYMENT] Error checking status:', error);
-    return c.json({ 
-      success: false, 
-      error: `Failed to check payment status: ${error.message}` 
+    return c.json({
+      success: false,
+      error: `Failed to check payment status: ${error.message}`
     }, 500);
   }
 });
@@ -537,8 +482,7 @@ app.get('/make-server-84f9c112/payment/status/:code', async (c) => {
 // Clean up expired pending payment orders (Owner only)
 app.delete('/make-server-84f9c112/payment/cleanup-expired', async (c) => {
   try {
-    console.log('🧹 [PAYMENT CLEANUP] Starting cleanup of expired pending orders...');
-    
+
     // Get all orders with prefix "order:"
     const { data: allOrders, error } = await supabase
       .from(KV_TABLE)
@@ -547,12 +491,9 @@ app.delete('/make-server-84f9c112/payment/cleanup-expired', async (c) => {
       .eq('value->>status', 'pending_payment');
     
     if (error) {
-      console.error('❌ [PAYMENT CLEANUP] Error querying orders:', error);
       throw new Error('Failed to query orders');
     }
-    
-    console.log(`📋 [PAYMENT CLEANUP] Found ${allOrders?.length || 0} pending payment orders`);
-    
+
     if (!allOrders || allOrders.length === 0) {
       return c.json({
         success: true,
@@ -570,9 +511,7 @@ app.delete('/make-server-84f9c112/payment/cleanup-expired', async (c) => {
       const createdAt = new Date(orderData.createdAt);
       return createdAt < oneHourAgo;
     });
-    
-    console.log(`⏰ [PAYMENT CLEANUP] Found ${expiredOrders.length} expired orders (> 1 hour old)`);
-    
+
     if (expiredOrders.length === 0) {
       return c.json({
         success: true,
@@ -580,7 +519,7 @@ app.delete('/make-server-84f9c112/payment/cleanup-expired', async (c) => {
         deleted: 0
       });
     }
-    
+
     // Delete expired orders
     let deletedCount = 0;
     const errors = [];
@@ -593,20 +532,15 @@ app.delete('/make-server-84f9c112/payment/cleanup-expired', async (c) => {
           .eq('key', order.key);
         
         if (deleteError) {
-          console.error(`❌ [PAYMENT CLEANUP] Failed to delete ${order.key}:`, deleteError);
           errors.push({ key: order.key, error: deleteError.message });
         } else {
           deletedCount++;
-          console.log(`✅ [PAYMENT CLEANUP] Deleted expired order: ${order.key}`);
         }
       } catch (err) {
-        console.error(`❌ [PAYMENT CLEANUP] Exception deleting ${order.key}:`, err);
         errors.push({ key: order.key, error: err.message });
       }
     }
-    
-    console.log(`✅ [PAYMENT CLEANUP] Cleanup complete. Deleted ${deletedCount}/${expiredOrders.length} expired orders`);
-    
+
     return c.json({
       success: true,
       message: `Successfully cleaned up ${deletedCount} expired pending orders`,
@@ -616,10 +550,9 @@ app.delete('/make-server-84f9c112/payment/cleanup-expired', async (c) => {
     });
     
   } catch (error) {
-    console.error('❌ [PAYMENT CLEANUP] Error during cleanup:', error);
-    return c.json({ 
-      success: false, 
-      error: `Failed to cleanup expired orders: ${error.message}` 
+    return c.json({
+      success: false,
+      error: `Failed to cleanup expired orders: ${error.message}`
     }, 500);
   }
 });

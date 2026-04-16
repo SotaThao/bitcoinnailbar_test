@@ -22,8 +22,6 @@ app.post('/make-server-84f9c112/auth/login', async (c) => {
     // Trim and normalize email
     const cleanEmail = email.trim().toLowerCase();
 
-    console.log(`🔐 [LOGIN] Attempt for email: ${cleanEmail}`);
-
     // Find user by email - Check both prefixes to be safe
     const usersColon = await kv.getByPrefix('user:');
     const usersHash = await kv.getByPrefix('user#');
@@ -33,11 +31,8 @@ app.post('/make-server-84f9c112/auth/login', async (c) => {
     const matchingUsers = allUsers.filter((u: User) => u?.email?.toLowerCase() === cleanEmail);
 
     if (matchingUsers.length === 0) {
-      console.log(`❌ [LOGIN] User not found: ${cleanEmail}`);
       return c.json({ success: false, error: 'Invalid email or password' }, 401);
     }
-
-    console.log(`🔐 [LOGIN] Found ${matchingUsers.length} potential user records`);
 
     // Try to find ONE user with a valid password
     let validUser = null;
@@ -45,7 +40,6 @@ app.post('/make-server-84f9c112/auth/login', async (c) => {
     for (const user of matchingUsers) {
       // Check if user is active
       if (!user.is_active) {
-        console.log(`❌ [LOGIN] User record inactive: ${user.id}`);
         continue;
       }
 
@@ -53,10 +47,7 @@ app.post('/make-server-84f9c112/auth/login', async (c) => {
       const isPasswordValid = await verifyPassword(password, user.password_hash);
       if (isPasswordValid) {
         validUser = user;
-        console.log(`✅ [LOGIN] Password matched for user ID: ${user.id}`);
         break;
-      } else {
-        console.log(`❌ [LOGIN] Password mismatch for user ID: ${user.id}`);
       }
     }
 
@@ -68,7 +59,6 @@ app.post('/make-server-84f9c112/auth/login', async (c) => {
          return c.json({ success: false, error: 'Account is inactive' }, 403);
       }
 
-      console.log(`❌ [LOGIN] No valid password match found for: ${cleanEmail}`);
       return c.json({ success: false, error: 'Invalid email or password' }, 401);
     }
 
@@ -79,7 +69,6 @@ app.post('/make-server-84f9c112/auth/login', async (c) => {
     user.permissions = permissions;
 
     // Generate JWT token
-    console.log(`🔐 [LOGIN] Generating JWT for: ${cleanEmail}`);
     const token = await generateJWT(user);
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
@@ -89,8 +78,6 @@ app.post('/make-server-84f9c112/auth/login', async (c) => {
       ...user,
       last_login: now.toISOString(),
     });
-
-    console.log(`✅ [LOGIN] Success for: ${email}, JWT generated, expires: ${expiresAt.toISOString()}`);
 
     // Return JWT and user (without password)
     const { password_hash: _, ...userWithoutPassword } = user;
@@ -104,7 +91,6 @@ app.post('/make-server-84f9c112/auth/login', async (c) => {
       },
     });
   } catch (error: any) {
-    console.error('❌ [LOGIN] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -120,24 +106,16 @@ app.get('/make-server-84f9c112/auth/verify', async (c) => {
       token = authHeader.replace('Bearer ', '');
     }
 
-    console.log(`🔍 [VERIFY JWT] Received Authorization header:`, authHeader ? 'YES' : 'NO');
-    console.log(`🔍 [VERIFY JWT] Received X-Session-Token header:`, c.req.header('X-Session-Token') ? 'YES' : 'NO');
-
     if (!token) {
-      console.log(`❌ [VERIFY JWT] No token provided`);
       return c.json({ success: false, error: 'Missing authorization header' }, 401);
     }
 
     // Verify JWT and decode payload
-    console.log(`🔍 [VERIFY JWT] Verifying token...`);
     const payload = await verifyJWT(token);
 
     if (!payload) {
-      console.log(`❌ [VERIFY JWT] Invalid or expired JWT`);
       return c.json({ success: false, error: 'Invalid or expired token' }, 401);
     }
-
-    console.log(`✅ [VERIFY JWT] Token verified for user:`, payload.email);
 
     // Get fresh user data from KV to ensure user is still active
     let user = await kv.get(`user:${payload.sub}`);
@@ -146,19 +124,15 @@ app.get('/make-server-84f9c112/auth/verify', async (c) => {
     }
 
     if (!user) {
-      console.log(`❌ [VERIFY JWT] User not found: ${payload.sub}`);
       return c.json({ success: false, error: 'User not found' }, 404);
     }
 
     if (!user.is_active) {
-      console.log(`❌ [VERIFY] User inactive: ${user.email}`);
       return c.json({ success: false, error: 'Account is inactive' }, 403);
     }
 
     // Return user without password + JWT payload
     const { password_hash: _, ...userWithoutPassword } = user;
-
-    console.log(`✅ [VERIFY JWT] Valid session for: ${user.email}`);
 
     return c.json({
       success: true,
@@ -168,7 +142,6 @@ app.get('/make-server-84f9c112/auth/verify', async (c) => {
       },
     });
   } catch (error: any) {
-    console.error('❌ [VERIFY JWT] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -190,11 +163,8 @@ app.post('/make-server-84f9c112/auth/logout', async (c) => {
     // Delete session from KV
     await kv.mdel([`session:${token}`]);
 
-    console.log(`✅ [LOGOUT] Session deleted`);
-
     return c.json({ success: true, message: 'Logged out successfully' });
   } catch (error: any) {
-    console.error('❌ [LOGOUT] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -219,14 +189,11 @@ app.get('/make-server-84f9c112/users', requireAuth, async (c) => {
       return userWithoutPassword;
     });
 
-    console.log(`✅ [GET USERS] Retrieved ${sanitizedUsers.length} users`);
-
     return c.json({
       success: true,
       data: sanitizedUsers,
     });
   } catch (error: any) {
-    console.error('❌ [GET USERS] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -306,8 +273,6 @@ app.post('/make-server-84f9c112/users', requireAuth, async (c) => {
 
     await kv.set(`permissions:${userId}`, permissions);
 
-    console.log(`✅ [CREATE USER] User created: ${email} (${role})`);
-
     // Return user without password
     const { password_hash: _, ...userWithoutPassword } = newUser;
 
@@ -319,7 +284,6 @@ app.post('/make-server-84f9c112/users', requireAuth, async (c) => {
       },
     });
   } catch (error: any) {
-    console.error('❌ [CREATE USER] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -359,7 +323,6 @@ app.put('/make-server-84f9c112/users/:id', requireAuth, async (c) => {
     let password_hash = user.password_hash;
     if (password) {
       password_hash = await hashPassword(password);
-      console.log(`🔐 [UPDATE USER] Password updated for: ${user.email}`);
     }
 
     // Update user
@@ -374,8 +337,6 @@ app.put('/make-server-84f9c112/users/:id', requireAuth, async (c) => {
 
     await kv.set(`user:${userId}`, updatedUser);
 
-    console.log(`✅ [UPDATE USER] User updated: ${updatedUser.email}`);
-
     // Return user without password
     const { password_hash: _, ...userWithoutPassword } = updatedUser;
 
@@ -384,7 +345,6 @@ app.put('/make-server-84f9c112/users/:id', requireAuth, async (c) => {
       data: userWithoutPassword,
     });
   } catch (error: any) {
-    console.error('❌ [UPDATE USER] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -428,14 +388,11 @@ app.put('/make-server-84f9c112/users/:id/permissions', requireAuth, async (c) =>
 
     await kv.set(`permissions:${userId}`, updatedPermissions);
 
-    console.log(`✅ [UPDATE PERMISSIONS] Permissions updated for user: ${user.email}`);
-
     return c.json({
       success: true,
       data: updatedPermissions,
     });
   } catch (error: any) {
-    console.error('❌ [UPDATE PERMISSIONS] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -474,8 +431,6 @@ app.post('/make-server-84f9c112/users/:id/deactivate', requireAuth, async (c) =>
 
     await kv.set(`user:${userId}`, updatedUser);
 
-    console.log(`✅ [DEACTIVATE USER] User deactivated: ${user.email}`);
-
     // Return user without password
     const { password_hash: _, ...userWithoutPassword } = updatedUser;
 
@@ -484,7 +439,6 @@ app.post('/make-server-84f9c112/users/:id/deactivate', requireAuth, async (c) =>
       data: userWithoutPassword,
     });
   } catch (error: any) {
-    console.error('❌ [DEACTIVATE USER] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -513,8 +467,6 @@ app.post('/make-server-84f9c112/users/:id/activate', requireAuth, async (c) => {
 
     await kv.set(`user:${userId}`, updatedUser);
 
-    console.log(`✅ [ACTIVATE USER] User activated: ${user.email}`);
-
     // Return user without password
     const { password_hash: _, ...userWithoutPassword } = updatedUser;
 
@@ -523,7 +475,6 @@ app.post('/make-server-84f9c112/users/:id/activate', requireAuth, async (c) => {
       data: userWithoutPassword,
     });
   } catch (error: any) {
-    console.error('❌ [ACTIVATE USER] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

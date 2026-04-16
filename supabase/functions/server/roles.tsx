@@ -48,7 +48,6 @@ app.get('/', requireAuth, async (c) => {
       data: sortedRoles,
     });
   } catch (error: any) {
-    console.error('❌ [ROLES] List error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to fetch roles',
@@ -71,7 +70,6 @@ app.get('/permissions', requireAuth, async (c) => {
       data: AVAILABLE_PERMISSIONS,
     });
   } catch (error: any) {
-    console.error('❌ [ROLES] Permissions list error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to fetch permissions',
@@ -137,14 +135,11 @@ app.post('/', requireAuth, async (c) => {
 
     await kv.set(`role:${roleId}`, newRole);
 
-    console.log('✅ [ROLES] Created role:', roleId, newRole.name);
-
     return c.json({
       success: true,
       data: newRole,
     }, 201);
   } catch (error: any) {
-    console.error('❌ [ROLES] Create error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to create role',
@@ -217,14 +212,11 @@ app.put('/:id', requireAuth, async (c) => {
 
     await kv.set(`role:${roleId}`, updatedRole);
 
-    console.log('✅ [ROLES] Updated role:', roleId, updatedRole.name);
-
     return c.json({
       success: true,
       data: updatedRole,
     });
   } catch (error: any) {
-    console.error('❌ [ROLES] Update error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to update role',
@@ -272,14 +264,11 @@ app.delete('/:id', requireAuth, async (c) => {
     // Delete role
     await kv.del(`role:${roleId}`);
 
-    console.log('✅ [ROLES] Deleted role:', roleId, existingRole.name);
-
     return c.json({
       success: true,
       message: 'Role deleted successfully',
     });
   } catch (error: any) {
-    console.error('❌ [ROLES] Delete error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to delete role',

@@ -51,17 +51,13 @@ export const retry = async <T>(
       isHTMLError;
     
     if (retries > 0 && isRetryable) {
-      const errorType = isHTMLError ? 'HTML Error Page (500/502/503)' : 'Connection Error';
-      console.warn(`⚠️ [RETRY] Request failed, retrying... (${retries} left). Error type: ${errorType}`);
-      
       // Wait with exponential backoff
       await new Promise(r => setTimeout(r, delay));
-      
+
       // Retry with doubled delay
       return retry(fn, retries - 1, delay * 2);
     }
-    
-    console.error(`❌ [RETRY] All retries exhausted. Final error:`, error);
+
     throw error;
   }
 };
@@ -104,8 +100,6 @@ export const retryWithConfig = async <T>(
         throw error;
       }
 
-      console.warn(`⚠️ [RETRY] Attempt ${currentRetry}/${maxRetries} failed, retrying in ${currentDelay}ms...`);
-      
       await new Promise(r => setTimeout(r, currentDelay));
       currentDelay = Math.min(currentDelay * 2, maxDelay);
     }

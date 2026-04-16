@@ -34,6 +34,7 @@ export function PaymentModal({
   const [emailError, setEmailError] = useState("");
   const [iframeUrl, setIframeUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { t } = useLanguage();
 
   // Lock body scroll when modal is open
@@ -125,8 +126,8 @@ export function PaymentModal({
   };
 
   const handlePaymentSuccess = (redeemCode: string) => {
-    // Show success popup
-    alert(
+    // Set success state instead of alert
+    setError(
       `${t("payment_modal.success.title")}\n\n` +
         `${t("payment_modal.success.code_label")} ${redeemCode}\n\n` +
         `${t("payment_modal.success.instruction1")}\n` +
@@ -200,6 +201,19 @@ export function PaymentModal({
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm bg-[rgba(0,0,0,0.4)]">
       <div className="relative w-full max-w-4xl mx-4 md:mx-6 bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden mt-16 md:mt-20">
+        {/* Error/Success Message */}
+        {error && (
+          <div className="absolute top-0 left-0 right-0 z-10 p-3 bg-green-50 border-b border-green-200">
+            <div className="flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-green-800 whitespace-pre-line flex-1">{error}</p>
+              <button onClick={() => setError(null)} className="text-green-400 hover:text-green-600 flex-shrink-0">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 bg-gradient-to-r from-[#FF9800] to-[#F57C00]">
           <div>

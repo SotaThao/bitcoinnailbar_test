@@ -16,8 +16,6 @@ app.post('/make-server-84f9c112/assignments/manual', async (c) => {
     const body = await c.req.json();
     const { appointment_id, technician_id, reason, changed_by } = body;
 
-    console.log('📝 [MANUAL ASSIGN] Request:', { appointment_id, technician_id, reason, changed_by });
-
     // Validate inputs
     if (!appointment_id || !technician_id || !reason) {
       return c.json({
@@ -34,7 +32,6 @@ app.post('/make-server-84f9c112/assignments/manual', async (c) => {
       .maybeSingle();
 
     if (apptError) {
-      console.error('❌ [MANUAL ASSIGN] Postgres error:', apptError);
       throw apptError;
     }
 
@@ -50,7 +47,6 @@ app.post('/make-server-84f9c112/assignments/manual', async (c) => {
       .maybeSingle();
 
     if (techError) {
-      console.error('❌ [MANUAL ASSIGN] Technician fetch error:', techError);
       throw techError;
     }
 
@@ -87,7 +83,6 @@ app.post('/make-server-84f9c112/assignments/manual', async (c) => {
       .single();
 
     if (updateError) {
-      console.error('❌ [MANUAL ASSIGN] Update error:', updateError);
       throw updateError;
     }
 
@@ -109,8 +104,6 @@ app.post('/make-server-84f9c112/assignments/manual', async (c) => {
       userAgent: c.req.header('user-agent'),
     });
 
-    console.log(`✅ [MANUAL ASSIGN] Successfully assigned ${technician.name} to appointment ${appointment_id}`);
-
     return c.json({
       success: true,
       data: {
@@ -120,7 +113,6 @@ app.post('/make-server-84f9c112/assignments/manual', async (c) => {
       message: 'Technician assigned successfully',
     });
   } catch (error: any) {
-    console.error('❌ [MANUAL ASSIGN] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to assign technician',

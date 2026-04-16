@@ -87,10 +87,8 @@ export const membershipRoutes = new Hono();
 membershipRoutes.get('/make-server-84f9c112/memberships', requireAuth, requirePermission('can_manage_settings'), async (c) => {
   try {
     const memberships = await kv.getByPrefix('membership:');
-    console.log(`✅ [MEMBERSHIPS GET] Found ${memberships.length} memberships`);
     return c.json({ success: true, data: memberships });
   } catch (error: any) {
-    console.error('❌ [MEMBERSHIPS GET] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -100,15 +98,13 @@ membershipRoutes.get('/make-server-84f9c112/memberships/:id', requireAuth, async
   try {
     const id = c.req.param('id');
     const membership = await kv.get(`membership:${id}`);
-    
+
     if (!membership) {
       return c.json({ success: false, error: 'Membership not found' }, 404);
     }
-    
-    console.log(`✅ [MEMBERSHIP GET] Found membership: ${id}`);
+
     return c.json({ success: true, data: membership });
   } catch (error: any) {
-    console.error('❌ [MEMBERSHIP GET] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -118,39 +114,36 @@ membershipRoutes.get('/make-server-84f9c112/memberships/check/:phone', async (c)
   try {
     const phone = c.req.param('phone');
     const allMemberships = await kv.getByPrefix('membership:');
-    
+
     // Find active membership for this phone
-    const activeMembership = allMemberships.find((m: Membership) => 
+    const activeMembership = allMemberships.find((m: Membership) =>
       m.customer_phone === phone && m.status === 'active'
     );
-    
+
     if (!activeMembership) {
-      console.log(`ℹ️ [MEMBERSHIP CHECK] No active membership for phone: ${phone}`);
-      return c.json({ 
-        success: true, 
-        data: { 
+      return c.json({
+        success: true,
+        data: {
           has_membership: false,
           tier: null,
           discount_percentage: 0
-        } 
+        }
       });
     }
-    
+
     // Get tier details
     const tier = DEFAULT_TIERS.find(t => t.name === activeMembership.tier);
-    
-    console.log(`✅ [MEMBERSHIP CHECK] Active ${activeMembership.tier} membership found for: ${phone}`);
-    return c.json({ 
-      success: true, 
-      data: { 
+
+    return c.json({
+      success: true,
+      data: {
         has_membership: true,
         tier: activeMembership.tier,
         discount_percentage: tier?.discount_percentage || 0,
         membership: activeMembership
-      } 
+      }
     });
   } catch (error: any) {
-    console.error('❌ [MEMBERSHIP CHECK] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -160,28 +153,28 @@ membershipRoutes.post('/make-server-84f9c112/memberships', requireAuth, requireP
   try {
     const user = c.get('user');
     const body = await c.req.json();
-    
+
     const { customer_phone, customer_name, customer_email, tier, payment_method, amount_paid, notes } = body;
-    
+
     // Validation
     if (!customer_phone || !customer_name || !tier || !payment_method || amount_paid === undefined) {
-      return c.json({ 
-        success: false, 
-        error: 'Missing required fields: customer_phone, customer_name, tier, payment_method, amount_paid' 
+      return c.json({
+        success: false,
+        error: 'Missing required fields: customer_phone, customer_name, tier, payment_method, amount_paid'
       }, 400);
     }
-    
+
     // Validate tier
     const tierConfig = DEFAULT_TIERS.find(t => t.name === tier);
     if (!tierConfig) {
       return c.json({ success: false, error: 'Invalid tier' }, 400);
     }
-    
+
     // Calculate dates
     const startDate = new Date();
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + tierConfig.duration_months);
-    
+
     // Create membership
     const id = `${Date.now()}`;
     const membership: Membership = {
@@ -199,13 +192,11 @@ membershipRoutes.post('/make-server-84f9c112/memberships', requireAuth, requireP
       created_at: new Date().toISOString(),
       created_by: user.sub || user.id,
     };
-    
+
     await kv.set(`membership:${id}`, membership);
-    
-    console.log(`✅ [MEMBERSHIP CREATE] Created ${tier} membership for ${customer_name} (${customer_phone})`);
+
     return c.json({ success: true, data: membership });
   } catch (error: any) {
-    console.error('❌ [MEMBERSHIP CREATE] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -215,12 +206,12 @@ membershipRoutes.put('/make-server-84f9c112/memberships/:id', requireAuth, requi
   try {
     const id = c.req.param('id');
     const body = await c.req.json();
-    
+
     const existingMembership = await kv.get(`membership:${id}`);
     if (!existingMembership) {
       return c.json({ success: false, error: 'Membership not found' }, 404);
     }
-    
+
     // Update membership
     const updatedMembership: Membership = {
       ...existingMembership,
@@ -228,13 +219,11 @@ membershipRoutes.put('/make-server-84f9c112/memberships/:id', requireAuth, requi
       id, // Prevent ID change
       updated_at: new Date().toISOString(),
     };
-    
+
     await kv.set(`membership:${id}`, updatedMembership);
-    
-    console.log(`✅ [MEMBERSHIP UPDATE] Updated membership: ${id}`);
+
     return c.json({ success: true, data: updatedMembership });
   } catch (error: any) {
-    console.error('❌ [MEMBERSHIP UPDATE] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -243,18 +232,16 @@ membershipRoutes.put('/make-server-84f9c112/memberships/:id', requireAuth, requi
 membershipRoutes.delete('/make-server-84f9c112/memberships/:id', requireAuth, requirePermission('can_manage_settings'), async (c) => {
   try {
     const id = c.req.param('id');
-    
+
     const existingMembership = await kv.get(`membership:${id}`);
     if (!existingMembership) {
       return c.json({ success: false, error: 'Membership not found' }, 404);
     }
-    
+
     await kv.mdel([`membership:${id}`]);
-    
-    console.log(`✅ [MEMBERSHIP DELETE] Deleted membership: ${id}`);
+
     return c.json({ success: true, message: 'Membership deleted successfully' });
   } catch (error: any) {
-    console.error('❌ [MEMBERSHIP DELETE] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -265,11 +252,9 @@ membershipRoutes.get('/make-server-84f9c112/memberships/tiers/config', async (c)
     // Check if custom tiers exist in KV
     const customTiers = await kv.get('settings:membership-tiers');
     const tiers = customTiers || DEFAULT_TIERS;
-    
-    console.log(`✅ [MEMBERSHIP TIERS] Returning ${tiers.length} tiers`);
+
     return c.json({ success: true, data: tiers });
   } catch (error: any) {
-    console.error('❌ [MEMBERSHIP TIERS] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -279,17 +264,15 @@ membershipRoutes.put('/make-server-84f9c112/memberships/tiers/config', requireAu
   try {
     const body = await c.req.json();
     const { tiers } = body;
-    
+
     if (!Array.isArray(tiers)) {
       return c.json({ success: false, error: 'Invalid tiers format' }, 400);
     }
-    
+
     await kv.set('settings:membership-tiers', tiers);
-    
-    console.log(`✅ [MEMBERSHIP TIERS UPDATE] Updated tier configuration`);
+
     return c.json({ success: true, data: tiers });
   } catch (error: any) {
-    console.error('❌ [MEMBERSHIP TIERS UPDATE] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

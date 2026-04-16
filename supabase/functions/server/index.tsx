@@ -81,7 +81,7 @@ import { utilitiesApp } from './utilities.tsx'; // 7 routes: upload, menu images
 
 const app = new Hono();
 
-app.use('*', logger(console.log));
+app.use('*', logger());
 app.use('*', cors({
   origin: '*',
   allowHeaders: ['Content-Type', 'Authorization', 'X-Session-Token'],
@@ -161,12 +161,10 @@ app.route('/', debugCustomerAuditApp);
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function seedBuiltInRoles() {
   try {
-    console.log('🌱 [SEED] Checking for built-in roles...');
-    
-    const timeoutPromise = new Promise((_, reject) => 
+    const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Seed timeout after 10s')), 10000)
     );
-    
+
     const seedPromise = (async () => {
       try {
         // Quick check with minimal retries
@@ -174,15 +172,13 @@ async function seedBuiltInRoles() {
         try {
           existingRoles = await retry(() => kv.getByPrefix('role:'), 2, 300);
         } catch {
-          console.log('⚠️ [SEED] Could not fetch existing roles, will attempt to seed anyway');
           existingRoles = [];
         }
-        
+
         const hasAdminRole = existingRoles.some((r: any) => r.name === 'admin' && r.is_built_in);
         const hasStaffRole = existingRoles.some((r: any) => r.name === 'staff' && r.is_built_in);
-        
+
         if (hasAdminRole && hasStaffRole) {
-          console.log('✅ [SEED] Built-in roles already exist, skipping...');
           return;
         }
 
@@ -206,9 +202,8 @@ async function seedBuiltInRoles() {
             updated_at: new Date().toISOString(),
           };
           await kv.set(`role:${adminRoleId}`, adminRole);
-          console.log('✅ [SEED] Created built-in role: Admin');
         }
-        
+
         // Seed Staff role if not exists
         if (!hasStaffRole) {
           const staffRoleId = crypto.randomUUID();
@@ -225,18 +220,14 @@ async function seedBuiltInRoles() {
             updated_at: new Date().toISOString(),
           };
           await kv.set(`role:${staffRoleId}`, staffRole);
-          console.log('✅ [SEED] Created built-in role: Staff');
         }
       } catch (seedError) {
-        console.error('❌ [SEED] Error in seed logic:', seedError);
         throw seedError;
       }
     })();
-    
+
     await Promise.race([seedPromise, timeoutPromise]);
   } catch (error: any) {
-    console.error('❌ [SEED] Failed to seed built-in roles:', error);
-    console.log('⚠️  [SEED] Server will continue starting. Roles will be created on first access if needed.');
     // Don't throw - let server continue
   }
 }
@@ -244,16 +235,10 @@ async function seedBuiltInRoles() {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SERVER STARTUP
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-console.log('🚀 [SERVER] Bitcoin Nail Bar Server Starting...');
-console.log('📦 [SERVER] Phase 2 Refactor Complete - Clean Module Architecture');
-console.log('🔍 [SERVER] All routes modularized into domain-specific files');
 
 // Seed roles in background (non-blocking)
 setTimeout(() => {
-  seedBuiltInRoles().catch(err => {
-    console.error('⚠️  [SEED] Background seed failed, but server is running:', err);
-    console.log('💡 [SEED] Roles will be created on first access if needed.');
-  });
+  seedBuiltInRoles().catch(() => {});
 }, 2000);
 
 Deno.serve(app.fetch);

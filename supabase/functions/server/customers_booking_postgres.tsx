@@ -105,7 +105,6 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
       .maybeSingle();
 
     if (fetchError) {
-      console.error('❌ [BOOKING] Fetch error:', fetchError);
       throw fetchError;
     }
 
@@ -114,12 +113,9 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
       // UPDATE EXISTING CUSTOMER
       // Per BOOKING_CUSTOMER_LOGIC.md: Only count if Complete
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      console.log(`📝 [BOOKING] Updating existing customer: ${existingCustomer.id}`);
-      console.log(`   Appointment status: ${appointment_status}`);
 
       // ✅ CRITICAL: Only accumulate if status = 'Complete'
       const shouldCount = appointment_status === 'Complete';
-      console.log(`   ${shouldCount ? '✅' : '⏸️'} ${shouldCount ? 'Counting' : 'NOT counting'} in statistics`);
 
       const updates: any = {
         full_name, // Allow name update
@@ -142,13 +138,8 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
         .single();
 
       if (updateError) {
-        console.error('❌ [BOOKING] Update error:', updateError);
         throw updateError;
       }
-
-      console.log(`✅ [BOOKING] Customer updated successfully`);
-      console.log(`   Total visits: ${updatedCustomer.total_visits}`);
-      console.log(`   Total spent: $${updatedCustomer.lifetime_spend}`);
 
       // Check membership validity for booking date
       const hasValidMembership = isMembershipValid(updatedCustomer, appointment_time);
@@ -184,13 +175,10 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
       // CREATE NEW CUSTOMER
       // Per BOOKING_CUSTOMER_LOGIC.md: Only count if Complete
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      console.log(`✨ [BOOKING] Creating new customer with phone: ${normalizedPhone}`);
-      console.log(`   Appointment status: ${appointment_status}`);
 
       // ✅ CRITICAL: Check status before counting
       const shouldCount = appointment_status === 'Complete';
-      console.log(`   ${shouldCount ? '✅' : '⏸️'} ${shouldCount ? 'Counting' : 'NOT counting'} in initial statistics`);
-      
+
       // Create customer (Postgres will auto-generate UUID via DEFAULT gen_random_uuid())
       const { data: newCustomer, error: createError } = await supabase
         .from('customer_profiles')
@@ -215,13 +203,8 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
         .single();
 
       if (createError) {
-        console.error('❌ [BOOKING] Create error:', createError);
         throw createError;
       }
-
-      console.log(`✅ [BOOKING] New customer created: ${newCustomer.id}`);
-      console.log(`   Total visits: ${newCustomer.total_visits}`);
-      console.log(`   Total spent: $${newCustomer.lifetime_spend}`);
 
       return c.json({
         success: true,
@@ -243,7 +226,6 @@ app.post('/make-server-84f9c112/customers/book', async (c) => {
     }
 
   } catch (error: any) {
-    console.error('❌ [BOOKING] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to process booking'
@@ -273,7 +255,6 @@ app.get('/make-server-84f9c112/customers/lookup/:phone', async (c) => {
       .maybeSingle();
 
     if (error) {
-      console.error('❌ [LOOKUP] Error:', error);
       throw error;
     }
 
@@ -287,8 +268,6 @@ app.get('/make-server-84f9c112/customers/lookup/:phone', async (c) => {
 
     // Check membership validity
     const hasValidMembership = isMembershipValid(customer, appointmentTime);
-
-    console.log(`✅ [LOOKUP] Customer found: ${customer.id}, Membership valid: ${hasValidMembership}`);
 
     return c.json({
       success: true,
@@ -317,7 +296,6 @@ app.get('/make-server-84f9c112/customers/lookup/:phone', async (c) => {
     });
 
   } catch (error: any) {
-    console.error('❌ [LOOKUP] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to lookup customer'

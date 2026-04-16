@@ -33,6 +33,7 @@ interface PromotionData {
   backgroundImagePath?: string;
   iconImage?: string;
   iconImagePath?: string;
+  videoUrl?: string;
 }
 
 interface Promotion {
@@ -809,6 +810,20 @@ function PromotionForm({
             onChange={(e) => onUpdateField(promo.id, "buttonLink", e.target.value)}
             placeholder="https://staging-register.vlinkpay.com/event?eventCode=bitcoinnailbar-grand-opening&lang=en"
           />
+        </div>
+
+        {/* Video URL (acts as background) */}
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor={`${promo.id}-videoUrl`}>Video URL (Optional - acts as background)</Label>
+          <Input
+            id={`${promo.id}-videoUrl`}
+            value={data.videoUrl || ""}
+            onChange={(e) => onUpdateField(promo.id, "videoUrl", e.target.value)}
+            placeholder="https://www.youtube.com/embed/VIDEO_ID or direct video URL"
+          />
+          <p className="text-xs text-gray-400">
+            Supports YouTube embed links, Vimeo embed, or direct video URLs (.mp4, .webm). If provided, this video will play as the background instead of the default theme.
+          </p>
         </div>
       </div>
 

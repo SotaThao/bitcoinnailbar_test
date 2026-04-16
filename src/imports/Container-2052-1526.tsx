@@ -516,7 +516,7 @@ function Link() {
 function Paragraph10() {
   return (
     <div className="absolute content-stretch flex h-[20px] items-start left-[24px] top-[120px] w-[656px]" data-name="Paragraph">
-      <p className="basis-0 font-['Arial:Regular',sans-serif] grow leading-[20px] min-h-px min-w-px not-italic relative shrink-0 text-[14px] text-[rgba(255,255,255,0.8)] text-center">http://localhost:8080/event/checkin</p>
+      <p className="basis-0 font-['Arial:Regular',sans-serif] grow leading-[20px] min-h-px min-w-px not-italic relative shrink-0 text-[14px] text-[rgba(255,255,255,0.8)] text-center">https://event.bitcoinnailbar.com/checkin</p>
     </div>
   );
 }

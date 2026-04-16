@@ -147,17 +147,14 @@ const customerHelpers = {
 };
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// LOGGING HELPER - Environment-based
+// LOGGING HELPER - Disabled (no-op)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const DEBUG_MODE = Deno.env.get('DEBUG_REDEEM') === 'true';
 
 const log = {
-  debug: (...args: any[]) => {
-    if (DEBUG_MODE) console.log(...args);
-  },
-  info: (...args: any[]) => console.log(...args),  // Always log important info
-  warn: (...args: any[]) => console.warn(...args), // Always log warnings
-  error: (...args: any[]) => console.error(...args) // Always log errors
+  debug: (..._args: any[]) => {},
+  info: (..._args: any[]) => {},
+  warn: (..._args: any[]) => {},
+  error: (..._args: any[]) => {}
 };
 
 // Helper to retry failed requests

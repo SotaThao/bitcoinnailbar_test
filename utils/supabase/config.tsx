@@ -32,7 +32,3 @@ const activeConfig = USE_STAGING ? STAGING : PRODUCTION;
 export const projectId = activeConfig.projectId;
 export const publicAnonKey = activeConfig.publicAnonKey;
 export const supabaseUrl = `https://${projectId}.supabase.co`;
-
-// Log current environment (helps debugging)
-console.log(`🌍 Supabase Environment: ${USE_STAGING ? '🧪 STAGING' : '🚀 PRODUCTION'}`);
-console.log(`📍 Project ID: ${projectId}`);

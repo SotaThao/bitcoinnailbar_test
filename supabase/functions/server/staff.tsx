@@ -85,15 +85,12 @@ app.get('/make-server-84f9c112/staff', async (c) => {
       .order('created_at', { ascending: true });
     
     if (error) {
-      console.error('❌ [GET STAFF] Postgres error:', error);
       throw error;
     }
-    
-    console.log(`✅ [GET STAFF] Returning ${staff?.length || 0} technicians from Postgres`);
+
     const rows = (staff || []).map(mapStaffRow);
     return c.json({ success: true, data: rows });
   } catch (e) {
-    console.error('❌ [GET STAFF] Error:', e);
     return c.json({ success: false, error: String(e) }, 500);
   }
 });
@@ -155,14 +152,11 @@ app.post('/make-server-84f9c112/staff', async (c) => {
       .single();
     
     if (error) {
-      console.error('❌ [CREATE STAFF] Postgres error:', error);
       throw error;
     }
-    
-    console.log(`✅ [CREATE STAFF] Created: ${newStaff.id} - ${newStaff.name}`);
+
     return c.json({ success: true, data: mapStaffRow(newStaff) });
   } catch (error: any) {
-    console.error('❌ [CREATE STAFF] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -283,14 +277,11 @@ app.put('/make-server-84f9c112/staff/:id', async (c) => {
       .single();
     
     if (error) {
-      console.error('❌ [UPDATE STAFF] Postgres error:', error);
       throw error;
     }
-    
-    console.log(`✅ [UPDATE STAFF] Updated: ${id} - ${updatedStaff.name}`);
+
     return c.json({ success: true, data: mapStaffRow(updatedStaff) });
   } catch (error: any) {
-    console.error('❌ [UPDATE STAFF] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -299,22 +290,18 @@ app.put('/make-server-84f9c112/staff/:id', async (c) => {
 app.delete('/make-server-84f9c112/staff/:id', async (c) => {
   try {
     const id = c.req.param('id');
-    console.log(`🗑️  [DELETE STAFF] Deleting: ${id}`);
-    
+
     const { error } = await supabase
       .from('technician_info')
       .delete()
       .eq('id', id);
-    
+
     if (error) {
-      console.error('❌ [DELETE STAFF] Postgres error:', error);
       throw error;
     }
-    
-    console.log(`✅ [DELETE STAFF] Successfully deleted: ${id}`);
+
     return c.json({ success: true, message: 'Staff deleted successfully' });
   } catch (error: any) {
-    console.error('❌ [DELETE STAFF] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -437,26 +424,21 @@ app.post('/make-server-84f9c112/staff/seed', async (c) => {
         .single();
       
       if (error) {
-        console.error(`❌ [SEED STAFF] Failed to create ${staff.name}:`, error);
         continue;
       }
-      
+
       created.push(mapStaffRow(newStaff));
-      console.log(`✅ [SEED STAFF] Created: ${newStaff.name}`);
-      
+
       // Small delay to avoid race conditions
       await new Promise(r => setTimeout(r, 10));
     }
 
-    console.log(`✅ [SEED STAFF] Successfully seeded ${created.length} staff members`);
-    
-    return c.json({ 
-      success: true, 
+    return c.json({
+      success: true,
       message: `Successfully seeded ${created.length} staff members`,
-      data: created 
+      data: created
     });
   } catch (error: any) {
-    console.error('❌ [SEED STAFF] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

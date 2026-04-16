@@ -23,11 +23,9 @@ const retry = async <T>(fn: () => Promise<T>, retries = 3, delay = 200): Promise
     return await fn();
   } catch (error: any) {
     if (retries > 0 && (String(error).includes("connection error") || String(error).includes("connection reset"))) {
-      console.warn(`⚠️ Request failed, retrying... (${retries} left). Error: ${error.message || error}`);
       await new Promise(r => setTimeout(r, delay));
       return retry(fn, retries - 1, delay * 2);
     }
-    console.error(`❌ [RETRY] All retries exhausted. Final error:`, error);
     throw error;
   }
 };
@@ -69,9 +67,7 @@ const getEncryptionKey = async (): Promise<CryptoKey> => {
   const keyData = encoder.encode(keyString);
   const hashBuffer = await crypto.subtle.digest('SHA-256', keyData);
   const hashedKey = new Uint8Array(hashBuffer);
-  
-  console.log('🔑 [ENCRYPTION] Key normalized to', hashedKey.length, 'bytes via SHA-256');
-  
+
   // Import the hashed key for AES-GCM encryption
   return await crypto.subtle.importKey(
     'raw',
@@ -116,7 +112,6 @@ const encryptApiKey = async (plainText: string): Promise<string> => {
     // Convert to base64 for storage
     return btoa(String.fromCharCode(...combined));
   } catch (error) {
-    console.error('❌ [ENCRYPTION] Failed to encrypt API key:', error);
     throw new Error(`Encryption failed: ${error.message}`);
   }
 };
@@ -151,7 +146,6 @@ const decryptApiKey = async (encryptedText: string): Promise<string> => {
     const decoder = new TextDecoder();
     return decoder.decode(decryptedBuffer);
   } catch (error) {
-    console.error('❌ [DECRYPTION] Failed to decrypt API key:', error);
     throw new Error(`Decryption failed: ${error.message}`);
   }
 };
@@ -161,10 +155,8 @@ const decryptApiKey = async (encryptedText: string): Promise<string> => {
 // GET /make-server-84f9c112/vlinkpay/settings
 app.get('/make-server-84f9c112/vlinkpay/settings', async (c) => {
   try {
-    console.log('📖 [VLINKPAY SETTINGS] Fetching settings...');
-    
     const settings = await kv.get('vlinkpay_settings');
-    
+
     if (!settings) {
       return c.json({ 
         success: true, 
@@ -172,14 +164,7 @@ app.get('/make-server-84f9c112/vlinkpay/settings', async (c) => {
         message: 'No settings configured yet' 
       });
     }
-    
-    console.log('✅ [VLINKPAY SETTINGS] Settings found:', {
-      hasMerchantRefCode: !!settings.merchantRefCode,
-      hasSecretKey: !!settings.secretKey,
-      hasSandboxEndpoint: !!settings.sandboxEndpoint,
-      hasRedirectUrl: !!settings.redirectUrl
-    });
-    
+
     // Return settings without exposing sensitive data
     return c.json({ 
       success: true, 
@@ -193,10 +178,9 @@ app.get('/make-server-84f9c112/vlinkpay/settings', async (c) => {
       }
     });
   } catch (error) {
-    console.error('❌ [VLINKPAY SETTINGS] Error fetching settings:', error);
-    return c.json({ 
-      success: false, 
-      error: `Failed to fetch settings: ${error.message}` 
+    return c.json({
+      success: false,
+      error: `Failed to fetch settings: ${error.message}`
     }, 500);
   }
 });
@@ -204,20 +188,11 @@ app.get('/make-server-84f9c112/vlinkpay/settings', async (c) => {
 // POST /make-server-84f9c112/vlinkpay/settings
 app.post('/make-server-84f9c112/vlinkpay/settings', async (c) => {
   try {
-    console.log('💾 [VLINKPAY SETTINGS] Saving settings...');
-    
     const body = await c.req.json();
-    console.log('📝 [VLINKPAY SETTINGS] Received body:', {
-      hasMerchantRefCode: !!body.merchantRefCode,
-      hasSecretKey: !!body.secretKey,
-      hasSandboxEndpoint: !!body.sandboxEndpoint,
-      hasRedirectUrl: !!body.redirectUrl
-    });
-    
+
     const { merchantRefCode, secretKey, sandboxEndpoint, redirectUrl } = body;
-    
+
     if (!merchantRefCode || !secretKey || !sandboxEndpoint || !redirectUrl) {
-      console.error('❌ [VLINKPAY SETTINGS] Missing required fields');
       return c.json({ 
         success: false, 
         error: 'merchantRefCode, secretKey, sandboxEndpoint, and redirectUrl are required' 
@@ -227,15 +202,9 @@ app.post('/make-server-84f9c112/vlinkpay/settings', async (c) => {
     // Normalize URLs - remove trailing slashes to prevent double slash issues
     const normalizedSandboxEndpoint = sandboxEndpoint.trim().replace(/\/+$/, '');
     const normalizedRedirectUrl = redirectUrl.trim().replace(/\/+$/, '');
-    
-    console.log('🔧 [VLINKPAY SETTINGS] Normalized URLs:');
-    console.log('   Sandbox:', sandboxEndpoint, '→', normalizedSandboxEndpoint);
-    console.log('   Redirect:', redirectUrl, '→', normalizedRedirectUrl);
-    
-    console.log('🔐 [VLINKPAY SETTINGS] Encrypting secret key...');
+
     const encryptedSecretKey = await encryptApiKey(secretKey);
-    console.log('✅ [VLINKPAY SETTINGS] Secret key encrypted successfully');
-    
+
     // ⚠️ IMPORTANT: Only save secretKey, remove any old apiKey field
     const settings = {
       merchantRefCode,
@@ -246,18 +215,11 @@ app.post('/make-server-84f9c112/vlinkpay/settings', async (c) => {
       isActive: true,
       updatedAt: new Date().toISOString()
     };
-    
-    console.log('💾 [VLINKPAY SETTINGS] Attempting to save to KV...');
+
     await kv.set('vlinkpay_settings', settings);
-    
-    console.log('✅ [VLINKPAY SETTINGS] Settings saved successfully to database');
-    
+
     // Verify save by reading back
     const savedSettings = await kv.get('vlinkpay_settings');
-    console.log('🔍 [VLINKPAY SETTINGS] Verification read:', {
-      exists: !!savedSettings,
-      hasMerchantRefCode: !!savedSettings?.merchantRefCode
-    });
     
     return c.json({ 
       success: true, 
@@ -272,11 +234,9 @@ app.post('/make-server-84f9c112/vlinkpay/settings', async (c) => {
       }
     });
   } catch (error) {
-    console.error('❌ [VLINKPAY SETTINGS] Error saving settings:', error);
-    console.error('❌ [VLINKPAY SETTINGS] Error stack:', error.stack);
-    return c.json({ 
-      success: false, 
-      error: `Failed to save settings: ${error.message}` 
+    return c.json({
+      success: false,
+      error: `Failed to save settings: ${error.message}`
     }, 500);
   }
 });
@@ -284,8 +244,6 @@ app.post('/make-server-84f9c112/vlinkpay/settings', async (c) => {
 // POST /make-server-84f9c112/vlinkpay/test-connection
 app.post('/make-server-84f9c112/vlinkpay/test-connection', async (c) => {
   try {
-    console.log('🔍 [VLINKPAY SETTINGS] Testing connection...');
-    
     const settings = await kv.get('vlinkpay_settings');
     
     if (!settings || !settings.isActive) {
@@ -307,10 +265,9 @@ app.post('/make-server-84f9c112/vlinkpay/test-connection', async (c) => {
       }
     });
   } catch (error) {
-    console.error('❌ [VLINKPAY SETTINGS] Error testing connection:', error);
-    return c.json({ 
-      success: false, 
-      error: `Connection test failed: ${error.message}` 
+    return c.json({
+      success: false,
+      error: `Connection test failed: ${error.message}`
     }, 500);
   }
 });

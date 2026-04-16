@@ -32,6 +32,7 @@ import {
   AvatarImage,
 } from "../ui/avatar";
 import { Badge } from "../ui/badge";
+import { Switch } from "../ui/switch";
 import { Separator } from "../ui/separator";
 import { toast } from "sonner";
 import {
@@ -56,6 +57,26 @@ interface StaffDetailProps {
   onSave: (data: any) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
 }
+
+type WorkingHours = {
+  start: string;
+  end: string;
+};
+
+const WEEK_DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
+const DEFAULT_WORKING_HOURS: WorkingHours = {
+  start: "09:00",
+  end: "18:00",
+};
 
 const formatPhoneNumber = (value: string) => {
   if (!value) return value;
@@ -83,6 +104,81 @@ const formatDate = (dateString: string) => {
     day: "numeric",
   });
 };
+
+const normalizeTimeValue = (
+  value: unknown,
+  fallback = "",
+): string => {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (!raw) return fallback;
+
+  let match = raw.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (match) {
+    const [, hour, minute] = match;
+    return `${hour.padStart(2, "0")}:${minute}`;
+  }
+
+  match = raw.match(/^([01]?\d|2[0-3])([0-5]\d)$/);
+  if (match) {
+    const [, hour, minute] = match;
+    return `${hour.padStart(2, "0")}:${minute}`;
+  }
+
+  match = raw.match(/^(\d{1,2})(?::([0-5]\d))?\s*([AP]M)$/);
+  if (match) {
+    const [, hourRaw, minuteRaw = "00", meridiem] = match;
+    const hourNum = Number(hourRaw);
+    if (hourNum < 1 || hourNum > 12) return fallback;
+    const normalizedHour =
+      meridiem === "AM"
+        ? hourNum % 12
+        : hourNum % 12 + 12;
+    return `${String(normalizedHour).padStart(2, "0")}:${minuteRaw}`;
+  }
+
+  return fallback;
+};
+
+const normalizeWorkingHours = (
+  value: unknown,
+  fallback: WorkingHours,
+): WorkingHours => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return fallback;
+  }
+
+  const hours = value as Record<string, unknown>;
+  return {
+    start: normalizeTimeValue(hours.start, fallback.start),
+    end: normalizeTimeValue(hours.end, fallback.end),
+  };
+};
+
+const buildFormData = (
+  staff: any,
+  isCreating: boolean,
+) => ({
+  ...staff,
+  licenseNumber: staff.licenseNumber ?? staff.license_number ?? "",
+  commissionRate: (() => {
+    const raw = staff.commissionRate ?? staff.commission_rate;
+    if (raw === undefined || raw === null || raw === "") return "60";
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return "60";
+    if (n > 0 && n <= 1) return String(n * 100);
+    return String(n);
+  })(),
+  rating: staff.rating || "",
+  skillLevel: staff.skillLevel || "senior",
+  specialties: staff.specialties || [],
+  workingDays: Array.isArray(staff.workingDays ?? staff.working_days)
+    ? [...(staff.workingDays ?? staff.working_days)]
+    : [],
+  workingHours: normalizeWorkingHours(
+    staff.workingHours ?? staff.working_hours,
+    isCreating ? DEFAULT_WORKING_HOURS : { start: "", end: "" },
+  ),
+});
 
 interface ProfileFieldProps {
   icon: any;
@@ -262,6 +358,11 @@ export default function StaffDetail({
     }
   }, [isCreating]);
 
+  useEffect(() => {
+    setFormData(buildFormData(staff, isCreating));
+    setIsEditing(isCreating);
+  }, [staff, isCreating]);
+
   const handleSave = async () => {
     // Validation
     if (
@@ -276,11 +377,32 @@ export default function StaffDetail({
       return;
     }
 
+    const rawStart = String(
+      formData.workingHours?.start ?? "",
+    ).trim();
+    const rawEnd = String(formData.workingHours?.end ?? "").trim();
+    const start = normalizeTimeValue(rawStart);
+    const end = normalizeTimeValue(rawEnd);
+
+    if ((rawStart && !start) || (rawEnd && !end)) {
+      toast.error("Please use 24-hour time format (HH:mm)");
+      return;
+    }
+
+    if ((start && !end) || (!start && end)) {
+      toast.error("Please set both start and end working hours");
+      return;
+    }
+
     setLoading(true);
     try {
       const dataToSave = {
         ...formData,
+        isActive,
         commissionRate: formData.commissionRate, // Pass the value (e.g. "60") directly
+        licenseNumber: String(formData.licenseNumber ?? "").trim(),
+        workingDays: formData.workingDays ?? [],
+        workingHours: start && end ? { start, end } : null,
       };
 
       await onSave(dataToSave);
@@ -308,9 +430,14 @@ export default function StaffDetail({
   const toggleWorkingDay = (day: string) => {
     setFormData((prev: any) => ({
       ...prev,
-      workingDays: prev.workingDays.includes(day)
-        ? prev.workingDays.filter((d: string) => d !== day)
-        : [...prev.workingDays, day],
+      workingDays: (
+        prev.workingDays.includes(day)
+          ? prev.workingDays.filter((d: string) => d !== day)
+          : [...prev.workingDays, day]
+      ).sort(
+        (a: string, b: string) =>
+          WEEK_DAYS.indexOf(a) - WEEK_DAYS.indexOf(b),
+      ),
     }));
   };
 
@@ -450,6 +577,28 @@ export default function StaffDetail({
                     )}
                   </div>
 
+                  {/* Status Toggle - Below Role */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                      <Switch
+                        checked={isActive}
+                        onCheckedChange={setIsActive}
+                        id="staff-detail-status-toggle"
+                        className={isActive ? "data-[state=checked]:bg-green-500" : ""}
+                      />
+                      <Badge
+                        variant={isActive ? "default" : "secondary"}
+                        className={`text-xs px-2 py-0.5 ${
+                          isActive
+                            ? "bg-green-100 text-green-700 hover:bg-green-100"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        {isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
                     {isEditing ? (
                       <div className="space-y-1.5">
@@ -576,15 +725,7 @@ export default function StaffDetail({
               </CardHeader>
               <CardContent className="px-5 pb-5 pt-0">
                 <div className="flex justify-between gap-1">
-                  {[
-                    "Monday",
-                    "Tuesday",
-                    "Wednesday",
-                    "Thursday",
-                    "Friday",
-                    "Saturday",
-                    "Sunday",
-                  ].map((day) => {
+                  {WEEK_DAYS.map((day) => {
                     const isActive =
                       formData.workingDays.includes(day);
                     return (
@@ -607,6 +748,100 @@ export default function StaffDetail({
                       </button>
                     );
                   })}
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  <div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-1.5">
+                      Start
+                    </div>
+                    {isEditing ? (
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="HH:mm"
+                        value={formData.workingHours?.start ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            workingHours: {
+                              ...(prev.workingHours ?? {
+                                start: "",
+                                end: "",
+                              }),
+                              start: e.target.value,
+                            },
+                          }))
+                        }
+                        onBlur={(e) => {
+                          const normalized = normalizeTimeValue(
+                            e.target.value,
+                            e.target.value,
+                          );
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            workingHours: {
+                              ...(prev.workingHours ?? {
+                                start: "",
+                                end: "",
+                              }),
+                              start: normalized,
+                            },
+                          }));
+                        }}
+                        className="h-9 border-gray-200 bg-gray-50/50 text-sm"
+                      />
+                    ) : (
+                      <div className="h-9 rounded-md border border-gray-100 bg-gray-50/70 px-3 flex items-center text-sm font-semibold text-gray-900">
+                        {formData.workingHours?.start || "-"}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-1.5">
+                      End
+                    </div>
+                    {isEditing ? (
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="HH:mm"
+                        value={formData.workingHours?.end ?? ""}
+                        onChange={(e) =>
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            workingHours: {
+                              ...(prev.workingHours ?? {
+                                start: "",
+                                end: "",
+                              }),
+                              end: e.target.value,
+                            },
+                          }))
+                        }
+                        onBlur={(e) => {
+                          const normalized = normalizeTimeValue(
+                            e.target.value,
+                            e.target.value,
+                          );
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            workingHours: {
+                              ...(prev.workingHours ?? {
+                                start: "",
+                                end: "",
+                              }),
+                              end: normalized,
+                            },
+                          }));
+                        }}
+                        className="h-9 border-gray-200 bg-gray-50/50 text-sm"
+                      />
+                    ) : (
+                      <div className="h-9 rounded-md border border-gray-100 bg-gray-50/70 px-3 flex items-center text-sm font-semibold text-gray-900">
+                        {formData.workingHours?.end || "-"}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>

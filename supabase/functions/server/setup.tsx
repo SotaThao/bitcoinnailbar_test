@@ -26,11 +26,9 @@ app.get('/make-server-84f9c112/setup/check', async (c) => {
   try {
     const users = await kv.getByPrefix('user:');
     const hasOwner = users.some((user: User) => user.role === 'owner');
-    
-    console.log(`🔍 [SETUP CHECK] Owner exists: ${hasOwner}`);
+
     return c.json({ success: true, data: { has_owner: hasOwner } });
   } catch (error: any) {
-    console.error('❌ [SETUP CHECK] Error:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });
@@ -98,8 +96,6 @@ app.post('/make-server-84f9c112/setup/owner', async (c) => {
 
     await kv.set(`permissions:${userId}`, permissions);
 
-    console.log(`✅ [CREATE OWNER] Owner created: ${email}`);
-    
     // Return user without password_hash
     const { password_hash: _, ...userWithoutPassword } = user;
     
@@ -108,7 +104,6 @@ app.post('/make-server-84f9c112/setup/owner', async (c) => {
       data: { user: userWithoutPassword, permissions } 
     });
   } catch (error: any) {
-    console.error('❌ [CREATE OWNER] Exception:', error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

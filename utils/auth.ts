@@ -20,8 +20,6 @@ interface SessionData {
  */
 export function saveSession(token: string, user: any, expiresAt: string): void {
   try {
-    console.log('🔐 [saveSession] Called with:', { token, userId: user.id, expiresAt });
-    
     const sessionData: SessionData = {
       token,
       user: {
@@ -34,22 +32,10 @@ export function saveSession(token: string, user: any, expiresAt: string): void {
       expiresAt,
     };
 
-    console.log('🔐 [saveSession] Session data prepared:', sessionData);
-    
     localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
-    console.log('✅ [saveSession] Set SESSION_KEY');
-    
     localStorage.setItem(SESSION_EXPIRY_KEY, expiresAt);
-    console.log('✅ [saveSession] Set SESSION_EXPIRY_KEY');
-    
-    // Verify immediately
-    const verify = localStorage.getItem(SESSION_KEY);
-    console.log('✅ [saveSession] Verification - Item exists:', verify ? 'YES' : 'NO');
-    
-    console.log('✅ Session saved, expires at:', expiresAt);
   } catch (error) {
-    console.error('❌ Failed to save session:', error);
-    throw error; // Re-throw so caller knows it failed
+    throw error;
   }
 }
 
@@ -71,7 +57,6 @@ export function getSession(): SessionData | null {
     const expiresAt = new Date(expiryStr);
 
     if (now > expiresAt) {
-      console.log('⏰ Session expired, clearing...');
       clearSession();
       return null;
     }
@@ -79,7 +64,6 @@ export function getSession(): SessionData | null {
     const session: SessionData = JSON.parse(sessionStr);
     return session;
   } catch (error) {
-    console.error('❌ Failed to get session:', error);
     clearSession();
     return null;
   }
@@ -92,9 +76,8 @@ export function clearSession(): void {
   try {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(SESSION_EXPIRY_KEY);
-    console.log('🗑️ Session cleared');
   } catch (error) {
-    console.error('❌ Failed to clear session:', error);
+    // Silently fail — session may already be cleared
   }
 }
 

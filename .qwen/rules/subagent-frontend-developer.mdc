@@ -1,0 +1,137 @@
+---
+description: Frontend-Developer subagent — React/TSX implementation, UI components, styling, i18n
+alwaysApply: false
+globs:
+  - "src/**/*.tsx"
+  - "src/**/*.css"
+---
+
+# Frontend-Developer Subagent Rules
+
+> Rules for **Frontend-Developer** subagent — responsible for React/TSX implementation, UI components, styling, and i18n.
+
+## Related Rules
+- **Workflow**: [subagent-workflow-rules.mdc](./subagent-workflow-rules.mdc)
+- **Documentation**: [doc-engineer-rules.md](./doc-engineer-rules.md)
+- **Code Standards**: [frontend-code-standards.mdc](./frontend-code-standards.mdc)
+- **Skills**: `.qwen/skills/frontend-code-standards/SKILL.md`, `.qwen/skills/Review-clean-code/SKILL.md`
+
+---
+
+## Activation
+
+**Keywords:** "Implement frontend", "Code UI", "Frontend development", "After design approval"
+
+**Prerequisites:**
+- ✅ Product-Designer completed
+- ✅ User approved design
+- ✅ Engineering Doc ready (FE section)
+
+---
+
+## Role & Responsibilities
+
+### Input
+- Master Doc: `Docs/00-master/<feature>-<ticket>_master_*.md`
+- Engineering Doc: `Docs/02-engineering/<feature>-<ticket>_engineering_*.md` (FE section)
+- Design Artifacts: `Docs/01-product/mockups/`
+- Approved wireframes and mockups
+
+### Tasks
+1. Read all documentation
+2. Review design mockups
+3. Implement frontend components (React/TSX)
+4. Follow `frontend-code-standards` skill
+5. Apply `Review-clean-code` workflow before commit
+6. Update Engineering Doc (FE section) with changelog
+7. Create PR with proper changelog (base → test)
+8. Report to Thread 727
+
+### Tools Used
+- **QwenCLI** — Code implementation
+- **frontend-code-standards** skill — Code conventions
+- **Review-clean-code** skill — Clean code & commit
+- **shadcn/ui** — Component library
+- **Tailwind CSS** — Styling
+
+### Output Artifacts
+- Frontend components
+- Updated Engineering Doc (FE section)
+- PR with changelog (→ test branch)
+
+---
+
+## Workflow
+
+```
+Step 1: Read Requirements & Design
+  → Master Doc + Engineering Doc (FE section) + Design mockups
+
+Step 2: Setup & Planning
+  → Task breakdown
+  → Identify components to create/modify
+  → Check existing codebase for patterns
+
+Step 3: Implementation
+  → Import order: React → third-party → @/ → relative
+  → Component structure: Interface → hooks → handlers → JSX
+  → API via services/ only (no raw fetch in UI)
+  → TypeScript types (no any)
+  → Tailwind + cn() for styling
+  → i18n: all text from t() — NO hardcoded strings
+
+Step 4: Clean Code Review (Before Commit)
+  → Remove all console.* calls
+  → Check for hard-coded values
+  → Verify import order
+  → Run TypeScript check
+  → Run lint
+  → Run build
+
+Step 5: Commit → Follow commit-and-pr-rules
+Step 6: Create PR (→ test branch)
+Step 7: Report to Thread 727
+```
+
+---
+
+## Report Template (Thread 727)
+
+```markdown
+⚛️ **Frontend-Developer Report**
+
+**Feature:** <feature-name>
+**Branch:** <branch-name>
+**PR:** <PR-URL> (→ test)
+
+## Completed Tasks
+✅ Components implemented
+✅ UI matches design mockups
+✅ TypeScript errors: 0
+✅ Lint errors: 0
+✅ Build successful
+✅ Console logs removed
+✅ PR created (→ test)
+
+## Components Created/Modified
+- Component 1: <description>
+- Component 2: <description>
+
+## Code Quality Checks
+- [x] TypeScript: No errors
+- [x] ESLint: Clean
+- [x] Build: Success
+- [x] Console logs: Removed
+- [x] Hard-coded values: None
+
+## PR Information
+🔗 PR URL: https://github.com/PersonalProjectJob/Job360/pull/<number>
+📝 Commits: <number>
+📊 Files changed: <number>
+🎯 Base Branch: test
+
+## Timestamp
+📅 Date: YYYY-MM-DD
+⏰ Time: HH:mm
+👤 Developer: Frontend-Developer Agent
+```

@@ -119,7 +119,6 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // UPDATE EXISTING CUSTOMER
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      console.log(`📝 [MEMBERSHIP] Updating customer: ${existingCustomer.id}`);
 
       const currentMembership = existingCustomer.membership;
       const newMembership = membership;
@@ -128,7 +127,6 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
 
       // CASE 1: No existing membership → Apply new one
       if (!currentMembership) {
-        console.log('✨ [MEMBERSHIP] No existing membership, applying new one');
         const expiresAt = new Date(activatedAt);
         expiresAt.setMonth(expiresAt.getMonth() + newMembership.duration);
 
@@ -145,7 +143,6 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
       }
       // CASE 2: Same tier → Stack duration
       else if (currentMembership.tier === newMembership.tier) {
-        console.log('📚 [MEMBERSHIP] Same tier detected, stacking duration');
         const expiresAt = calculateStackedExpiry(currentMembership, newMembership.duration);
 
         finalMembership = {
@@ -156,18 +153,11 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
           benefits: newMembership.benefits || currentMembership.benefits,
           redeem_code: newMembership.redeem_code // Latest redeem code
         };
-
-        console.log(`✅ [MEMBERSHIP] Extended expiry to: ${expiresAt.toISOString()}`);
       }
       // CASE 3: Different tier → Compare amounts
       else {
-        console.log('⚖️ [MEMBERSHIP] Different tiers, comparing amounts');
-        console.log(`   Current: ${currentMembership.tier} ($${currentMembership.amount})`);
-        console.log(`   New: ${newMembership.tier} ($${newMembership.amount})`);
-
         // Higher amount wins
         if (newMembership.amount > currentMembership.amount) {
-          console.log('🏆 [MEMBERSHIP] New tier has higher amount, replacing');
           const expiresAt = new Date(activatedAt);
           expiresAt.setMonth(expiresAt.getMonth() + newMembership.duration);
 
@@ -182,7 +172,6 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
             redeem_code: newMembership.redeem_code
           };
         } else {
-          console.log('🛡️ [MEMBERSHIP] Current tier has higher amount, keeping it');
           finalMembership = currentMembership; // Keep existing
         }
       }
@@ -192,8 +181,6 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
       existingCustomer.updated_at = new Date().toISOString();
 
       await customerKV.set(existingCustomer.id, existingCustomer);
-
-      console.log(`✅ [MEMBERSHIP] Customer updated successfully`);
 
       return c.json({
         success: true,
@@ -210,7 +197,6 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       // CREATE NEW CUSTOMER
       // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      console.log(`✨ [MEMBERSHIP] Creating new customer with phone: ${normalizedPhone}`);
 
       // Generate key
       const key = region === 'US' 
@@ -254,8 +240,6 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
 
       await customerKV.set(key, newCustomer);
 
-      console.log(`✅ [MEMBERSHIP] New customer created: ${key}`);
-
       return c.json({
         success: true,
         data: {
@@ -266,7 +250,6 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
     }
 
   } catch (error: any) {
-    console.error('❌ [MEMBERSHIP] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to activate membership'
@@ -282,34 +265,19 @@ app.post('/make-server-84f9c112/customers/activate-membership', async (c) => {
 app.get('/make-server-84f9c112/customers/membership/:identifier', async (c) => {
   try {
     const identifier = c.req.param('identifier');
-    
-    console.log('🔍 [MEMBERSHIP CHECK] Received identifier:', identifier);
-    
+
     // Determine if identifier is email or phone
     const isEmail = identifier.includes('@');
     let customer;
     
     if (isEmail) {
-      console.log('📧 [MEMBERSHIP CHECK] Searching by email...');
       customer = await customerKV.searchByEmail(identifier.trim());
     } else {
       const normalizedPhone = normalizePhone(identifier);
-      console.log('📱 [MEMBERSHIP CHECK] Searching by phone:', normalizedPhone);
       customer = await customerKV.searchByPhone(normalizedPhone);
     }
 
-    console.log('📊 [MEMBERSHIP CHECK] Customer found:', !!customer);
-    if (customer) {
-      console.log('📊 [MEMBERSHIP CHECK] Customer ID:', customer.id);
-      console.log('📊 [MEMBERSHIP CHECK] Customer membership:', JSON.stringify(customer.membership, null, 2));
-      console.log('📊 [MEMBERSHIP CHECK] Has membership?', !!customer.membership);
-      console.log('📊 [MEMBERSHIP CHECK] Membership tier:', customer.membership?.tier);
-      console.log('📊 [MEMBERSHIP CHECK] Membership status:', customer.membership?.status);
-      console.log('📊 [MEMBERSHIP CHECK] Membership expires_at:', customer.membership?.expires_at);
-    }
-
     if (!customer || customer.is_deleted) {
-      console.log('❌ [MEMBERSHIP CHECK] Customer not found or deleted');
       return c.json({
         success: true,
         has_membership: false,
@@ -323,10 +291,6 @@ app.get('/make-server-84f9c112/customers/membership/:identifier', async (c) => {
       const now = new Date();
       const expiresAt = new Date(customer.membership.expires_at);
       isActive = expiresAt > now && customer.membership.status === 'active';
-      console.log('✅ [MEMBERSHIP CHECK] Is active?', isActive);
-      console.log('   Expires at:', customer.membership.expires_at);
-      console.log('   Current time:', now.toISOString());
-      console.log('   Status:', customer.membership.status);
     }
 
     const response = {
@@ -338,17 +302,10 @@ app.get('/make-server-84f9c112/customers/membership/:identifier', async (c) => {
         membership: customer.membership || null
       }
     };
-    
-    console.log('📤 [MEMBERSHIP CHECK] Sending response with:');
-    console.log('   - success:', response.success);
-    console.log('   - has_membership:', response.has_membership);
-    console.log('   - is_active:', response.is_active);
-    console.log('   - membership data:', JSON.stringify(response.data.membership, null, 2));
 
     return c.json(response);
 
   } catch (error: any) {
-    console.error('❌ [MEMBERSHIP CHECK] Error:', error);
     return c.json({
       success: false,
       error: error.message || 'Failed to check membership'

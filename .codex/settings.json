@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell *)",
+      "Bash(del *)",
+      "Bash(node *)",
+      "Bash(npm run *)",
+      "Bash(scripts\\test-registration-fix.bat)",
+      "Bash(npm install)",
+      "Bash(npx *)",
+      "Bash(curl *)",
+      "Bash(findstr *)",
+      "Bash(netstat *)",
+      "Bash(taskkill *)",
+      "Bash(git init)",
+      "Read(C:\\Users\\AD\\AppData\\Roaming\\npm\\node_modules\\@qwen-code\\qwen-code\\bundled\\qc-helper\\docs\\features/**)",
+      "Read(C:\\Users\\AD\\.qwen/**)",
+      "Bash(npm *)",
+      "Bash(gh *)",
+      "Bash(select-object *)",
+      "Bash(codex *)",
+      "WebSearch",
+      "WebFetch(github.com)",
+      "Bash(git checkout *)",
+      "Read(C:\\Users\\AD\\AppData\\Roaming\\npm\\node_modules\\@qwen-code\\qwen-code\\bundled\\qc-helper\\docs/**)",
+      "Read(C:\\Users\\AD\\AppData\\Roaming\\npm\\node_modules\\@qwen-code\\qwen-code\\bundled\\qc-helper\\docs\\ide-integration/**)",
+      "Bash(start *)"
+    ]
+  },
+  "$version": 3
+}
