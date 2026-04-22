@@ -175,3 +175,4 @@ This builds the application and serves it via Nginx on port 8088.
 - [Tailwind CSS](https://tailwindcss.com/)
 - [Supabase Documentation](https://supabase.com/docs)
 - [shadcn/ui](https://ui.shadcn.com/)
+
