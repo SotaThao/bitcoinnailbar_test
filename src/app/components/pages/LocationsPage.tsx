@@ -114,7 +114,7 @@ export default function LocationsPage() {
                           </div>
                           <div className="flex justify-between gap-8">
                             <span>Sunday:</span>
-                            <span>10:00 AM - 6:00 PM</span>
+                            <span>Closed</span>
                           </div>
                         </div>
                       </div>

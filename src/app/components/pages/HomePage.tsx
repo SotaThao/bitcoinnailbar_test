@@ -76,8 +76,8 @@ export default function HomePage() {
       {
         "@type": "OpeningHoursSpecification",
         dayOfWeek: "Sunday",
-        opens: "10:00",
-        closes: "18:00",
+        opens: "00:00",
+        closes: "00:00",
       },
     ],
   };

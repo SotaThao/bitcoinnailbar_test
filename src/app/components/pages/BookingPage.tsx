@@ -336,7 +336,7 @@ export default function BookingPage() {
       name: "Downtown Location",
       address: "123 Main Street, Your City, CA 90210",
       phone: "(555) 123-4567",
-      hours: "Mon-Sat: 9AM-7PM, Sun: 10AM-6PM",
+      hours: "Mon-Sat: 9AM-7PM, Sun: Closed",
     };
 
     try {
