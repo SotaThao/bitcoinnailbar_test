@@ -100,6 +100,15 @@ export default function App() {
   const [modalRendered, setModalRendered] = useState(false);
 
   useEffect(() => {
+    let modalTimer: number | undefined;
+
+    const clearPromotionSchedule = () => {
+      if (modalTimer) {
+        window.clearTimeout(modalTimer);
+        modalTimer = undefined;
+      }
+    };
+
     const fetchPromotions = async () => {
       try {
         const response = await fetch(
@@ -163,7 +172,16 @@ export default function App() {
             });
 
             if (dismissedDate !== today && hasFeaturedPromotions) {
-              setTimeout(() => setShowPromotionModal(true), 500);
+              clearPromotionSchedule();
+              let didShowPromo = false;
+              const showPromo = () => {
+                if (didShowPromo) return;
+                didShowPromo = true;
+                clearPromotionSchedule();
+                setShowPromotionModal(true);
+              };
+
+              modalTimer = window.setTimeout(showPromo, 45000);
             }
           }
         }
@@ -177,7 +195,10 @@ export default function App() {
     const handlePromotionsUpdated = () => fetchPromotions();
     window.addEventListener("promotions-updated", handlePromotionsUpdated);
 
-    return () => window.removeEventListener("promotions-updated", handlePromotionsUpdated);
+    return () => {
+      clearPromotionSchedule();
+      window.removeEventListener("promotions-updated", handlePromotionsUpdated);
+    };
   }, []);
 
   const handleClosePromotionModal = () => setShowPromotionModal(false);

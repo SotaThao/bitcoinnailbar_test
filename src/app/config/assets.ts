@@ -21,6 +21,9 @@ export const ASSETS = {
   
   // Hygiene - Luxury Treatments (was: figma:asset/9b76d043322193ecba98cb79a9c58c5abe8efbf0.png)
   hygieneLuxuryTreatments: '/assets/signature-treatments.png',
+
+  // Homepage hero - Lacquer Lounge direction
+  heroLacquerLounge: '/assets/hero-lacquer-lounge.png',
   
   // Hygiene - Standards (was: figma:asset/36d0ff035d3f60c47a5c81a3484dd16ff2e9a5e6.png)
   hygieneStandards: '/assets/hygiene-nail-bar.jpg',
