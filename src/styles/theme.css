@@ -2,80 +2,54 @@
 
 :root {
   --font-size: 16px;
-  --background: #fafafa;
-  --foreground: #1a1a1a;
-  --card: #ffffff;
-  --card-foreground: #1a1a1a;
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #FF9800; /* Orange - luxury nail salon accent */
-  --primary-foreground: #000000;
-  --secondary: #fff3e0; /* Light orange */
-  --secondary-foreground: #1a1a1a;
-  --muted: #f5f5f5;
-  --muted-foreground: #6b7280; /* Gray-500 - readable on light backgrounds */
-  --accent: #ffe0b2; /* Soft orange */
-  --accent-foreground: #1a1a1a;
+  /* Light Mode (Quiet Wealth) */
+  --background: #F7F1E8;
+  --foreground: #050504;
+  --card: #F2DFC0;
+  --card-foreground: #050504;
+  --popover: #F7F1E8;
+  --popover-foreground: #050504;
+  --primary: #FF9800; /* Bitcoin Orange */
+  --primary-foreground: #050504;
+  --secondary: #F2DFC0;
+  --secondary-foreground: #050504;
+  --muted: #F2DFC0;
+  --muted-foreground: #595249; /* Dark warm grey for 5.0:1 contrast on cards */
+  --accent: #FF9800;
+  --accent-foreground: #050504;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.08);
-  --input: #e5e7eb; /* Gray-200 - subtle but visible border for inputs */
-  --input-background: #f9fafb;
+  --border: rgba(5, 5, 4, 0.08);
+  --input: rgba(5, 5, 4, 0.12);
+  --input-background: transparent;
   --switch-background: #d1d5db;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: oklch(0.708 0 0);
-  --chart-1: #FF9800; /* Orange */
-  --chart-2: #8b5cf6; /* Purple */
-  --chart-3: #06b6d4; /* Cyan */
-  --chart-4: #10b981; /* Green */
-  --chart-5: #f59e0b; /* Amber */
-  --radius: 0.75rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #1a1a1a;
-  --sidebar-primary: #FF9800;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #ffe0b2;
-  --sidebar-accent-foreground: #1a1a1a;
-  --sidebar-border: rgba(0, 0, 0, 0.08);
-  --sidebar-ring: oklch(0.708 0 0);
+  --ring: #FF9800;
+  --radius: 2rem; /* Exaggerated squircle radii for main cards per DESIGN.md */
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  /* Dark Mode (Obsidian Vault) */
+  --background: #070708;
+  --foreground: #F0EDE4;
+  --card: #15120E;
+  --card-foreground: #F0EDE4;
+  --popover: #070708;
+  --popover-foreground: #F0EDE4;
+  --primary: #FF9800; /* Bitcoin Orange */
+  --primary-foreground: #070708;
+  --secondary: #15120E;
+  --secondary-foreground: #F0EDE4;
+  --muted: #15120E;
+  --muted-foreground: #95959D; /* Lighter cool grey for 7.4:1 contrast on cards */
+  --accent: #FF9800;
+  --accent-foreground: #070708;
+  --destructive: #dc2626;
+  --destructive-foreground: #F0EDE4;
+  --border: rgba(240, 237, 228, 0.08);
+  --input: rgba(240, 237, 228, 0.12);
+  --ring: #FF9800;
 }
 
 @theme inline {
@@ -100,77 +74,39 @@
   --color-input-background: var(--input-background);
   --color-switch-background: var(--switch-background);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: 0; /* Sharp hairlines */
+  --radius-md: calc(var(--radius) - 1rem);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-xl: calc(var(--radius) + 1rem);
+  
+  /* Typography mappings from DESIGN.md */
   --font-serif: "Playfair Display", serif;
+  --font-sans: "Inter Tight", sans-serif;
+  --font-mono: "Space Mono", monospace;
 
   --animate-fade-in: fade-in 0.5s ease-out;
-  --animate-slide-up: slide-up 0.7s ease-out;
+  --animate-slide-up: slide-up 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   --animate-pulse-slow: pulse-slow 3s infinite;
   --animate-shimmer: shimmer 2s ease-in-out infinite;
 
   @keyframes fade-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   @keyframes slide-up {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes pulse-slow {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.8;
-    }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
   }
 
   @keyframes shimmer {
-    0% {
-      transform: translateX(-100%) translateY(-100%) rotate(45deg);
-    }
-    100% {
-      transform: translateX(100%) translateY(100%) rotate(45deg);
-    }
-  }
-
-  @keyframes neonPulse {
-    0%, 100% {
-      text-shadow: 0 0 4px rgba(255,193,7,0.3), 0 0 8px rgba(255,213,79,0.15);
-      transform: scale(1);
-    }
-    50% {
-      text-shadow: 0 0 8px rgba(255,193,7,0.6), 0 0 16px rgba(255,213,79,0.3), 0 0 24px rgba(255,235,59,0.15);
-      transform: scale(1.02);
-    }
+    0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
   }
 }
 

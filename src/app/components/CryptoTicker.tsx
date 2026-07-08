@@ -19,7 +19,6 @@ import {
   Clock,
   Gift,
 } from "lucide-react";
-import { useLanguage } from "../context/LanguageContext";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 
 interface CryptoItemProps {
@@ -75,8 +74,11 @@ const CryptoItem = ({
   );
 };
 
-export function CryptoTicker() {
-  const { t } = useLanguage();
+interface CryptoTickerProps {
+  showMarket?: boolean;
+}
+
+export function CryptoTicker({ showMarket = true }: CryptoTickerProps) {
   const [cryptoData, setCryptoData] = useState<
     CryptoItemProps[]
   >([]);
@@ -120,6 +122,11 @@ export function CryptoTicker() {
   }, [promotions.length]);
 
   useEffect(() => {
+    if (!showMarket) {
+      setCryptoData([]);
+      return;
+    }
+
     const fetchPrices = async () => {
       try {
         const [coingeckoRes, vlinkRes] =
@@ -431,7 +438,28 @@ export function CryptoTicker() {
     // Refresh every 2 minutes (120,000ms) to avoid spamming
     const interval = setInterval(fetchPrices, 120000);
     return () => clearInterval(interval);
-  }, []);
+  }, [showMarket]);
+
+  if (!showMarket) {
+    return (
+      <div className="w-full">
+        <div className="h-8 bg-[#0B0F19] border-b border-white/10 flex items-center justify-center relative z-10 px-4">
+          <motion.div
+            key={currentPromoIndex}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex items-center gap-2"
+          >
+            {promotions[currentPromoIndex].icon}
+            <span className="text-[10px] md:text-[12px] font-sans tracking-[1.2px] uppercase text-white/90 truncate">
+              {promotions[currentPromoIndex].text}
+            </span>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
 
   if (cryptoData.length === 0) {
     return (

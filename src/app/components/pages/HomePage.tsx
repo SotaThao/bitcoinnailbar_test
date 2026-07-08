@@ -94,29 +94,15 @@ export default function HomePage() {
       {/* Hero with Bitcoin card design */}
       <HeroSection />
 
-      {/* Why choose us features */}
-      <FeaturesSection />
-
-      {/* Bitcoin payment acceptance - "Future of Beauty" section */}
-      <div id="about">
-        <BitcoinSection />
+      {/* Photo gallery */}
+      <div id="gallery">
+        <GallerySection />
       </div>
 
       {/* Navigable sections with IDs */}
       <div id="promotions">
         <PromotionsSection />
       </div>
-
-      <div id="egift">
-        <EGiftCardSection />
-      </div>
-
-      <div id="membership">
-        <MembershipSection />
-      </div>
-
-      {/* Hygiene & Safety */}
-      <HygieneSection />
 
       {/* Services overview */}
       <ServicesSection />
@@ -126,14 +112,28 @@ export default function HomePage() {
         <ServiceMenu />
       </div>
 
+      {/* Hygiene & Safety */}
+      <HygieneSection />
+
+      {/* Why choose us features */}
+      <FeaturesSection />
+
+      <div id="membership">
+        <MembershipSection />
+      </div>
+
+      {/* Bitcoin payment acceptance - "Future of Beauty" section */}
+      <div id="about">
+        <BitcoinSection />
+      </div>
+
+      <div id="egift">
+        <EGiftCardSection />
+      </div>
+
       {/* Career opportunities */}
       <div id="careers">
         <CareerSection />
-      </div>
-
-      {/* Photo gallery */}
-      <div id="gallery">
-        <GallerySection />
       </div>
 
       {/* Call-to-action */}

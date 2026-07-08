@@ -314,7 +314,8 @@ export default function PublicLayout({
         if (element) {
           // Use setTimeout to ensure page has rendered
           setTimeout(() => {
-            const headerOffset = 144; // Height of fixed header (80px nav + 64px crypto ticker)
+            const headerOffset =
+              location.pathname === "/" ? 112 : 144;
             const elementPosition =
               element.getBoundingClientRect().top;
             const offsetPosition =
@@ -376,7 +377,9 @@ export default function PublicLayout({
       <header
         className={`fixed top-0 z-50 w-full border-b border-white/5 bg-[#0B0F19]/90 backdrop-blur supports-[backdrop-filter]:bg-[#0B0F19]/60 transition-all duration-500 translate-y-0 opacity-100 ${isPaymentModalOpen ? "hidden" : ""}`}
       >
-        {loadCryptoTicker && <CryptoTicker />}
+        {loadCryptoTicker && (
+          <CryptoTicker showMarket={!isHomePage} />
+        )}
         <div className="container mx-auto px-4">
           <div className="flex h-20 items-center justify-between">
             {/* Logo */}
