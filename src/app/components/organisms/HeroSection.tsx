@@ -1,8 +1,11 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { motion } from "motion/react";
 import {
   Bitcoin,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
   Crown,
   Diamond,
   Gift,
@@ -63,12 +66,36 @@ const paymentMethods = [
   },
 ];
 
+const BENEFIT_ROTATION_MS = 4000;
+
 export function HeroSection() {
   const { t } = useLanguage();
+  const [activeBenefitIndex, setActiveBenefitIndex] = useState(0);
 
   const copy = (path: string, fallback: string) => {
     const value = t(path);
     return value === path ? fallback : value;
+  };
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveBenefitIndex((current) => (current + 1) % benefitItems.length);
+    }, BENEFIT_ROTATION_MS);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const activeBenefit = benefitItems[activeBenefitIndex];
+  const ActiveBenefitIcon = activeBenefit.icon;
+
+  const showPreviousBenefit = () => {
+    setActiveBenefitIndex(
+      (current) => (current - 1 + benefitItems.length) % benefitItems.length,
+    );
+  };
+
+  const showNextBenefit = () => {
+    setActiveBenefitIndex((current) => (current + 1) % benefitItems.length);
   };
 
   return (
@@ -170,7 +197,73 @@ export function HeroSection() {
       </div>
 
       <div className="relative z-10 border-y border-[#C8932D]/20 bg-[#080706] text-[#F7F1E8]">
-        <div className="mx-auto flex max-w-[1680px] snap-x overflow-x-auto px-5 md:px-8 lg:grid lg:grid-cols-5 lg:overflow-visible lg:px-14">
+        <div className="mx-auto max-w-[1680px] px-5 py-4 md:px-8 lg:hidden">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              aria-label="Previous benefit"
+              onClick={showPreviousBenefit}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#C8932D]/35 text-[#F2B544] transition-colors hover:bg-[#C8932D]/12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8932D]"
+            >
+              <ChevronLeft className="h-4 w-4" strokeWidth={1.8} />
+            </button>
+
+            <motion.article
+              key={activeBenefit.title}
+              className="flex min-h-[86px] min-w-0 flex-1 items-center gap-4 overflow-hidden"
+              initial={{ opacity: 0, x: 18 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.28 }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.08}
+              onDragEnd={(_, info) => {
+                if (info.offset.x < -36) showNextBenefit();
+                if (info.offset.x > 36) showPreviousBenefit();
+              }}
+            >
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-[#C8932D]/35 text-[#F2B544]">
+                <ActiveBenefitIcon className="h-5 w-5" strokeWidth={1.6} />
+              </span>
+              <div className="min-w-0">
+                <h3 className="break-words font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-[#F2B544]">
+                  {activeBenefit.title}
+                </h3>
+                <p className="mt-1 text-sm leading-snug text-[#F7F1E8]/76">
+                  {activeBenefit.text}
+                </p>
+              </div>
+            </motion.article>
+
+            <button
+              type="button"
+              aria-label="Next benefit"
+              onClick={showNextBenefit}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#C8932D]/35 text-[#F2B544] transition-colors hover:bg-[#C8932D]/12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8932D]"
+            >
+              <ChevronRight className="h-4 w-4" strokeWidth={1.8} />
+            </button>
+          </div>
+
+          <div className="mt-3 flex items-center justify-center gap-2">
+            {benefitItems.map((item, index) => (
+              <button
+                key={item.title}
+                type="button"
+                aria-label={`Show ${item.title}`}
+                aria-current={index === activeBenefitIndex ? "true" : undefined}
+                onClick={() => setActiveBenefitIndex(index)}
+                className={`h-2 rounded-full transition-all ${
+                  index === activeBenefitIndex
+                    ? "w-6 bg-[#F2B544]"
+                    : "w-2 bg-[#F2B544]/35 hover:bg-[#F2B544]/60"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="mx-auto hidden max-w-[1680px] px-5 md:px-8 lg:grid lg:grid-cols-5 lg:px-14">
           {benefitItems.map((item) => (
             <article
               key={item.title}
