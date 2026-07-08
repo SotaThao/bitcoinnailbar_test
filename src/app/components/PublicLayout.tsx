@@ -767,16 +767,19 @@ export default function PublicLayout({
                     </div>
                   </div>
 
-                  {/* USDC */}
+                  {/* USDT / USDC */}
                   <div
-                    className="group relative flex items-center justify-center w-12 h-12 rounded-lg text-[#2775CA] transition-all duration-200"
-                    title="USDC"
+                    className="group relative flex h-12 items-center justify-center rounded-lg border border-white/10 bg-white px-3 transition-all duration-200 hover:border-[#26A17B]"
+                    title="USDT/USDC"
                   >
                     <img
-                      src={ASSETS.layoutFeature3}
+                      src={ASSETS.usdtUsdcLogo}
                       alt="USDT/USDC"
-                      className="w-full h-full object-contain"
+                      className="h-8 w-auto object-contain"
                     />
+                    <span className="ml-1.5 text-xs font-bold text-[#0F172A]">
+                      USDT/USDC
+                    </span>
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-[#2775CA] text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg">
                       USDT/USDC
                       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#2775CA] rotate-45"></div>

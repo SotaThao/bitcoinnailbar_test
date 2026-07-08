@@ -1,0 +1,10 @@
+<svg width="64" height="40" viewBox="0 0 64 40" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">USDT and USDC icons</title>
+  <desc id="desc">Payment icons for Tether USDT and USD Coin USDC without text.</desc>
+  <circle cx="24" cy="20" r="14" fill="#26A17B"/>
+  <path d="M14 11.7H34V16.1H26.3V18.7C31.6 19 35.6 20 35.6 21.2C35.6 22.4 31.6 23.4 26.3 23.7V30H21.7V23.7C16.4 23.4 12.4 22.4 12.4 21.2C12.4 20 16.4 19 21.7 18.7V16.1H14V11.7ZM24 21.6C28.4 21.6 32.1 21.1 32.1 20.5C32.1 20 28.4 19.5 24 19.5C19.6 19.5 15.9 20 15.9 20.5C15.9 21.1 19.6 21.6 24 21.6Z" fill="white"/>
+  <circle cx="48" cy="20" r="14" fill="#2775CA"/>
+  <circle cx="48" cy="20" r="10" stroke="white" stroke-width="2"/>
+  <path d="M48 10.6V29.4" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <path d="M52.4 15.8C51.6 14.9 50.3 14.4 48.8 14.4C46.6 14.4 45.1 15.5 45.1 17.1C45.1 20.7 52.8 19 52.8 23.2C52.8 25.4 50.8 26.7 48.2 26.7C46.2 26.7 44.5 26 43.4 24.7" stroke="white" stroke-width="2" stroke-linecap="round"/>
+</svg>

@@ -22,8 +22,8 @@ export const ASSETS = {
   // Hygiene - Luxury Treatments (was: figma:asset/9b76d043322193ecba98cb79a9c58c5abe8efbf0.png)
   hygieneLuxuryTreatments: '/assets/signature-treatments.png',
 
-  // Homepage hero - Lacquer Lounge direction
-  heroLacquerLounge: '/assets/hero-lacquer-lounge.png',
+  // Homepage hero - US-market gallery nail art direction
+  heroLacquerLounge: '/assets/hero-us-market-nail-art.png',
   
   // Hygiene - Standards (was: figma:asset/36d0ff035d3f60c47a5c81a3484dd16ff2e9a5e6.png)
   hygieneStandards: '/assets/hygiene-nail-bar.jpg',
@@ -45,6 +45,13 @@ export const ASSETS = {
   
   // Shop logo (was: figma:asset/a0a142070a5eba3845c46a9b2c9f3045cc1462ff.png) - UNUSED
   shopLogo: '/assets/shop-logo.png',
+
+  // Payment product logos
+  bitcoinProductLogo:
+    'https://pwmrmcipniefewufwjjy.supabase.co/storage/v1/object/public/NailPage/Symbol.png',
+  usdtUsdcLogo: '/assets/payment-usdt-usdc-icons.svg',
+  usdtLogo: '/assets/payment-usdt-icon.svg',
+  vlinkpayLogo: '/assets/vlinkpay-credit.png',
 } as const;
 
 export type AssetKey = keyof typeof ASSETS;

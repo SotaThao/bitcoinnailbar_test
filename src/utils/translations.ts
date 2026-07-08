@@ -21,7 +21,7 @@ export const translations = {
       membership: "Membership",
       careers: "Careers",
       gallery: "Gallery",
-      booking: "Book Appointment",
+      booking: "Book Now",
       staff: "Staff",
       locations: "Locations",
       reviews: "Reviews",
