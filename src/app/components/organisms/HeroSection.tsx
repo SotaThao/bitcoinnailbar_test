@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import useEmblaCarousel from "embla-carousel-react";
 import { Link } from "react-router";
 import { motion } from "motion/react";
 import {
@@ -13,6 +14,23 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext";
 import { ASSETS } from "../../config/assets";
+import { projectId, publicAnonKey } from "../../../../utils/supabase/info";
+
+interface BannerTranslation {
+  languageCode: string;
+  webUrl: string;
+  mobileUrl: string;
+  tabletUrl: string;
+}
+
+interface NexoraBanner {
+  id: string;
+  title: string;
+  webActionUrl: string;
+  target: string;
+  status: string;
+  translations: BannerTranslation[];
+}
 
 const benefitItems = [
   {
@@ -69,8 +87,13 @@ const paymentMethods = [
 const BENEFIT_ROTATION_MS = 4000;
 
 export function HeroSection() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [activeBenefitIndex, setActiveBenefitIndex] = useState(0);
+  const [banners, setBanners] = useState<NexoraBanner[]>([]);
+  
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'start' });
 
   const copy = (path: string, fallback: string) => {
     const value = t(path);
@@ -84,6 +107,55 @@ export function HeroSection() {
 
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        const response = await fetch(`https://api.nexoratouch.com/api/v1/banners/active`);
+        const data = await response.json();
+        if (data && data.Items) {
+          setBanners(data.Items);
+        }
+      } catch (error) {
+        console.error("Error fetching banners:", error);
+      }
+    };
+    fetchBanners();
+  }, []);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setActiveBannerIndex(emblaApi.selectedScrollSnap());
+  }, [emblaApi, setActiveBannerIndex]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    onSelect();
+    setScrollSnaps(emblaApi.scrollSnapList());
+    emblaApi.on('select', onSelect);
+    emblaApi.on('reInit', onSelect);
+    
+    const onReInit = () => setScrollSnaps(emblaApi.scrollSnapList());
+    emblaApi.on('reInit', onReInit);
+
+    return () => {
+      emblaApi.off('select', onSelect);
+      emblaApi.off('reInit', onSelect);
+      emblaApi.off('reInit', onReInit);
+    };
+  }, [emblaApi, onSelect]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    const autoplay = window.setInterval(() => {
+      if (emblaApi.canScrollNext()) {
+        emblaApi.scrollNext();
+      } else {
+        emblaApi.scrollTo(0);
+      }
+    }, 5000);
+    return () => window.clearInterval(autoplay);
+  }, [emblaApi]);
 
   const activeBenefit = benefitItems[activeBenefitIndex];
   const ActiveBenefitIcon = activeBenefit.icon;
@@ -102,7 +174,66 @@ export function HeroSection() {
     <section className="relative max-w-[100vw] overflow-hidden bg-[#F6EFE4] text-[#080604]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_24%_18%,rgba(200,147,45,0.13),transparent_28%),radial-gradient(circle_at_82%_20%,rgba(255,255,255,0.76),transparent_32%),linear-gradient(180deg,#FBF7EF_0%,#F3E8D9_100%)]" />
 
-      <div className="relative z-10 mx-auto max-w-[1680px] px-5 py-7 md:px-8 lg:px-14 lg:py-8">
+      <div className="relative z-10 mx-auto max-w-[1440px] px-5 py-7 md:px-8 lg:px-14 lg:py-8">
+        {/* Banner Frame Carousel */}
+        <motion.div 
+          className="mb-10 lg:mb-14 w-full"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex -ml-4 touch-pan-y">
+              {banners.length > 0 ? banners.map((banner) => {
+                const translation = banner.translations?.find(t => t.languageCode === language) || banner.translations?.find(t => t.languageCode === 'en');
+                const bgImg = translation?.webUrl;
+                return (
+                  <div key={banner.id} className="pl-4 shrink-0 min-w-0 w-full md:w-1/2">
+                    <div className="relative rounded-[1.25rem] overflow-hidden aspect-[3/1] shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-[#0A0B10]">
+                      <a href={banner.webActionUrl || "#"} target={banner.target === 'OpenNewTab' ? '_blank' : '_self'} rel="noreferrer" className="block w-full h-full" draggable="false">
+                        <img src={bgImg} alt={banner.title} className="w-full h-full object-cover" draggable="false" />
+                      </a>
+                    </div>
+                  </div>
+                );
+              }) : (
+                <>
+                  <div className="pl-4 shrink-0 min-w-0 w-full md:w-1/2">
+                    <div className="relative rounded-[1.25rem] overflow-hidden aspect-[3/1] shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-[#0A0B10]">
+                      <img src="/assets/banners/vlinkpay_banner.jpg" alt="VLINKPAY Banner" className="w-full h-full object-cover" draggable="false" />
+                    </div>
+                  </div>
+                  <div className="pl-4 shrink-0 min-w-0 w-full md:w-1/2">
+                    <div className="relative rounded-[1.25rem] overflow-hidden aspect-[3/1] shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-[#0A0B10]">
+                      <img src="/assets/banners/cryptomap360_banner.jpg" alt="CryptoMap360 Banner" className="w-full h-full object-cover" draggable="false" />
+                    </div>
+                  </div>
+                  <div className="pl-4 shrink-0 min-w-0 w-full md:w-1/2">
+                    <div className="relative rounded-[1.25rem] overflow-hidden aspect-[3/1] shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-[#0A0B10]">
+                      <img src="/assets/banners/nailbar_banner.jpg" alt="Bitcoin Nail Bar Promotion" className="w-full h-full object-cover" draggable="false" />
+                    </div>
+                  </div>
+                  <div className="pl-4 shrink-0 min-w-0 w-full md:w-1/2">
+                    <div className="relative rounded-[1.25rem] overflow-hidden aspect-[3/1] shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-[#0A0B10]">
+                      <img src="/assets/banners/membership_banner.jpg" alt="VIP Membership Banner" className="w-full h-full object-cover" draggable="false" />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="flex justify-center gap-2 mt-4">
+            {scrollSnaps.map((_, i) => (
+              <button 
+                key={i} 
+                onClick={() => emblaApi?.scrollTo(i)}
+                className={`h-2 rounded-full transition-all duration-300 ${i === activeBannerIndex ? "w-6 bg-[#080604]/40" : "w-2 bg-[#080604]/15 hover:bg-[#080604]/30"}`}
+                aria-label={`Go to banner ${i + 1}`}
+              />
+            ))}
+          </div>
+        </motion.div>
+
         <div className="grid min-w-0 items-start gap-8 lg:min-h-[600px] lg:grid-cols-12 lg:gap-10">
           <motion.div
             className="mx-auto w-full min-w-0 max-w-[calc(100vw_-_2.5rem)] space-y-6 pt-2 text-center lg:col-span-5 lg:mx-0 lg:max-w-[620px] lg:text-left"
@@ -194,10 +325,12 @@ export function HeroSection() {
             </div>
           </motion.div>
         </div>
+
+
       </div>
 
       <div className="relative z-10 border-y border-[#C8932D]/20 bg-[#080706] text-[#F7F1E8]">
-        <div className="mx-auto max-w-[1680px] px-5 py-4 md:px-8 lg:hidden">
+        <div className="mx-auto max-w-[1440px] px-5 py-4 md:px-8 lg:hidden">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -263,7 +396,7 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div className="mx-auto hidden max-w-[1680px] px-5 md:px-8 lg:grid lg:grid-cols-5 lg:px-14">
+        <div className="mx-auto hidden max-w-[1440px] px-5 md:px-8 lg:grid lg:grid-cols-5 lg:px-14">
           {benefitItems.map((item) => (
             <article
               key={item.title}

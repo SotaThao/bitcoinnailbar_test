@@ -380,7 +380,7 @@ export default function PublicLayout({
         {loadCryptoTicker && (
           <CryptoTicker showMarket={!isHomePage} />
         )}
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto max-w-[1440px] px-4">
           <div className="flex h-20 items-center justify-between">
             {/* Logo */}
             <BrandLogo />
@@ -685,7 +685,7 @@ export default function PublicLayout({
 
       {/* Footer */}
       <footer className="border-t border-white/10 bg-[rgb(3,0,32)] pb-24 lg:pb-0">
-        <div className="container mx-auto px-4 py-12">
+        <div className="container mx-auto max-w-[1440px] px-4 py-12">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.5fr_auto_auto] gap-8 lg:gap-24">
             {/* Brand */}
             <div className="space-y-6">
