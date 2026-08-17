@@ -45,3 +45,6 @@ Thumbs.db
 .vercel/
 .turbo/
 *.local
+
+# Agent task state (local only)
+.agent-tasks/
