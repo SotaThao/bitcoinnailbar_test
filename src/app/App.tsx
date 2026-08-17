@@ -25,6 +25,7 @@ import VIPPage from "@/app/components/pages/VIPPage";
 import MenuPage from "@/app/components/pages/MenuPage";
 import PaymentSuccessPage from "@/app/pages/PaymentSuccessPage";
 import RedeemMembershipStandalonePage from "@/app/pages/RedeemMembershipStandalonePage";
+import BookingV2Page from "@/app/components/booking-v2/BookingV2Page";
 
 import AdminKioskCheckInPage from "@/app/pages/CheckInPage";
 import SetupOwnerPage from "@/app/pages/admin/SetupOwnerPage";
@@ -255,6 +256,7 @@ function AppContent({
     { path: "/gallery", element: <GalleryPage /> },
     { path: "/egift", element: <EGiftPage /> },
     { path: "/booking", element: <ExternalRedirect url="https://nailsolutionplus.firebaseapp.com/?storeKey=-OiuBNzy2Knxtk0uDGmn" /> },
+    { path: "/booking-v2", element: <BookingV2Page /> },
     { path: "/locations", element: <LocationsPage /> },
     { path: "/reviews", element: <ReviewsPage /> },
     { path: "/vip", element: <VIPPage /> },
